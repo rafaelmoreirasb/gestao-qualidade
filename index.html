@@ -74,10 +74,104 @@
         <div class="cartao em-construcao"><p>Em construção</p></div>
       </section>
 
-      <!-- ===== Gemba ===== -->
+      <!-- ===== Gemba (js/gemba.js) ===== -->
       <section class="aba" id="aba-gemba" data-titulo="Gemba" hidden>
         <h1 class="titulo">Gemba</h1>
-        <div class="cartao em-construcao"><p>Em construção</p></div>
+
+        <div class="gemba-linha">
+          <section class="cartao gemba-form" aria-label="Novo registro">
+
+            <!-- Passo 1: colaborador -->
+            <div class="gemba-passo">
+              <div class="gemba-passo-topo">
+                <div class="gemba-numero" aria-hidden="true">1</div>
+                <label for="gemba-busca" class="gemba-passo-titulo">Colaborador</label>
+              </div>
+              <div class="gemba-escolhido" id="gemba-colab-escolhido" hidden>
+                <div>
+                  <div class="gemba-escolhido-nome" id="gemba-colab-nome"></div>
+                  <div class="gemba-escolhido-info" id="gemba-colab-info"></div>
+                </div>
+                <button type="button" class="botao-trocar" id="gemba-trocar">Trocar</button>
+              </div>
+              <div class="gemba-busca" id="gemba-colab-busca">
+                <input type="search" id="gemba-busca" class="gemba-campo" placeholder="Digite o nome ou a matrícula" autocomplete="off">
+                <div class="gemba-resultados" id="gemba-resultados"></div>
+              </div>
+            </div>
+
+            <!-- Passo 2: processo -->
+            <div class="gemba-passo">
+              <div class="gemba-passo-topo">
+                <div class="gemba-numero" aria-hidden="true">2</div>
+                <div class="gemba-passo-titulo">Processo onde o erro foi encontrado</div>
+              </div>
+              <div class="gemba-processos" id="gemba-processos" role="group" aria-label="Processo"></div>
+              <div class="gemba-novo">
+                <label for="gemba-novo-proc" class="sr-only">Novo processo</label>
+                <input type="text" id="gemba-novo-proc" placeholder="Criar novo processo" autocomplete="off">
+                <button type="button" class="botao botao-contorno" id="gemba-add-proc">+ Adicionar</button>
+              </div>
+              <div id="gemba-msg-proc" class="mensagem" role="status" hidden></div>
+            </div>
+
+            <!-- Passo 3: motivo do erro -->
+            <div class="gemba-passo apagado" id="gemba-passo3">
+              <div class="gemba-passo-topo">
+                <div class="gemba-numero" aria-hidden="true">3</div>
+                <div class="gemba-passo-titulo">Motivo do erro <span class="gemba-passo-detalhe" id="gemba-proc-rotulo"></span></div>
+              </div>
+              <div class="gemba-aviso" id="gemba-sem-proc">Escolha o processo no passo 2 para abrir a lista de motivos.</div>
+              <div class="gemba-motivos" id="gemba-com-proc" hidden>
+                <label for="gemba-motivo" class="sr-only">Motivo do erro</label>
+                <select id="gemba-motivo" class="gemba-select"></select>
+                <div class="gemba-novo">
+                  <label for="gemba-novo-motivo" class="sr-only">Novo motivo</label>
+                  <input type="text" id="gemba-novo-motivo" placeholder="Criar novo motivo" autocomplete="off">
+                  <button type="button" class="botao botao-contorno" id="gemba-add-motivo">+ Adicionar</button>
+                </div>
+                <div id="gemba-msg-motivo" class="mensagem" role="status" hidden></div>
+              </div>
+            </div>
+
+            <!-- Passo 4: ação tomada -->
+            <div class="gemba-passo">
+              <div class="gemba-passo-topo">
+                <div class="gemba-numero" aria-hidden="true">4</div>
+                <div class="gemba-passo-titulo">Ação tomada</div>
+              </div>
+              <div class="gemba-acoes" id="gemba-acoes" role="group" aria-label="Ação tomada"></div>
+              <div class="gemba-novo">
+                <label for="gemba-nova-acao" class="sr-only">Nova ação</label>
+                <input type="text" id="gemba-nova-acao" placeholder="Criar nova ação" autocomplete="off">
+                <button type="button" class="botao botao-contorno" id="gemba-add-acao">+ Adicionar</button>
+              </div>
+              <div id="gemba-msg-acao" class="mensagem" role="status" hidden></div>
+            </div>
+
+            <!-- Observação -->
+            <label class="gemba-obs">
+              <span>Observação <span class="gemba-obs-opcional">Opcional</span></span>
+              <textarea id="gemba-obs" rows="3" placeholder="Detalhe o que viu, se precisar"></textarea>
+            </label>
+
+            <!-- Salvar -->
+            <div class="gemba-salvar">
+              <div id="gemba-msg" class="mensagem" role="status" hidden></div>
+              <button type="button" class="botao botao-principal" id="gemba-salvar">Salvar registro</button>
+            </div>
+          </section>
+
+          <!-- Registros de hoje -->
+          <aside class="gemba-hoje" aria-label="Registros de hoje">
+            <div>
+              <div class="gemba-hoje-rotulo">Registros de hoje</div>
+              <div class="gemba-hoje-titulo"><span id="gemba-hoje-data"></span> <span class="gemba-hoje-contagem" id="gemba-hoje-contagem"></span></div>
+            </div>
+            <div id="gemba-msg-hoje" class="mensagem" role="status" hidden></div>
+            <div class="gemba-hoje-lista" id="gemba-hoje-lista"></div>
+          </aside>
+        </div>
       </section>
 
       <!-- ===== Torre de Aduana ===== -->
@@ -177,5 +271,7 @@
   <script src="js/menu.js"></script>
   <script src="js/planilha.js"></script>
   <script src="js/colaboradores.js"></script>
+  <script src="js/listas.js"></script>
+  <script src="js/gemba.js"></script>
 </body>
 </html>
