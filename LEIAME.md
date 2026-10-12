@@ -15,7 +15,7 @@ App web da operação DHL Supply Chain Mirassol SSP53 para registrar desvios de 
 | --- | --- |
 | GitHub `rafaelmoreirasb/gestao-qualidade` (privado) | Guarda o código. Ramo **main** = oficial; ramo **teste** = mudanças em teste |
 | Supabase, projeto `gestao-qualidade` (São Paulo) | Login e, nas próximas fases, o banco de dados. Cadastro de novos usuários **desligado** |
-| Vercel | Publica o site: **main** → link oficial; **teste** → link de teste |
+| Vercel, projeto `gestao-qualidade` | Publica o site: **main** → link oficial; **teste** → link de teste fixo (endereço com `git-teste`) |
 
 ## Arquivos
 
@@ -24,6 +24,7 @@ index.html        página única: cabeçalho, login e conteúdo
 logo.png          logo DHL
 css/estilo.css    cores, fontes e componentes
 js/supabase.js    conexão com o Supabase, entrar, sair (URL e chave pública no topo)
+                  a URL deve terminar em .supabase.co (sem /rest/v1/)
 LEIAME.md         este arquivo
 CHANGELOG.md      histórico de mudanças
 ```
@@ -36,4 +37,11 @@ CHANGELOG.md      histórico de mudanças
 
 ## Como mudar algo
 
-Sempre uma mudança por vez: primeiro no ramo **teste**, conferir no link de teste, e só depois levar para o **main**.
+1. Subir os arquivos no ramo **teste** (GitHub → Add file → Upload files, ou lápis para editar).
+2. Conferir no **link de teste** com o roteiro de teste.
+3. Depois de aprovado: GitHub → **Pull requests** → **New pull request** (base: `main`, compare: `teste`) → **Create pull request** → **Merge pull request**. Nunca apagar o ramo teste.
+4. A Vercel publica o link oficial sozinha em cerca de 1 minuto.
+
+## Proteção da Vercel
+
+Os links de teste podem pedir login da Vercel (use "Continue with GitHub"). Mesmo sem essa proteção, nada do app aparece sem o login do Supabase.
