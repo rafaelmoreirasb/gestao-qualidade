@@ -23,6 +23,19 @@
           <div class="marca-subtitulo">Mirassol SSP53</div>
         </div>
       </div>
+
+      <!-- Menu das abas: só aparece depois do login (js/menu.js) -->
+      <nav class="menu" id="menu" aria-label="Seções" hidden>
+        <a href="#painel" data-aba="painel">Painel</a>
+        <a href="#gemba" data-aba="gemba">Gemba</a>
+        <a href="#torre" data-aba="torre">Torre de Aduana</a>
+        <a href="#pokayoke" data-aba="pokayoke">Poka-Yoke</a>
+        <a href="#eficacia" data-aba="eficacia">Eficácia</a>
+        <a href="#cronograma" data-aba="cronograma">Cronograma</a>
+        <a href="#planoacao" data-aba="planoacao">Plano de ação</a>
+        <a href="#colaboradores" data-aba="colaboradores">Colaboradores</a>
+      </nav>
+
       <div class="usuario" id="area-usuario" hidden>
         <span class="usuario-email" id="usuario-email"></span>
         <button type="button" class="botao botao-contorno" id="botao-sair">Sair</button>
@@ -53,15 +66,116 @@
     </section>
 
     <!-- Conteúdo do app: só aparece depois do login -->
-    <section id="tela-app" hidden>
-      <div class="cartao em-construcao">
-        <h1 class="titulo">Em construção</h1>
-      </div>
-    </section>
+    <div id="tela-app" hidden>
+
+      <!-- ===== Painel ===== -->
+      <section class="aba" id="aba-painel" data-titulo="Painel" hidden>
+        <h1 class="titulo">Visão Geral</h1>
+        <div class="cartao em-construcao"><p>Em construção</p></div>
+      </section>
+
+      <!-- ===== Gemba ===== -->
+      <section class="aba" id="aba-gemba" data-titulo="Gemba" hidden>
+        <h1 class="titulo">Gemba</h1>
+        <div class="cartao em-construcao"><p>Em construção</p></div>
+      </section>
+
+      <!-- ===== Torre de Aduana ===== -->
+      <section class="aba" id="aba-torre" data-titulo="Torre de Aduana" hidden>
+        <h1 class="titulo">Torre de Aduana</h1>
+        <div class="cartao em-construcao"><p>Em construção</p></div>
+      </section>
+
+      <!-- ===== Poka-Yoke ===== -->
+      <section class="aba" id="aba-pokayoke" data-titulo="Poka-Yoke" hidden>
+        <h1 class="titulo">Poka-Yoke</h1>
+        <div class="cartao em-construcao"><p>Em construção</p></div>
+      </section>
+
+      <!-- ===== Eficácia ===== -->
+      <section class="aba" id="aba-eficacia" data-titulo="Eficácia do Treinamento" hidden>
+        <h1 class="titulo">Eficácia do Treinamento</h1>
+        <div class="cartao em-construcao"><p>Em construção</p></div>
+      </section>
+
+      <!-- ===== Cronograma ===== -->
+      <section class="aba" id="aba-cronograma" data-titulo="Cronograma" hidden>
+        <h1 class="titulo">Cronograma</h1>
+        <div class="cartao em-construcao"><p>Em construção</p></div>
+      </section>
+
+      <!-- ===== Plano de ação ===== -->
+      <section class="aba" id="aba-planoacao" data-titulo="Plano de ação" hidden>
+        <h1 class="titulo">Plano de ação</h1>
+        <div class="cartao em-construcao"><p>Em construção</p></div>
+      </section>
+
+      <!-- ===== Colaboradores (js/colaboradores.js) ===== -->
+      <section class="aba" id="aba-colaboradores" data-titulo="Colaboradores" hidden>
+        <h1 class="titulo">Colaboradores <span class="titulo-contagem" id="colab-contagem"></span></h1>
+
+        <div class="linha-cartoes">
+          <section class="cartao cartao-adicionar">
+            <h2 class="subtitulo">Adicionar manualmente</h2>
+            <form id="colab-form" class="form-adicionar" novalidate>
+              <div class="grade-adicionar">
+                <label class="campo">Matrícula
+                  <input type="text" id="colab-matricula" autocomplete="off" inputmode="numeric">
+                </label>
+                <label class="campo">Nome
+                  <input type="text" id="colab-nome" autocomplete="off">
+                </label>
+              </div>
+              <button type="submit" class="botao botao-contorno" id="colab-adicionar">+ Adicionar colaborador</button>
+              <div id="colab-msg-adicionar" class="mensagem" role="status" hidden></div>
+            </form>
+          </section>
+        </div>
+
+        <section class="cartao cartao-lista">
+          <div class="cartao-topo">
+            <h2 class="subtitulo">Lista de colaboradores</h2>
+            <input type="search" id="colab-busca" class="busca" aria-label="Buscar colaborador" placeholder="Buscar nome, matrícula ou status">
+          </div>
+          <div id="colab-msg-lista" class="mensagem" role="status" hidden></div>
+          <div class="planilha-rolagem">
+            <div class="planilha planilha-colab">
+              <div class="planilha-cabecalho">
+                <div class="direita">#</div>
+                <div>Matrícula</div>
+                <div>Nome</div>
+                <div>Status</div>
+                <div class="direita">Treinamentos</div>
+                <div></div>
+              </div>
+              <div id="colab-linhas"></div>
+              <div id="colab-vazio" class="planilha-vazio" hidden></div>
+            </div>
+          </div>
+          <div class="nota">Só colaboradores <strong>Ativos</strong> aparecem na busca do Gemba e na escolha de participantes do Cronograma. Desligados vão para o fim da lista e todo o histórico deles continua registrado. A lixeira serve só para corrigir cadastro feito errado.</div>
+        </section>
+
+        <section class="cartao cartao-importar">
+          <div class="importar-topo">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M8 13l3 4"></path><path d="M11 13l-3 4"></path><line x1="13" y1="15" x2="16" y2="15"></line></svg>
+            <h2 class="subtitulo">Importar planilha</h2>
+          </div>
+          <p class="importar-texto">Excel (.xlsx) ou .csv com as colunas <strong>Nome</strong> e <strong>Matrícula</strong>. Só as matrículas que ainda <strong>não estão na lista</strong> são cadastradas, como Ativo. Quem já está na lista não muda.</p>
+          <label class="botao botao-arquivo" id="colab-arquivo-rotulo">Escolher planilha
+            <input type="file" id="colab-arquivo" accept=".xlsx,.csv">
+          </label>
+          <div id="colab-msg-importar" class="mensagem" role="status" hidden></div>
+        </section>
+      </section>
+
+    </div>
 
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase.js"></script>
+  <script src="js/menu.js"></script>
+  <script src="js/planilha.js"></script>
+  <script src="js/colaboradores.js"></script>
 </body>
 </html>
