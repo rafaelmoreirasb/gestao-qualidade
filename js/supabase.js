@@ -10,7 +10,7 @@
    Mantenha as aspas simples em volta de cada valor.
    NUNCA cole aqui a chave secreta (secret / service_role).
    ---------------------------------------------------------- */
-const SUPABASE_URL = 'https://cpufojkpsayfzjsrygej.supabase.co/rest/v1/';
+const SUPABASE_URL = 'https://cpufojkpsayfzjsrygej.supabase.co';
 const SUPABASE_CHAVE_PUBLICA = 'sb_publishable_xMTcrsIwIh9kDl5I2sNbvA_P2xqFrYA';
 /* ------------------- fim da configuração ------------------ */
 
