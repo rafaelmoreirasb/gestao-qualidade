@@ -1,0 +1,249 @@
+/* ==========================================================
+   Gestão de Processo e Qualidade · Mirassol SSP53
+   Estilo geral (cores DHL, fonte Barlow, componentes)
+   ========================================================== */
+
+:root {
+  --amarelo: #FFCC00;
+  --amarelo-claro: #FFF5CC;
+  --vermelho: #D40511;
+  --vermelho-escuro: #A0040D;
+  --vermelho-claro: #F9DADB;
+  --preto: #1A1A1A;
+  --branco: #FFFFFF;
+  --cinza-fundo: #F2F2F2;
+  --cinza-borda: #D9D9D9;
+  --cinza-campo: #B3B3B3;
+  --cinza-texto: #595959;
+  --cinza-subtitulo: #4D4D4D;
+  --verde: #1B6B2A;
+  --verde-claro: #E3F4E1;
+  --raio: 4px;
+  --raio-cartao: 6px;
+  --fonte: 'Barlow', system-ui, sans-serif;
+  --fonte-numeros: 'JetBrains Mono', monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; }
+
+body {
+  min-height: 100vh;
+  background: var(--cinza-fundo);
+  color: var(--preto);
+  font-family: var(--fonte);
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+input, select, textarea, button { font-family: inherit; }
+
+a { color: var(--vermelho); }
+a:hover { color: var(--vermelho-escuro); }
+
+[hidden] { display: none !important; }
+
+/* ---------- Cabeçalho ---------- */
+
+.cabecalho {
+  background: var(--amarelo);
+  color: var(--preto);
+  border-bottom: 4px solid var(--vermelho);
+}
+
+.cabecalho-conteudo {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.marca-logo {
+  height: 40px;
+  width: 141px;
+  display: block;
+}
+
+.marca-titulo {
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+}
+
+.marca-subtitulo {
+  font-size: 12px;
+  color: var(--cinza-subtitulo);
+}
+
+.usuario {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.usuario-email {
+  font-size: 13px;
+  color: var(--cinza-subtitulo);
+}
+
+/* ---------- Área principal ---------- */
+
+.principal {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 24px 20px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.titulo {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.cartao {
+  background: var(--branco);
+  border: 1px solid var(--cinza-borda);
+  border-radius: var(--raio-cartao);
+  padding: 20px 24px;
+}
+
+.tela-aguarde {
+  padding: 40px 0;
+  text-align: center;
+  color: var(--cinza-texto);
+}
+
+/* ---------- Login ---------- */
+
+.cartao-login {
+  width: 100%;
+  max-width: 420px;
+  margin: 32px auto 0;
+  border-top: 4px solid var(--amarelo);
+}
+
+.cartao-login .titulo {
+  font-size: 24px;
+  margin-bottom: 16px;
+}
+
+#form-login {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.campo input {
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--cinza-campo);
+  border-radius: var(--raio);
+  font-size: 16px;
+  font-weight: 400;
+  background: var(--branco);
+  color: var(--preto);
+}
+
+.campo input:focus {
+  outline: 2px solid var(--vermelho);
+  outline-offset: 0;
+  border-color: var(--vermelho);
+}
+
+/* ---------- Botões ---------- */
+
+.botao {
+  height: 44px;
+  padding: 0 18px;
+  border-radius: var(--raio);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.botao:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.botao-principal {
+  height: 54px;
+  border: 0;
+  background: var(--vermelho);
+  color: var(--branco);
+  font-size: 16px;
+  font-weight: 800;
+  border-radius: var(--raio-cartao);
+}
+
+.botao-principal:hover:not(:disabled) { background: var(--vermelho-escuro); }
+
+.botao-contorno {
+  border: 1px solid var(--preto);
+  background: var(--branco);
+  color: var(--preto);
+}
+
+.botao-contorno:hover { background: var(--amarelo-claro); }
+
+/* ---------- Mensagens ---------- */
+
+.mensagem {
+  padding: 10px 14px;
+  border-radius: var(--raio);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.mensagem-erro {
+  background: var(--vermelho-claro);
+  color: var(--vermelho-escuro);
+}
+
+.mensagem-ok {
+  background: var(--amarelo-claro);
+  color: var(--preto);
+}
+
+/* ---------- Em construção ---------- */
+
+.em-construcao {
+  border-top: 4px solid var(--amarelo);
+  padding: 40px 24px;
+  text-align: center;
+}
+
+/* ---------- Celular ---------- */
+
+@media (max-width: 600px) {
+  .cabecalho-conteudo { padding: 12px 16px; }
+  .principal { padding: 16px 16px 40px; }
+  .marca-titulo { font-size: 16px; }
+  .usuario-email { display: none; }
+  .cartao { padding: 18px 16px; }
+  .cartao-login { margin-top: 16px; }
+}

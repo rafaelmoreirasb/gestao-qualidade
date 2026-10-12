@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Gestão de Processo e Qualidade · Mirassol SSP53</title>
+<link rel="icon" href="logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="css/estilo.css">
+</head>
+<body class="carregando">
+
+  <!-- Cabeçalho: aparece na tela de login e dentro do app -->
+  <header class="cabecalho">
+    <div class="cabecalho-conteudo">
+      <div class="marca">
+        <img src="logo.png" alt="DHL" class="marca-logo" width="141" height="40">
+        <div>
+          <div class="marca-titulo">Gestão de Processo e Qualidade</div>
+          <div class="marca-subtitulo">Mirassol SSP53</div>
+        </div>
+      </div>
+      <div class="usuario" id="area-usuario" hidden>
+        <span class="usuario-email" id="usuario-email"></span>
+        <button type="button" class="botao botao-contorno" id="botao-sair">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="principal">
+
+    <!-- Aguardando: enquanto o sistema confere se você já está logado -->
+    <section id="tela-aguarde" class="tela-aguarde" aria-live="polite">
+      Carregando…
+    </section>
+
+    <!-- Tela de login -->
+    <section id="tela-login" class="cartao cartao-login" hidden>
+      <h1 class="titulo">Entrar</h1>
+      <form id="form-login" novalidate>
+        <label class="campo">E-mail
+          <input type="email" id="login-email" autocomplete="username" required>
+        </label>
+        <label class="campo">Senha
+          <input type="password" id="login-senha" autocomplete="current-password" required>
+        </label>
+        <div id="login-mensagem" class="mensagem mensagem-erro" role="alert" hidden></div>
+        <button type="submit" class="botao botao-principal" id="botao-entrar">Entrar</button>
+      </form>
+    </section>
+
+    <!-- Conteúdo do app: só aparece depois do login -->
+    <section id="tela-app" hidden>
+      <div class="cartao em-construcao">
+        <h1 class="titulo">Em construção</h1>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
+</body>
+</html>
