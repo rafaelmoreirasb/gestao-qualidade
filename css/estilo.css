@@ -566,3 +566,407 @@ a:hover { color: var(--vermelho-escuro); }
   .grade-adicionar { grid-template-columns: 1fr; }
   .busca { width: 100%; }
 }
+
+/* ---------- Gemba (Fase 2) ---------- */
+
+/* Texto só para leitores de tela */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.gemba-linha {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.gemba-form {
+  flex: 999 1 560px;
+  min-width: 0;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+.gemba-passo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gemba-passo.apagado { opacity: 0.75; }
+
+.gemba-passo-topo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gemba-numero {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--amarelo);
+  color: var(--preto);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.gemba-passo-titulo {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.gemba-passo-detalhe {
+  font-weight: 500;
+  color: var(--cinza-texto);
+}
+
+/* Passo 1: colaborador */
+.gemba-escolhido {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 2px solid var(--vermelho);
+  border-radius: var(--raio);
+  background: var(--cinza-zebra);
+}
+
+.gemba-escolhido-nome { font-weight: 700; }
+
+.gemba-escolhido-info {
+  font-size: 13px;
+  color: var(--cinza-texto);
+}
+
+.botao-trocar {
+  height: 40px;
+  padding: 0 12px;
+  flex: none;
+  border: 1px solid var(--cinza-campo);
+  border-radius: var(--raio);
+  background: var(--branco);
+  color: var(--preto);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.botao-trocar:hover { background: var(--amarelo-claro); }
+
+.gemba-busca {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gemba-campo {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--cinza-campo);
+  border-radius: var(--raio);
+  background: var(--branco);
+  color: var(--preto);
+  font-size: 16px;
+}
+
+.gemba-campo:focus,
+.gemba-novo input:focus,
+.gemba-select:focus,
+.gemba-obs textarea:focus {
+  outline: 2px solid var(--vermelho);
+  outline-offset: 0;
+  border-color: var(--vermelho);
+}
+
+.gemba-resultados {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--cinza-borda);
+  border-radius: var(--raio);
+  overflow: hidden;
+}
+
+.gemba-resultado {
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  border-bottom: 1px solid #E6E6E6;
+  background: var(--branco);
+  color: var(--preto);
+  text-align: left;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.gemba-resultado:last-child { border-bottom: 0; }
+.gemba-resultado:hover { background: var(--amarelo-claro); }
+
+.gemba-resultado-nome { font-weight: 600; }
+
+.gemba-resultado-info {
+  font-size: 13px;
+  color: var(--cinza-texto);
+  white-space: nowrap;
+}
+
+.gemba-resultado-vazio {
+  padding: 12px 14px;
+  font-size: 14px;
+  color: var(--cinza-texto);
+}
+
+/* Passo 2: processos em botões */
+.gemba-processos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.gemba-opcao {
+  height: 56px;
+  padding: 0 8px;
+  border: 1px solid var(--cinza-campo);
+  border-radius: var(--raio);
+  background: var(--branco);
+  color: var(--vermelho);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.gemba-opcao:hover { background: var(--vermelho-claro); }
+
+.gemba-opcao.marcado,
+.gemba-acao.marcado {
+  background: var(--vermelho);
+  color: var(--branco);
+  border: 2px solid var(--vermelho);
+}
+
+/* Campo "Criar novo ..." + botão "+ Adicionar" */
+.gemba-novo {
+  display: flex;
+  gap: 8px;
+}
+
+.gemba-novo input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--cinza-campo);
+  border-radius: var(--raio);
+  background: var(--branco);
+  color: var(--preto);
+  font-size: 15px;
+}
+
+.gemba-novo .botao {
+  padding: 0 16px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* Passo 3: motivo */
+.gemba-aviso {
+  padding: 14px;
+  border: 1px dashed var(--cinza-campo);
+  border-radius: var(--raio);
+  color: var(--cinza-texto);
+  font-size: 14px;
+}
+
+.gemba-motivos {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gemba-select {
+  width: 100%;
+  height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--cinza-campo);
+  border-radius: var(--raio);
+  background: var(--branco);
+  color: var(--preto);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.gemba-select.escolhido { border: 2px solid var(--vermelho); }
+
+/* Passo 4: ações em botões arredondados */
+.gemba-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gemba-acao {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--cinza-campo);
+  border-radius: 22px;
+  background: var(--branco);
+  color: var(--vermelho);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.gemba-acao:hover { background: var(--vermelho-claro); }
+
+/* Observação e salvar */
+.gemba-obs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.gemba-obs-opcional {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--cinza-texto);
+}
+
+.gemba-obs textarea {
+  padding: 10px 12px;
+  border: 1px solid var(--cinza-campo);
+  border-radius: var(--raio);
+  background: var(--branco);
+  color: var(--preto);
+  font-size: 15px;
+  font-weight: 400;
+  resize: vertical;
+}
+
+.gemba-salvar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Registros de hoje */
+.gemba-hoje {
+  flex: 1 1 340px;
+  min-width: 0;
+  padding: 20px;
+  border-radius: var(--raio-cartao);
+  background: var(--amarelo);
+  color: var(--preto);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gemba-hoje-rotulo {
+  font-size: 12px;
+  color: var(--cinza-texto);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.gemba-hoje-titulo {
+  margin-top: 4px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.gemba-hoje-contagem {
+  font-family: var(--fonte-numeros);
+  color: var(--vermelho);
+}
+
+.gemba-hoje-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gemba-hoje-vazio {
+  padding: 12px 14px;
+  border-radius: var(--raio);
+  background: var(--branco);
+  font-size: 14px;
+}
+
+.gemba-registro {
+  padding: 12px 14px;
+  border-radius: var(--raio);
+  background: var(--branco);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gemba-registro-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.gemba-registro-nome {
+  min-width: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.gemba-registro-direita {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gemba-registro-hora {
+  font-family: var(--fonte-numeros);
+  font-size: 13px;
+  color: var(--cinza-texto);
+}
+
+.gemba-registro-motivo {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vermelho);
+}
+
+.gemba-registro-acao {
+  font-size: 13px;
+  color: var(--cinza-subtitulo);
+}
+
+.gemba-registro-obs {
+  font-size: 12px;
+  color: var(--cinza-texto);
+  white-space: pre-wrap;
+}
+
+@media (max-width: 600px) {
+  .gemba-form { padding: 18px 16px; gap: 22px; }
+  .gemba-processos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gemba-resultado-info { white-space: normal; text-align: right; }
+}
