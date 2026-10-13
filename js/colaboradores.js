@@ -3,6 +3,8 @@
    Aba Colaboradores: adicionar, listar, mudar status,
    excluir (só para corrigir cadastro errado) e importar planilha.
    Dados guardados: só matrícula, nome, setor e status.
+   A coluna Treinamentos conta de quantos treinamentos do
+   Cronograma a pessoa participou (só os já realizados).
    ========================================================== */
 
 (function () {
@@ -11,6 +13,7 @@
   const CAMPOS = 'id, matricula, nome, setor, status';
 
   let lista = [];             // colaboradores carregados do banco
+  let treinosPorColab = {};   // id do colaborador -> nº de treinamentos realizados
   let carregadoPara = null;   // id do usuário cujos dados estão na tela
   let carregando = false;
 
@@ -20,6 +23,8 @@
   const limparNome = (s) => String(s || '').replace(/\s+/g, ' ').trim();
   const limparMatricula = (s) => String(s || '').replace(/\.0+$/, '').replace(/\s+/g, '').trim();
   const ehAtivo = (c) => (c.status || 'Ativo') === 'Ativo';
+  const pad = (n) => String(n).padStart(2, '0');
+  const hojeK = () => { const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
 
   function mostrarMsg(idCaixa, texto, ok) {
     const caixa = $(idCaixa);
@@ -68,6 +73,7 @@
       lista = todos;
       carregadoPara = uid;
       render();
+      await carregarTreinos();
     } catch (e) {
       carregadoPara = null;
       lista = [];
@@ -77,6 +83,33 @@
     } finally {
       carregando = false;
     }
+  }
+
+  // Conta os treinamentos realizados (até hoje) de cada colaborador.
+  // Se der erro (ex.: tabelas do Cronograma ainda não criadas), a coluna mostra 0
+  // e o resto da aba continua funcionando normalmente.
+  async function carregarTreinos() {
+    const cont = {};
+    try {
+      const hoje = hojeK();
+      const PAGINA = 1000;
+      for (let de = 0; ; de += PAGINA) {
+        const { data, error } = await sb.from('treinamento_participantes')
+          .select('colaborador_id, treinamentos(data)')
+          .order('id', { ascending: true })
+          .range(de, de + PAGINA - 1);
+        if (error) throw error;
+        data.forEach((p) => {
+          const dia = p.treinamentos && p.treinamentos.data;
+          if (dia && dia <= hoje) cont[p.colaborador_id] = (cont[p.colaborador_id] || 0) + 1;
+        });
+        if (data.length < PAGINA) break;
+      }
+    } catch (e) {
+      // Sem a contagem, a coluna fica com 0
+    }
+    treinosPorColab = cont;
+    if (carregadoPara) render();
   }
 
   /* ---------------- Desenhar a lista ---------------- */
@@ -144,8 +177,8 @@
     cs.appendChild(sel);
     linha.appendChild(cs);
 
-    // Treinamentos: passa a contar na Fase 4 (Cronograma)
-    linha.appendChild(celula('direita numero', '0'));
+    // Treinamentos realizados de que a pessoa participou (Cronograma)
+    linha.appendChild(celula('direita numero', String(treinosPorColab[c.id] || 0)));
 
     // Lixeira: só para corrigir cadastro errado
     const cl = celula('centro');
@@ -317,6 +350,7 @@
 
   function limparTela() {
     lista = [];
+    treinosPorColab = {};
     carregadoPara = null;
     $('colab-linhas').textContent = '';
     $('colab-contagem').textContent = '';
@@ -340,6 +374,11 @@
   $('colab-form').addEventListener('submit', adicionar);
   $('colab-busca').addEventListener('input', render);
   $('colab-arquivo').addEventListener('change', importar);
+
+  // Ao abrir a aba, atualiza a contagem de treinamentos (ex.: participante marcado agora no Cronograma)
+  document.addEventListener('gq:aba', (ev) => {
+    if (ev.detail && ev.detail.aba === 'colaboradores' && carregadoPara && !carregando) carregarTreinos();
+  });
 
   // O Supabase pede para não chamar o banco dentro deste aviso; por isso o setTimeout.
   sb.auth.onAuthStateChange((_evento, sessao) => {
