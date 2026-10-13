@@ -1311,3 +1311,674 @@ a:hover { color: var(--vermelho-escuro); }
   .painel-pessoa-campo select { width: 100%; min-width: 0; }
   .kpi-valor { font-size: 28px; }
 }
+
+/* ---------- Cronograma (Fase 4) ---------- */
+
+.crono-topo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.crono-botao-vermelho {
+  border: 0;
+  background: var(--vermelho);
+  color: var(--branco);
+}
+
+.crono-botao-vermelho:hover:not(:disabled) { background: var(--vermelho-escuro); }
+
+/* Novo treinamento */
+.crono-form {
+  border-top: 4px solid var(--amarelo);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+#crono-form-novo {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.crono-campos {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(160px, 1fr) minmax(130px, 1fr) minmax(130px, 1fr);
+  gap: 12px;
+}
+
+.crono-campos .campo input {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  font-size: 15px;
+}
+
+.crono-dica {
+  margin: 0;
+  font-size: 13px;
+  color: var(--cinza-texto);
+}
+
+.crono-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.crono-acoes .botao { padding: 0 20px; }
+.crono-acoes .mensagem { flex: 1 1 260px; }
+
+/* Calendário + próximos */
+.crono-linha {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.crono-calendario {
+  flex: 999 1 640px;
+  min-width: 0;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.crono-mes-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.crono-mes-titulo {
+  font-size: 20px;
+  text-transform: capitalize;
+}
+
+.crono-seta {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  padding: 0;
+  border: 1px solid var(--cinza-campo);
+  border-radius: var(--raio);
+  background: var(--branco);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.crono-seta:hover { background: var(--amarelo-claro); }
+
+.crono-cal-rolagem { overflow-x: auto; }
+
+.crono-cal { min-width: 620px; }
+
+.crono-semana,
+.crono-grade {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.crono-semana { margin-bottom: 4px; }
+
+.crono-semana div {
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--cinza-texto);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.crono-dia {
+  min-width: 0;
+  min-height: 128px;
+  padding: 6px;
+  border: 1px solid var(--cinza-linha);
+  border-radius: var(--raio);
+  background: var(--branco);
+  color: var(--preto);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+/* Sábado e domingo: amarelo bem clarinho (normalmente não tem treinamento) */
+.crono-semana div:first-child,
+.crono-semana div:last-child,
+.crono-dia.fim-de-semana { background: #FFFAE6; }
+
+.crono-dia:hover { background: var(--amarelo-claro); }
+.crono-dia.fora { opacity: 0.45; }
+
+.crono-dia.selecionado {
+  background: var(--amarelo-claro);
+  border: 2px solid var(--amarelo);
+}
+
+.crono-dia.hoje { border: 2px solid var(--vermelho); }
+
+.crono-dia-num {
+  font-family: var(--fonte-numeros);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.crono-dia.hoje .crono-dia-num { color: var(--vermelho); }
+
+.crono-evento {
+  display: block;
+  padding: 3px 5px;
+  border-radius: 3px;
+  background: var(--amarelo);
+  color: var(--preto);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.crono-evento.realizado {
+  background: var(--preto);
+  color: var(--branco);
+}
+
+/* Agendado com data já passada: amarelo com faixa vermelha */
+.crono-evento.atrasado { border-left: 4px solid var(--vermelho); }
+
+.crono-mais {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--cinza-texto);
+}
+
+.crono-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--cinza-texto);
+}
+
+.crono-legenda-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.crono-legenda-cor {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+
+.crono-legenda-atrasado {
+  background: var(--amarelo);
+  border-left: 4px solid var(--vermelho);
+}
+
+.crono-legenda-fds {
+  background: #FFFAE6;
+  border: 1px solid var(--cinza-linha);
+}
+
+/* Botões Exportar PDF e Tela cheia */
+.crono-cal-barra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.crono-botao-barra {
+  height: 40px;
+  padding: 0 14px;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Título que só aparece no PDF */
+.crono-titulo-impressao { display: none; }
+
+/* Tela cheia: o calendário ocupa a tela toda */
+.crono-calendario.crono-cheia {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  overflow: auto;
+}
+
+.crono-cheia .crono-dia { min-height: max(128px, calc((100vh - 230px) / 6)); }
+
+.crono-cheia .crono-evento {
+  font-size: 12px;
+  white-space: normal;
+}
+
+.crono-proximos {
+  flex: 1 1 360px;
+  min-width: 0;
+  padding: 20px;
+  border-radius: var(--raio-cartao);
+  background: var(--amarelo);
+  color: var(--preto);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.crono-proximos-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.crono-proximo {
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: var(--raio);
+  background: var(--branco);
+  color: var(--preto);
+  text-align: left;
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.crono-proximo:hover { outline: 2px solid var(--vermelho); }
+
+.crono-proximo-topo {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.crono-proximo-tema {
+  min-width: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.crono-proximo-quando {
+  flex: none;
+  font-family: var(--fonte-numeros);
+  font-size: 13px;
+  color: var(--vermelho);
+  white-space: nowrap;
+}
+
+.crono-proximo-qtd {
+  font-size: 13px;
+  color: var(--cinza-subtitulo);
+}
+
+.crono-proximo-qtd.sem {
+  color: var(--vermelho);
+  font-weight: 700;
+}
+
+.crono-proximo-nomes {
+  font-size: 12px;
+  color: var(--cinza-texto);
+}
+
+.crono-proximo-vazio {
+  padding: 12px 14px;
+  border-radius: var(--raio);
+  background: var(--branco);
+  font-size: 14px;
+}
+
+/* Todos os treinamentos */
+.crono-total {
+  font-weight: 500;
+  color: var(--cinza-texto);
+}
+
+.crono-tabela-rolagem { max-height: 360px; }
+
+.planilha-crono { min-width: 960px; }
+
+.planilha-crono .planilha-cabecalho,
+.planilha-crono .planilha-linha {
+  grid-template-columns: 96px 70px 64px minmax(220px, 1.5fr) minmax(240px, 2fr) 110px 170px;
+}
+
+.planilha-crono .planilha-linha {
+  height: auto;
+  min-height: 38px;
+}
+
+.planilha-crono .planilha-linha > div {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.planilha-crono .numero { font-size: 12px; }
+
+.crono-col-tema {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.crono-col-pessoas {
+  color: #333333;
+  overflow-wrap: anywhere;
+}
+
+.crono-col-pessoas.sem {
+  color: var(--vermelho);
+  font-style: italic;
+}
+
+.crono-chip {
+  padding: 3px 8px;
+  border-radius: 3px;
+  background: var(--amarelo);
+  color: var(--preto);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.crono-chip.realizado {
+  background: var(--preto);
+  color: var(--branco);
+}
+
+.crono-chip.atrasado {
+  background: var(--vermelho-claro);
+  color: var(--vermelho-escuro);
+}
+
+.planilha-crono .crono-col-acoes {
+  justify-content: center;
+  gap: 6px;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.crono-botao-part {
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--raio);
+  background: var(--vermelho);
+  color: var(--branco);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.crono-botao-part:hover { background: var(--vermelho-escuro); }
+
+.planilha-crono .botao-lixeira { height: 32px; }
+
+/* Janela de participantes */
+body.crono-travado { overflow: hidden; }
+
+.crono-fundo {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  padding: 40px 16px;
+  background: rgba(26, 26, 26, 0.55);
+  overflow-y: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.crono-janela {
+  width: 100%;
+  max-width: 760px;
+  padding: 22px 24px;
+  border-top: 6px solid var(--amarelo);
+  border-radius: var(--raio-cartao);
+  background: var(--branco);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.crono-janela-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.crono-janela-situacao {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--vermelho);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.crono-janela-tema {
+  margin: 2px 0 0;
+  font-size: 22px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.crono-janela-quando {
+  margin-top: 4px;
+  font-family: var(--fonte-numeros);
+  font-size: 13px;
+  color: var(--cinza-subtitulo);
+}
+
+/* Carga horária e status, dentro da janela */
+.crono-janela-dados {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 28px;
+  padding: 14px 16px;
+  border-radius: var(--raio);
+  background: var(--cinza-zebra);
+}
+
+.crono-janela-bloco {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.crono-janela-rotulo {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.crono-janela-linha {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.crono-janela-carga {
+  width: 110px;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--cinza-campo);
+  border-radius: var(--raio);
+  background: var(--branco);
+  font-family: var(--fonte-numeros);
+  font-size: 15px;
+}
+
+.crono-janela-carga:focus {
+  outline: 2px solid var(--vermelho);
+  border-color: var(--vermelho);
+}
+
+.crono-janela-linha .botao { font-size: 14px; }
+
+.crono-janela-dica {
+  max-width: 340px;
+  font-size: 12px;
+  color: var(--cinza-texto);
+}
+
+.crono-janela-barra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.crono-janela-contagem {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.crono-janela-contagem span {
+  font-weight: 500;
+  color: var(--cinza-texto);
+}
+
+.crono-janela-barra .busca { width: 260px; }
+
+.crono-pessoas {
+  max-height: 340px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 6px;
+}
+
+.crono-pessoa {
+  min-height: 42px;
+  padding: 0 10px;
+  border: 1px solid var(--cinza-borda);
+  border-radius: var(--raio);
+  background: var(--branco);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.crono-pessoa.marcado {
+  background: var(--amarelo-claro);
+  border: 2px solid var(--amarelo);
+}
+
+.crono-pessoa input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  flex: none;
+  accent-color: var(--vermelho);
+}
+
+.crono-pessoa small {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--cinza-texto);
+}
+
+.crono-pessoas-vazio {
+  grid-column: 1 / -1;
+  padding: 12px;
+  font-size: 14px;
+  color: var(--cinza-texto);
+}
+
+.crono-janela-rodape {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.crono-janela-rodape .botao { padding: 0 22px; }
+
+@media (max-width: 600px) {
+  .crono-campos { grid-template-columns: 1fr 1fr; }
+  .crono-campo-tema { grid-column: 1 / -1; }
+  .crono-fundo { padding: 16px 8px; }
+  .crono-janela { padding: 18px 16px; }
+  .crono-janela-barra .busca { width: 100%; }
+  .crono-calendario.crono-cheia { padding: 12px; }
+}
+
+/* Exportar PDF: na impressão sai só o calendário do mês, em folha deitada */
+@media print {
+  @page { size: A4 landscape; margin: 8mm; }
+
+  body.crono-imprimindo {
+    background: var(--branco);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body.crono-imprimindo .cabecalho,
+  body.crono-imprimindo #aba-cronograma > :not(.crono-linha),
+  body.crono-imprimindo .crono-proximos,
+  body.crono-imprimindo .crono-nao-imprimir { display: none !important; }
+
+  body.crono-imprimindo .principal { padding: 0; max-width: none; }
+
+  body.crono-imprimindo .crono-calendario,
+  body.crono-imprimindo .crono-calendario.crono-cheia {
+    position: static;
+    padding: 0;
+    border: 0;
+    overflow: visible;
+  }
+
+  body.crono-imprimindo .crono-titulo-impressao {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--cinza-texto);
+    text-align: center;
+  }
+
+  body.crono-imprimindo .crono-seta { visibility: hidden; }
+  body.crono-imprimindo .crono-cal-rolagem { overflow: visible; }
+  body.crono-imprimindo .crono-cal { min-width: 0; }
+
+  body.crono-imprimindo .crono-dia {
+    min-height: 26mm;
+    break-inside: avoid;
+  }
+
+  body.crono-imprimindo .crono-evento {
+    white-space: normal;
+    font-size: 9px;
+  }
+}
