@@ -88,19 +88,26 @@
             <h2 class="subtitulo painel-h2">Mapa de calor — <span id="painel-ano-titulo"></span></h2>
             <div class="painel-controles">
               <select id="painel-ano" class="painel-ano" aria-label="Ano" hidden></select>
-              <div class="painel-modos" id="painel-modos" role="group" aria-label="Visão do mapa">
-                <button type="button" data-modo="dev" aria-pressed="true" class="ativo">Desvios</button>
-                <button type="button" data-modo="tre" aria-pressed="false">Treinamentos</button>
-              </div>
             </div>
           </div>
-          <div class="painel-aviso" id="painel-aviso-modo" hidden>Os treinamentos passam a contar na Fase 4 (Cronograma).</div>
           <div class="mapa-rolagem" id="painel-mapa"></div>
           <div class="mapa-legenda">
             <div class="mapa-legenda-item">
-              <span>Menos</span>
+              <span>Desvios: menos</span>
               <div class="mapa-legenda-cores" id="painel-legenda-cores"></div>
-              <span>Mais</span>
+              <span>mais</span>
+            </div>
+            <div class="mapa-legenda-item">
+              <div class="legenda-quadro legenda-treino"></div>
+              <span>Treinamento</span>
+            </div>
+            <div class="mapa-legenda-item">
+              <div class="legenda-quadro legenda-dividido"></div>
+              <span>Desvio e treinamento</span>
+            </div>
+            <div class="mapa-legenda-item">
+              <div class="legenda-quadro legenda-agendado"></div>
+              <span>Treinamento agendado</span>
             </div>
             <div class="mapa-legenda-item">
               <div class="legenda-quadro legenda-tracejado"></div>
@@ -111,6 +118,7 @@
               <span>Sem registro</span>
             </div>
           </div>
+          <div class="mapa-legenda-nota">Os treinamentos aparecem no mapa a partir da Fase 4 (Cronograma).</div>
           <div class="mapa-resumo" id="painel-dia" aria-live="polite"></div>
         </section>
 
@@ -152,6 +160,8 @@
           <div class="mapa-legenda">
             <div class="mapa-legenda-item"><div class="legenda-quadro" style="background:#D40511"></div><span>Dia com desvio</span></div>
             <div class="mapa-legenda-item"><div class="legenda-quadro" style="background:#A0040D"></div><span>Mais de um desvio</span></div>
+            <div class="mapa-legenda-item"><div class="legenda-quadro legenda-treino"></div><span>Treinamento</span></div>
+            <div class="mapa-legenda-item"><div class="legenda-quadro legenda-dividido"></div><span>Desvio e treinamento</span></div>
             <div class="mapa-legenda-item"><div class="legenda-quadro legenda-sem"></div><span>Sem registro</span></div>
             <div class="mapa-legenda-item"><div class="legenda-quadro legenda-tracejado"></div><span>Dias futuros / antes do início</span></div>
           </div>
