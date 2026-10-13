@@ -6,6 +6,9 @@
    treinamentos e treinamento_participantes).
    O filtro de processo vale só para os desvios: os treinamentos
    aparecem sempre (eles não têm processo).
+   Treinamento só conta (amarelo cheio, indicador, ficha) quando
+   está marcado como Realizado no Cronograma; ainda Agendado
+   aparece com contorno amarelo.
    ========================================================== */
 
 (function () {
@@ -54,13 +57,25 @@
     return 'ativo';
   }
 
-  // Treinamento já aconteceu (ou é hoje)?
-  const treinoRealizado = (t) => semHora(new Date(t.data)) <= hojeSemHora();
+  // Treinamento marcado como Realizado no Cronograma?
+  const treinoRealizado = (t) => t.realizado;
 
   // Texto de um treinamento no resumo e nas dicas
   function textoTreino(t) {
     const n = t.pessoas.length;
-    return t.hora + ' · Treinamento — ' + t.tema + ' (' + (n ? plural(n, 'participante', 'participantes') : 'sem participantes') + ')';
+    return t.hora + ' · Treinamento — ' + t.tema + ' (' + (n ? plural(n, 'participante', 'participantes') : 'sem participantes') +
+      (t.realizado ? '' : ' · ainda não marcado como realizado') + ')';
+  }
+
+  // Cor de um dia ATIVO (hoje ou passado):
+  // amarelo cheio só para treino Realizado; treino ainda Agendado = contorno amarelo (pendente)
+  function estiloDiaAtivo(corDesvio, treinosDoDia) {
+    const feitos = treinosDoDia.filter(treinoRealizado).length;
+    const pendentes = treinosDoDia.length - feitos;
+    if (!corDesvio && !feitos && pendentes) return estiloAgendado();
+    const estilo = corDoDia(corDesvio, feitos);
+    if (pendentes && !feitos) estilo.borda = '2px solid ' + COR_TREINO;
+    return estilo;
   }
 
   /* ---------------- Mensagens ---------------- */
@@ -75,8 +90,8 @@
   function traduzirErro(e) {
     const m = String((e && e.message) || '').toLowerCase();
     const code = e && e.code;
-    if (code === '42P01' || code === 'PGRST205' || code === 'PGRST200' || m.includes('could not find') || m.includes('does not exist')) {
-      return 'Faltam tabelas no banco. Confira se os arquivos sql/001, sql/002 e sql/003 foram rodados no Supabase.';
+    if (code === '42703' || code === '42P01' || code === 'PGRST205' || code === 'PGRST200' || m.includes('could not find') || m.includes('does not exist')) {
+      return 'Faltam tabelas ou colunas no banco. Confira se os arquivos sql/001, sql/002, sql/003 e sql/004 foram rodados no Supabase.';
     }
     if (code === '42501' || m.includes('permission denied') || m.includes('row-level security')) {
       return 'O banco recusou por falta de permissão.';
@@ -117,7 +132,7 @@
           .order('id', { ascending: true })),
         carregarListas(),
         lerTudo(() => sb.from('treinamentos')
-          .select('id, data, hora, tema, treinamento_participantes(colaborador_id)')
+          .select('id, data, hora, tema, status, treinamento_participantes(colaborador_id)')
           .gte('data', chaveDia(INICIO))
           .order('data', { ascending: true })
           .order('hora', { ascending: true })
@@ -134,6 +149,7 @@
           data: t.data + 'T' + hora + ':00',
           hora,
           tema: t.tema,
+          realizado: t.status === 'Realizado',
           pessoas: (t.treinamento_participantes || []).map((p) => p.colaborador_id)
         };
       });
@@ -266,7 +282,7 @@
     let topo = null;
     Object.keys(porProc).forEach((p) => { if (!topo || porProc[p] > porProc[topo]) topo = p; });
 
-    // Treinamentos: conta cada treinamento realizado (até hoje), não cada participante
+    // Treinamentos: conta cada treinamento marcado como Realizado, não cada participante
     const doAno = treinosDoAno();
     const realizados = doAno.filter(treinoRealizado).length;
     const agendados = doAno.length - realizados;
@@ -424,7 +440,7 @@
       if (sit !== 'ativo') return Object.assign(estiloTracejado(), { dica: dicaForaDaContagem(dia, sit) });
       const itens = porDia[k] || [];
       const lv = nivel(itens.length);
-      const estilo = corDoDia(lv < 0 ? null : PALETA_DEV[lv], tre.length);
+      const estilo = estiloDiaAtivo(lv < 0 ? null : PALETA_DEV[lv], tre);
       let dica = dataLonga(dia) + '\n' + plural(itens.length, 'desvio', 'desvios') + ' · ' + plural(tre.length, 'treinamento', 'treinamentos');
       const linhas = itens.map((r) => '• ' + ((nomes[r.colaborador_id] || {}).nome || 'Colaborador') + ' — ' + r.processo)
         .concat(tre.map((t) => '• ' + textoTreino(t)));
@@ -558,8 +574,8 @@
       if (!itens.length && !tre.length) return Object.assign(corDoDia(null, 0), { dica: dataCurta(dia) + ' · sem registro' });
       const corDesvio = itens.length ? (itens.length > 1 ? '#A0040D' : '#D40511') : null;
       const linhas = itens.map((r) => '• Desvio — ' + r.processo + ': ' + r.motivo)
-        .concat(tre.map((t) => '• Treinamento — ' + t.hora + ' ' + t.tema));
-      return Object.assign(corDoDia(corDesvio, tre.length), { dica: dataLonga(dia) + '\n' + linhas.join('\n') });
+        .concat(tre.map((t) => '• Treinamento — ' + t.hora + ' ' + t.tema + (t.realizado ? '' : ' (ainda não marcado como realizado)')));
+      return Object.assign(estiloDiaAtivo(corDesvio, tre), { dica: dataLonga(dia) + '\n' + linhas.join('\n') });
     }, est.diaPessoa, (k) => { est.diaPessoa = k; desenharResumoPessoa(porDia, treinosPessoaPorDia); });
 
     desenharResumoPessoa(porDia, treinosPessoaPorDia);
@@ -591,7 +607,7 @@
       return;
     }
     const textos = itens.map((r) => horaDe(r.data) + ' · ' + r.processo + ': ' + r.motivo + ' · Ação: ' + r.acao)
-      .concat(tre.map((t) => t.hora + ' · Treinamento — ' + t.tema));
+      .concat(tre.map((t) => t.hora + ' · Treinamento — ' + t.tema + (t.realizado ? '' : ' (ainda não marcado como realizado)')));
     listaResumo(caixa, textos);
   }
 
