@@ -2,13 +2,32 @@
 
 App web da operação DHL Supply Chain Mirassol SSP53 para registrar desvios de processo, treinamentos e planos de ação.
 
-## Situação atual: Fase 2
+## Situação atual: Fase 3
 
 - **Tela de login** por e-mail e senha (Supabase). Senha errada é recusada com a mensagem "E-mail ou senha incorretos".
 - O login fica lembrado no navegador até você clicar em **Sair** (ou a sessão expirar).
 - Depois de entrar: cabeçalho DHL (logo, "Gestão de Processo e Qualidade", "Mirassol SSP53"), menu com as 8 abas, seu e-mail e botão **Sair**.
 - **Menu:** Painel, Gemba, Torre de Aduana, Poka-Yoke, Eficácia, Cronograma, Plano de ação e Colaboradores. A aba aberta fica em vermelho e aparece no endereço (ex.: `#colaboradores`); ao recarregar, você continua nela. Sem login, o menu não aparece.
-- **Abas ainda "Em construção":** Painel (título "Visão Geral"), Torre de Aduana, Poka-Yoke, Eficácia ("Eficácia do Treinamento"), Cronograma e Plano de ação.
+- **Abas ainda "Em construção":** Torre de Aduana, Poka-Yoke, Eficácia ("Eficácia do Treinamento"), Cronograma e Plano de ação.
+
+### Aba Painel — "Visão Geral" (funcionando)
+
+O Painel só **lê** o banco (registros do Gemba, colaboradores e listas). Ele não grava nada. Ao abrir a aba, os dados são lidos de novo, então um registro feito agora no Gemba já aparece.
+
+- **Início da contagem: 13/10/2026.** Registros anteriores (testes de 12/10) continuam no banco, mas não entram no Painel. A data fica numa linha só, no topo de `js/painel.js` (constante `INICIO`).
+- **Filtro de setor:** "Todos os setores" ou um **processo** do Gemba (os da LISTA_PROCESSOS e os que aparecem nos registros). O campo setor dos colaboradores está vazio por enquanto. O filtro vale para o Painel inteiro.
+- **4 indicadores do ano:** Registros, Desvios, Treinamentos (0 com o aviso "passa a contar na Fase 4") e **Processo com mais desvios** (nome e quantidade).
+  - Não há indicador nem modo de Conformidade: o Gemba só registra desvio (decisão da Fase 3).
+- **Mapa de calor do ano: um mapa só**, com desvios e treinamentos juntos (decisão de 13/10/2026; não há botões para trocar de modo). Uma coluna por semana, de domingo a sábado. Cores de cada dia:
+  - **vermelho** = dia com desvio; quanto mais escuro, mais desvios;
+  - **amarelo** = dia só com treinamento;
+  - **dividido na diagonal** (metade vermelha, metade amarela) = desvio e treinamento no mesmo dia;
+  - **contorno amarelo** = treinamento agendado num dia futuro;
+  - **cinza** = sem registro; **tracejado** = dia futuro ou antes do início da contagem.
+  - Os treinamentos só aparecem quando o Cronograma existir (Fase 4); a legenda avisa isso.
+- **Resumo do dia:** passar o mouse num dia (ou tocar, no celular) mostra abaixo do mapa a data, a contagem de desvios e treinamentos e a lista: hora, colaborador, processo e motivo.
+- No computador, o mapa abre rolado até a semana de hoje. Quando houver mais de um ano, aparece um seletor de ano.
+- **Mapa por colaborador:** escolher a pessoa (Ativos primeiro; desligados aparecem com "(desligado)"). Ficha com iniciais, nome, matrícula, setor ("Sem setor" por enquanto), total de desvios, treinamentos (0 até a Fase 4) e o **desvio que mais se repete** (processo — motivo). Abaixo, o mapa de calor só dela, com as mesmas regras de cor (vermelho escuro = mais de um desvio no dia) e o resumo do dia com hora, processo, motivo e ação.
 
 ### Aba Gemba (funcionando)
 
@@ -50,6 +69,7 @@ Registro rápido de desvio em 4 passos, feito para usar também no celular.
 | listas | `sql/002_gemba.sql` (Fase 2) | id, lista (ex.: LISTA_ACOES), item, ordem, ativo, criado_em. Item único por lista. Pode ler, acrescentar e desativar; **não pode apagar** (item removido fica com ativo = falso) |
 | registros_gemba | `sql/002_gemba.sql` (Fase 2) | id, data (data e hora), colaborador_id, processo, motivo, acao, observacao, criado_em. Pode ler, cadastrar e excluir (só lançamento errado) |
 
+- A Fase 3 (Painel) **não criou tabelas**: só lê as que já existem.
 - RLS ligado: só o usuário logado lê e grava. Visitante sem login não acessa nada.
 - Os scripts `sql/` são rodados à mão no Supabase (SQL Editor → New query → colar → Run), um por vez, em ordem.
 
@@ -66,12 +86,13 @@ Registro rápido de desvio em 4 passos, feito para usar também no celular.
 ```text
 index.html            página única: cabeçalho, menu, login e uma <section> por aba
 logo.png              logo DHL
-css/estilo.css        cores, fontes e componentes (menu, planilha, status, importação, Gemba)
+css/estilo.css        cores, fontes e componentes (menu, planilha, status, importação, Gemba, Painel)
 js/supabase.js        conexão com o Supabase, entrar, sair (URL e chave pública no topo)
                       a URL deve terminar em .supabase.co (sem /rest/v1/)
 js/listas.js          leitura e acréscimo de itens nas LISTA_... (arquivo comum)
 js/menu.js            troca de abas
 js/planilha.js        leitura de .xlsx e .csv no navegador, sem biblioteca
+js/painel.js          aba Painel (indicadores, mapa de calor único e mapa por colaborador)
 js/gemba.js           aba Gemba
 js/colaboradores.js   aba Colaboradores
 sql/001_colaboradores.sql   cria a tabela colaboradores e as regras de acesso
@@ -84,13 +105,13 @@ CHANGELOG.md          histórico de mudanças
 
 - Só a **chave pública** do Supabase fica no código (`js/supabase.js`). A chave secreta nunca entra no código.
 - Só existe um usuário, criado manualmente no Supabase. Ninguém consegue se cadastrar sozinho.
-- Nada do app aparece sem login. Ao clicar em Sair, a lista some da tela.
+- Nada do app aparece sem login. Ao clicar em Sair, as listas e o Painel somem da tela.
 - Dados de colaboradores: só matrícula, nome, setor e status.
 
 ## Como mudar algo
 
-1. Subir os arquivos no ramo **teste** (GitHub → Add file → Upload files, ou lápis para editar). Se houver arquivo `sql/` novo, rodar antes no Supabase.
-   - No upload, arraste as **pastas** (`css`, `js`, `sql`), não os arquivos soltos; senão eles caem na raiz e o app não os encontra.
+1. Subir os arquivos no ramo **teste**. O jeito mais seguro é editar pelo **lápis** (apagar tudo e colar o arquivo novo) ou criar com **Add file → Create new file**, digitando o caminho (ex.: `js/painel.js`). Se houver arquivo `sql/` novo, rodar antes no Supabase.
+   - Se usar Upload files, arraste as **pastas** (`css`, `js`, `sql`), não os arquivos soltos; senão eles caem na raiz e o app não os encontra.
 2. Conferir no **link de teste** com o roteiro de teste.
 3. Depois de aprovado: GitHub → **Pull requests** → **New pull request** (base: `main`, compare: `teste`) → **Create pull request** → **Merge pull request**. Nunca apagar o ramo teste.
 4. A Vercel publica o link oficial sozinha em cerca de 1 minuto.
