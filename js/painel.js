@@ -2,8 +2,13 @@
    js/painel.js
    Aba Painel (Visão Geral): filtro por processo do Gemba,
    4 indicadores, mapa de calor do ano e mapa por colaborador.
-   Só LÊ o banco (registros_gemba, colaboradores e listas).
-   Treinamentos passam a contar na Fase 4 (Cronograma).
+   Só LÊ o banco (registros_gemba, colaboradores, listas,
+   treinamentos e treinamento_participantes).
+   O filtro de processo vale só para os desvios: os treinamentos
+   aparecem sempre (eles não têm processo).
+   Treinamento só conta (amarelo cheio, indicador, ficha) quando
+   está marcado como Realizado no Cronograma; ainda Agendado
+   aparece com contorno amarelo.
    ========================================================== */
 
 (function () {
@@ -25,7 +30,7 @@
   let registros = [];        // desvios do Gemba desde INICIO
   let colaboradores = [];    // todos (Ativos e Desligados)
   let processosLista = [];   // LISTA_PROCESSOS
-  const treinos = [];        // treinamentos do Cronograma: passam a ser lidos na Fase 4
+  let treinos = [];          // treinamentos do Cronograma desde INICIO: { id, data, hora, tema, pessoas: [ids] }
   let carregadoPara = null;
   let carregando = false;
 
@@ -42,6 +47,7 @@
   const dataCurta = (d) => pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear();
   const horaDe = (iso) => { const d = new Date(iso); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
   const plural = (n, um, varios) => n + ' ' + (n === 1 ? um : varios);
+  const horaCurta = (h) => String(h || '').slice(0, 5) || '08:00';
 
   function diaDe(iso) { return chaveDia(new Date(iso)); }
 
@@ -49,6 +55,27 @@
     if (d < INICIO) return 'antes';
     if (d > hojeSemHora()) return 'futuro';
     return 'ativo';
+  }
+
+  // Treinamento marcado como Realizado no Cronograma?
+  const treinoRealizado = (t) => t.realizado;
+
+  // Texto de um treinamento no resumo e nas dicas
+  function textoTreino(t) {
+    const n = t.pessoas.length;
+    return t.hora + ' · Treinamento — ' + t.tema + ' (' + (n ? plural(n, 'participante', 'participantes') : 'sem participantes') +
+      (t.realizado ? '' : ' · ainda não marcado como realizado') + ')';
+  }
+
+  // Cor de um dia ATIVO (hoje ou passado):
+  // amarelo cheio só para treino Realizado; treino ainda Agendado = contorno amarelo (pendente)
+  function estiloDiaAtivo(corDesvio, treinosDoDia) {
+    const feitos = treinosDoDia.filter(treinoRealizado).length;
+    const pendentes = treinosDoDia.length - feitos;
+    if (!corDesvio && !feitos && pendentes) return estiloAgendado();
+    const estilo = corDoDia(corDesvio, feitos);
+    if (pendentes && !feitos) estilo.borda = '2px solid ' + COR_TREINO;
+    return estilo;
   }
 
   /* ---------------- Mensagens ---------------- */
@@ -63,8 +90,8 @@
   function traduzirErro(e) {
     const m = String((e && e.message) || '').toLowerCase();
     const code = e && e.code;
-    if (code === '42P01' || code === 'PGRST205' || m.includes('could not find') || m.includes('does not exist')) {
-      return 'Faltam tabelas no banco. Confira se os arquivos sql/001 e sql/002 foram rodados no Supabase.';
+    if (code === '42703' || code === '42P01' || code === 'PGRST205' || code === 'PGRST200' || m.includes('could not find') || m.includes('does not exist')) {
+      return 'Faltam tabelas ou colunas no banco. Confira se os arquivos sql/001, sql/002, sql/003 e sql/004 foram rodados no Supabase.';
     }
     if (code === '42501' || m.includes('permission denied') || m.includes('row-level security')) {
       return 'O banco recusou por falta de permissão.';
@@ -93,7 +120,7 @@
     carregando = true;
     mostrarMsg('');
     try {
-      const [regs, cols, listas] = await Promise.all([
+      const [regs, cols, listas, tres] = await Promise.all([
         lerTudo(() => sb.from('registros_gemba')
           .select('id, data, colaborador_id, processo, motivo, acao')
           .gte('data', INICIO.toISOString())
@@ -103,16 +130,34 @@
           .select('id, matricula, nome, setor, status')
           .order('nome', { ascending: true })
           .order('id', { ascending: true })),
-        carregarListas()
+        carregarListas(),
+        lerTudo(() => sb.from('treinamentos')
+          .select('id, data, hora, tema, status, treinamento_participantes(colaborador_id)')
+          .gte('data', chaveDia(INICIO))
+          .order('data', { ascending: true })
+          .order('hora', { ascending: true })
+          .order('id', { ascending: true }))
       ]);
       registros = regs;
       colaboradores = cols;
       processosLista = listas[LISTA_PROCESSOS] || [];
+      // A data do treino vira "AAAA-MM-DDTHH:MM:00" (hora local), para cair no dia certo do mapa
+      treinos = tres.map((t) => {
+        const hora = horaCurta(t.hora);
+        return {
+          id: t.id,
+          data: t.data + 'T' + hora + ':00',
+          hora,
+          tema: t.tema,
+          realizado: t.status === 'Realizado',
+          pessoas: (t.treinamento_participantes || []).map((p) => p.colaborador_id)
+        };
+      });
       carregadoPara = uid;
       desenharTudo();
     } catch (e) {
       carregadoPara = null;
-      registros = []; colaboradores = []; processosLista = [];
+      registros = []; colaboradores = []; processosLista = []; treinos = [];
       desenharTudo();
       mostrarMsg('Não foi possível carregar o Painel. ' + traduzirErro(e));
     } finally {
@@ -148,6 +193,12 @@
       if (est.setor && r.processo !== est.setor) return false;
       return new Date(r.data).getFullYear() === ano;
     });
+  }
+
+  // Treinamentos do ano escolhido (o filtro de processo não vale para eles)
+  function treinosDoAno() {
+    const ano = anoAtual();
+    return treinos.filter((t) => new Date(t.data).getFullYear() === ano);
   }
 
   function agruparPorDia(lista) {
@@ -231,12 +282,18 @@
     let topo = null;
     Object.keys(porProc).forEach((p) => { if (!topo || porProc[p] > porProc[topo]) topo = p; });
 
+    // Treinamentos: conta cada treinamento marcado como Realizado, não cada participante
+    const doAno = treinosDoAno();
+    const realizados = doAno.filter(treinoRealizado).length;
+    const agendados = doAno.length - realizados;
+    const subTreino = [desde, agendados ? plural(agendados, 'agendado', 'agendados') : ''].filter(Boolean).join(' · ');
+
     const caixa = $('painel-kpis');
     caixa.textContent = '';
-    const registrosAno = lista.length; // treinamentos entram na Fase 4
+    const registrosAno = lista.length + realizados;
     caixa.appendChild(kpi('Registros em ' + ano, String(registrosAno), desde, '#D40511'));
     caixa.appendChild(kpi('Desvios em ' + ano, String(lista.length), desde, '#D40511'));
-    caixa.appendChild(kpi('Treinamentos em ' + ano, '0', 'passa a contar na Fase 4', '#1A1A1A'));
+    caixa.appendChild(kpi('Treinamentos em ' + ano, String(realizados), subTreino, '#1A1A1A'));
     caixa.appendChild(topo
       ? kpi('Processo com mais desvios', topo, plural(porProc[topo], 'desvio', 'desvios'), '#1A1A1A', true)
       : kpi('Processo com mais desvios', '—', 'nenhum desvio ainda', '#1A1A1A', true));
@@ -332,7 +389,7 @@
     return { bg: '#FFFFFF', borda: '1px dashed #CCCCCC' };
   }
 
-  // Treinamento agendado num dia futuro: contorno amarelo (a partir da Fase 4)
+  // Treinamento agendado num dia futuro: contorno amarelo
   function estiloAgendado() {
     return { bg: '#FFFFFF', borda: '2px solid ' + COR_TREINO };
   }
@@ -356,7 +413,7 @@
   function desenharMapaGeral(lista) {
     const ano = anoAtual();
     const porDia = agruparPorDia(lista);
-    const treinosPorDia = agruparPorDia(treinos);
+    const treinosPorDia = agruparPorDia(treinosDoAno());
     const nomes = colabPorId();
 
     const leg = $('painel-legenda-cores');
@@ -377,13 +434,17 @@
     montarMapa($('painel-mapa'), ano, (dia, k) => {
       const sit = situacaoDia(dia);
       const tre = treinosPorDia[k] || [];
-      if (sit === 'futuro' && tre.length) return Object.assign(estiloAgendado(), { dica: dataCurta(dia) + ' · ' + plural(tre.length, 'treinamento agendado', 'treinamentos agendados') });
+      if (sit === 'futuro' && tre.length) {
+        return Object.assign(estiloAgendado(), { dica: dataCurta(dia) + ' · ' + plural(tre.length, 'treinamento agendado', 'treinamentos agendados') + '\n\n' + tre.map((t) => '• ' + textoTreino(t)).join('\n') });
+      }
       if (sit !== 'ativo') return Object.assign(estiloTracejado(), { dica: dicaForaDaContagem(dia, sit) });
       const itens = porDia[k] || [];
       const lv = nivel(itens.length);
-      const estilo = corDoDia(lv < 0 ? null : PALETA_DEV[lv], tre.length);
+      const estilo = estiloDiaAtivo(lv < 0 ? null : PALETA_DEV[lv], tre);
       let dica = dataLonga(dia) + '\n' + plural(itens.length, 'desvio', 'desvios') + ' · ' + plural(tre.length, 'treinamento', 'treinamentos');
-      if (itens.length) dica += '\n\n' + itens.map((r) => '• ' + ((nomes[r.colaborador_id] || {}).nome || 'Colaborador') + ' — ' + r.processo).join('\n');
+      const linhas = itens.map((r) => '• ' + ((nomes[r.colaborador_id] || {}).nome || 'Colaborador') + ' — ' + r.processo)
+        .concat(tre.map((t) => '• ' + textoTreino(t)));
+      if (linhas.length) dica += '\n\n' + linhas.join('\n');
       return Object.assign(estilo, { dica });
     }, est.dia, (k) => { est.dia = k; desenharResumoGeral(porDia, treinosPorDia, nomes); });
 
@@ -402,6 +463,17 @@
     caixa.appendChild(l);
   }
 
+  function listaResumo(caixa, textos) {
+    const ul = document.createElement('ul');
+    ul.className = 'mapa-resumo-lista';
+    textos.forEach((t) => {
+      const li = document.createElement('li');
+      li.textContent = t;
+      ul.appendChild(li);
+    });
+    caixa.appendChild(ul);
+  }
+
   function desenharResumoGeral(porDia, treinosPorDia, nomes) {
     const caixa = $('painel-dia');
     caixa.textContent = '';
@@ -411,27 +483,29 @@
     }
     const dia = dataDaChave(est.dia);
     const sit = situacaoDia(dia);
+    const tre = treinosPorDia[est.dia] || [];
     linhaResumo(caixa, dataLonga(dia), 'mapa-resumo-titulo');
-    if (sit !== 'ativo') {
-      linhaResumo(caixa, sit === 'antes' ? 'Antes do início da contagem (' + dataCurta(INICIO) + ').' : 'Dia futuro.', 'mapa-resumo-vazio');
+    if (sit === 'antes') {
+      linhaResumo(caixa, 'Antes do início da contagem (' + dataCurta(INICIO) + ').', 'mapa-resumo-vazio');
+      return;
+    }
+    if (sit === 'futuro') {
+      if (!tre.length) { linhaResumo(caixa, 'Dia futuro.', 'mapa-resumo-vazio'); return; }
+      linhaResumo(caixa, plural(tre.length, 'treinamento agendado', 'treinamentos agendados'), 'mapa-resumo-contagem');
+      listaResumo(caixa, tre.map(textoTreino));
       return;
     }
     const itens = porDia[est.dia] || [];
-    const tre = treinosPorDia[est.dia] || [];
     linhaResumo(caixa, plural(itens.length, 'desvio', 'desvios') + ' · ' + plural(tre.length, 'treinamento', 'treinamentos') + (est.setor ? ' · ' + est.setor : ''), 'mapa-resumo-contagem');
-    if (!itens.length) {
-      linhaResumo(caixa, 'Nenhum desvio registrado neste dia.', 'mapa-resumo-vazio');
+    if (!itens.length && !tre.length) {
+      linhaResumo(caixa, 'Nenhum desvio nem treinamento registrado neste dia.', 'mapa-resumo-vazio');
       return;
     }
-    const ul = document.createElement('ul');
-    ul.className = 'mapa-resumo-lista';
-    itens.forEach((r) => {
-      const li = document.createElement('li');
+    const textos = itens.map((r) => {
       const c = nomes[r.colaborador_id] || {};
-      li.textContent = horaDe(r.data) + ' · ' + (c.nome || 'Colaborador') + ' — ' + r.processo + ': ' + r.motivo;
-      ul.appendChild(li);
-    });
-    caixa.appendChild(ul);
+      return horaDe(r.data) + ' · ' + (c.nome || 'Colaborador') + ' — ' + r.processo + ': ' + r.motivo;
+    }).concat(tre.map(textoTreino));
+    listaResumo(caixa, textos);
   }
 
   /* ---------------- Mapa por colaborador ---------------- */
@@ -470,7 +544,9 @@
     const p = ordenados.find((c) => c.id === est.pessoa) || null;
     const meus = p ? lista.filter((r) => r.colaborador_id === p.id) : [];
     const porDia = agruparPorDia(meus);
-    const treinosPessoaPorDia = {}; // Fase 4: treinamentos de que a pessoa participou
+    // Treinamentos de que a pessoa participou
+    const meusTreinos = p ? treinosDoAno().filter((t) => t.pessoas.includes(p.id)) : [];
+    const treinosPessoaPorDia = agruparPorDia(meusTreinos);
 
     // Ficha
     $('painel-ficha-ini').textContent = p ? iniciais(p.nome) : '—';
@@ -479,7 +555,7 @@
       ? 'Matrícula ' + p.matricula + ' · ' + (p.setor || 'Sem setor') + (p.status === 'Ativo' ? '' : ' · Desligado')
       : '';
     $('painel-ficha-dev').textContent = String(meus.length);
-    $('painel-ficha-tre').textContent = '0';
+    $('painel-ficha-tre').textContent = String(meusTreinos.filter(treinoRealizado).length);
     const cont = {};
     meus.forEach((r) => { const k = r.processo + ' — ' + r.motivo; cont[k] = (cont[k] || 0) + 1; });
     let top = null;
@@ -492,20 +568,20 @@
     montarMapa($('painel-pessoa-mapa'), ano, (dia, k) => {
       const sit = situacaoDia(dia);
       const tre = treinosPessoaPorDia[k] || [];
-      if (sit === 'futuro' && tre.length) return Object.assign(estiloAgendado(), { dica: dataCurta(dia) + ' · treinamento agendado' });
+      if (sit === 'futuro' && tre.length) return Object.assign(estiloAgendado(), { dica: dataCurta(dia) + ' · treinamento agendado\n' + tre.map((t) => '• ' + t.hora + ' — ' + t.tema).join('\n') });
       if (sit !== 'ativo') return Object.assign(estiloTracejado(), { dica: dicaForaDaContagem(dia, sit) });
       const itens = porDia[k] || [];
       if (!itens.length && !tre.length) return Object.assign(corDoDia(null, 0), { dica: dataCurta(dia) + ' · sem registro' });
       const corDesvio = itens.length ? (itens.length > 1 ? '#A0040D' : '#D40511') : null;
-      const linhas = itens.map((r) => '• Desvio — ' + r.processo + ': ' + r.motivo);
-      if (tre.length) linhas.push('• ' + plural(tre.length, 'treinamento', 'treinamentos'));
-      return Object.assign(corDoDia(corDesvio, tre.length), { dica: dataLonga(dia) + '\n' + linhas.join('\n') });
-    }, est.diaPessoa, (k) => { est.diaPessoa = k; desenharResumoPessoa(porDia); });
+      const linhas = itens.map((r) => '• Desvio — ' + r.processo + ': ' + r.motivo)
+        .concat(tre.map((t) => '• Treinamento — ' + t.hora + ' ' + t.tema + (t.realizado ? '' : ' (ainda não marcado como realizado)')));
+      return Object.assign(estiloDiaAtivo(corDesvio, tre), { dica: dataLonga(dia) + '\n' + linhas.join('\n') });
+    }, est.diaPessoa, (k) => { est.diaPessoa = k; desenharResumoPessoa(porDia, treinosPessoaPorDia); });
 
-    desenharResumoPessoa(porDia);
+    desenharResumoPessoa(porDia, treinosPessoaPorDia);
   }
 
-  function desenharResumoPessoa(porDia) {
+  function desenharResumoPessoa(porDia, treinosPessoaPorDia) {
     const caixa = $('painel-pessoa-dia');
     caixa.textContent = '';
     if (!est.diaPessoa) {
@@ -514,30 +590,31 @@
     }
     const dia = dataDaChave(est.diaPessoa);
     const sit = situacaoDia(dia);
+    const tre = treinosPessoaPorDia[est.diaPessoa] || [];
     linhaResumo(caixa, dataLonga(dia), 'mapa-resumo-titulo');
-    if (sit !== 'ativo') {
-      linhaResumo(caixa, sit === 'antes' ? 'Antes do início da contagem (' + dataCurta(INICIO) + ').' : 'Dia futuro.', 'mapa-resumo-vazio');
+    if (sit === 'antes') {
+      linhaResumo(caixa, 'Antes do início da contagem (' + dataCurta(INICIO) + ').', 'mapa-resumo-vazio');
+      return;
+    }
+    if (sit === 'futuro') {
+      if (!tre.length) { linhaResumo(caixa, 'Dia futuro.', 'mapa-resumo-vazio'); return; }
+      listaResumo(caixa, tre.map((t) => t.hora + ' · Treinamento agendado — ' + t.tema));
       return;
     }
     const itens = porDia[est.diaPessoa] || [];
-    if (!itens.length) {
+    if (!itens.length && !tre.length) {
       linhaResumo(caixa, 'Sem registro neste dia.', 'mapa-resumo-vazio');
       return;
     }
-    const ul = document.createElement('ul');
-    ul.className = 'mapa-resumo-lista';
-    itens.forEach((r) => {
-      const li = document.createElement('li');
-      li.textContent = horaDe(r.data) + ' · ' + r.processo + ': ' + r.motivo + ' · Ação: ' + r.acao;
-      ul.appendChild(li);
-    });
-    caixa.appendChild(ul);
+    const textos = itens.map((r) => horaDe(r.data) + ' · ' + r.processo + ': ' + r.motivo + ' · Ação: ' + r.acao)
+      .concat(tre.map((t) => t.hora + ' · Treinamento — ' + t.tema + (t.realizado ? '' : ' (ainda não marcado como realizado)')));
+    listaResumo(caixa, textos);
   }
 
   /* ---------------- Login / saída ---------------- */
 
   function limparTela() {
-    registros = []; colaboradores = []; processosLista = [];
+    registros = []; colaboradores = []; processosLista = []; treinos = [];
     carregadoPara = null;
     est.setor = ''; est.ano = null; est.dia = null; est.pessoa = null; est.diaPessoa = null;
     Object.keys(rolado).forEach((k) => delete rolado[k]);
@@ -563,7 +640,8 @@
     desenharPessoa(registrosFiltrados());
   });
 
-  // Ao abrir a aba, busca os dados mais novos (ex.: registro feito agora no Gemba)
+  // Ao abrir a aba, busca os dados mais novos (ex.: registro feito agora no Gemba
+  // ou treinamento criado agora no Cronograma)
   document.addEventListener('gq:aba', (ev) => {
     if (ev.detail && ev.detail.aba === 'painel' && carregadoPara) carregar(carregadoPara);
   });
