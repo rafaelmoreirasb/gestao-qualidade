@@ -431,10 +431,111 @@
         </div>
       </section>
 
-      <!-- ===== Plano de ação ===== -->
+      <!-- ===== Plano de ação (js/planoacao.js) ===== -->
       <section class="aba" id="aba-planoacao" data-titulo="Plano de ação" hidden>
-        <h1 class="titulo">Plano de ação</h1>
-        <div class="cartao em-construcao"><p>Em construção</p></div>
+        <div class="plano-topo">
+          <h1 class="titulo">Plano de ação</h1>
+          <button type="button" class="botao plano-botao-vermelho" id="plano-alternar">+ Nova ação</button>
+        </div>
+
+        <div id="plano-msg-geral" class="mensagem mensagem-erro" role="alert" hidden></div>
+
+        <!-- Nova ação ou alterar ação (5W2H) -->
+        <section class="cartao plano-form" id="plano-form" hidden>
+          <div>
+            <h2 class="subtitulo" id="plano-form-titulo">Nova ação · 5W2H</h2>
+            <p class="plano-dica">Responda às 7 perguntas. O quê, Quem e Quando são obrigatórios.</p>
+          </div>
+          <form id="plano-form-campos" novalidate>
+            <div class="plano-grade plano-grade-2">
+              <label class="plano-campo">
+                <span class="plano-rotulo"><span class="plano-tag">WHAT</span>O quê? Ação a ser feita</span>
+                <input type="text" id="plano-oque" placeholder="Ex.: Reforçar padrão de etiquetagem" autocomplete="off" maxlength="500">
+              </label>
+              <label class="plano-campo">
+                <span class="plano-rotulo"><span class="plano-tag">WHY</span>Por quê? Problema que motivou</span>
+                <input type="text" id="plano-porque" placeholder="Ex.: Etiqueta fora da posição é o erro nº 1" autocomplete="off" maxlength="500">
+              </label>
+            </div>
+            <div class="plano-grade plano-grade-3">
+              <label class="plano-campo">
+                <span class="plano-rotulo"><span class="plano-tag">WHERE</span>Onde?</span>
+                <select id="plano-onde"></select>
+              </label>
+              <label class="plano-campo">
+                <span class="plano-rotulo"><span class="plano-tag">WHO</span>Quem? Responsável</span>
+                <input type="text" id="plano-quem" placeholder="Nome" autocomplete="off" maxlength="120">
+              </label>
+              <label class="plano-campo">
+                <span class="plano-rotulo"><span class="plano-tag">WHEN</span>Quando? Prazo</span>
+                <input type="date" id="plano-quando">
+              </label>
+            </div>
+            <label class="plano-campo">
+              <span class="plano-rotulo"><span class="plano-tag">HOW</span>Como? Passo a passo da execução</span>
+              <textarea id="plano-como" rows="2" placeholder="Ex.: DDS de 10 min no início do turno + acompanhamento no posto por 3 dias" maxlength="2000"></textarea>
+            </label>
+            <div class="plano-grade plano-grade-2">
+              <label class="plano-campo">
+                <span class="plano-rotulo"><span class="plano-tag">HOW MUCH</span>Quanto custa?</span>
+                <input type="text" id="plano-quanto" placeholder="Ex.: Sem custo / R$ 250,00" autocomplete="off" maxlength="120">
+              </label>
+              <label class="plano-campo">
+                <span class="plano-rotulo">Origem do problema</span>
+                <select id="plano-origem">
+                  <option value="Gemba">Gemba</option>
+                  <option value="Torre de Aduana">Torre de Aduana</option>
+                  <option value="Poka-Yoke">Poka-Yoke</option>
+                </select>
+              </label>
+            </div>
+            <div class="plano-acoes">
+              <button type="submit" class="botao plano-botao-vermelho" id="plano-salvar">Adicionar ao plano</button>
+              <button type="button" class="botao botao-contorno" id="plano-cancelar" hidden>Cancelar</button>
+              <div id="plano-msg-form" class="mensagem" role="status" hidden></div>
+            </div>
+          </form>
+        </section>
+
+        <!-- Indicadores -->
+        <div class="plano-kpis" id="plano-kpis"></div>
+
+        <!-- Ações -->
+        <section class="cartao cartao-lista">
+          <div class="cartao-topo">
+            <h2 class="subtitulo">Ações</h2>
+            <div class="plano-filtros-barra">
+              <div class="plano-filtros" id="plano-filtros" role="group" aria-label="Filtro de situação"></div>
+              <select id="plano-origem-filtro" class="plano-select-filtro" aria-label="Origem">
+                <option value="">Todas as origens</option>
+                <option value="Gemba">Gemba</option>
+                <option value="Torre de Aduana">Torre de Aduana</option>
+                <option value="Poka-Yoke">Poka-Yoke</option>
+              </select>
+            </div>
+          </div>
+          <div id="plano-msg-lista" class="mensagem" role="status" hidden></div>
+          <div class="planilha-rolagem">
+            <div class="planilha planilha-plano">
+              <div class="planilha-cabecalho">
+                <div class="direita">Nº</div>
+                <div class="plano-cab"><span>WHAT</span>O quê</div>
+                <div class="plano-cab"><span>WHY</span>Por quê</div>
+                <div class="plano-cab"><span>WHERE</span>Onde</div>
+                <div class="plano-cab"><span>WHO</span>Quem</div>
+                <div class="plano-cab"><span>WHEN</span>Quando</div>
+                <div class="plano-cab"><span>HOW</span>Como</div>
+                <div class="plano-cab"><span>HOW MUCH</span>Quanto</div>
+                <div>Origem</div>
+                <div>Status</div>
+                <div></div>
+              </div>
+              <div id="plano-linhas"></div>
+              <div id="plano-vazio" class="planilha-vazio" hidden></div>
+            </div>
+          </div>
+          <div class="nota">Linha vermelha clara = prazo vencido · Linha cinza = ação concluída. O lápis abre a ação para alterar; a lixeira serve só para corrigir lançamento feito errado.</div>
+        </section>
       </section>
 
       <!-- ===== Colaboradores (js/colaboradores.js) ===== -->
@@ -508,5 +609,6 @@
   <script src="js/gemba.js"></script>
   <script src="js/painel.js"></script>
   <script src="js/cronograma.js"></script>
+  <script src="js/planoacao.js"></script>
 </body>
 </html>
