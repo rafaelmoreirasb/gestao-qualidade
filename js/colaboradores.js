@@ -4,7 +4,7 @@
    excluir (só para corrigir cadastro errado) e importar planilha.
    Dados guardados: só matrícula, nome, setor e status.
    A coluna Treinamentos conta de quantos treinamentos do
-   Cronograma a pessoa participou (só os já realizados).
+   Cronograma a pessoa participou (só os marcados como Realizado).
    ========================================================== */
 
 (function () {
@@ -23,8 +23,6 @@
   const limparNome = (s) => String(s || '').replace(/\s+/g, ' ').trim();
   const limparMatricula = (s) => String(s || '').replace(/\.0+$/, '').replace(/\s+/g, '').trim();
   const ehAtivo = (c) => (c.status || 'Ativo') === 'Ativo';
-  const pad = (n) => String(n).padStart(2, '0');
-  const hojeK = () => { const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
 
   function mostrarMsg(idCaixa, texto, ok) {
     const caixa = $(idCaixa);
@@ -85,23 +83,21 @@
     }
   }
 
-  // Conta os treinamentos realizados (até hoje) de cada colaborador.
+  // Conta os treinamentos marcados como Realizado de cada colaborador.
   // Se der erro (ex.: tabelas do Cronograma ainda não criadas), a coluna mostra 0
   // e o resto da aba continua funcionando normalmente.
   async function carregarTreinos() {
     const cont = {};
     try {
-      const hoje = hojeK();
       const PAGINA = 1000;
       for (let de = 0; ; de += PAGINA) {
         const { data, error } = await sb.from('treinamento_participantes')
-          .select('colaborador_id, treinamentos(data)')
+          .select('colaborador_id, treinamentos(status)')
           .order('id', { ascending: true })
           .range(de, de + PAGINA - 1);
         if (error) throw error;
         data.forEach((p) => {
-          const dia = p.treinamentos && p.treinamentos.data;
-          if (dia && dia <= hoje) cont[p.colaborador_id] = (cont[p.colaborador_id] || 0) + 1;
+          if (p.treinamentos && p.treinamentos.status === 'Realizado') cont[p.colaborador_id] = (cont[p.colaborador_id] || 0) + 1;
         });
         if (data.length < PAGINA) break;
       }
