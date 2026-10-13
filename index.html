@@ -68,10 +68,105 @@
     <!-- Conteúdo do app: só aparece depois do login -->
     <div id="tela-app" hidden>
 
-      <!-- ===== Painel ===== -->
+      <!-- ===== Painel (js/painel.js) ===== -->
       <section class="aba" id="aba-painel" data-titulo="Painel" hidden>
-        <h1 class="titulo">Visão Geral</h1>
-        <div class="cartao em-construcao"><p>Em construção</p></div>
+        <div class="painel-topo">
+          <h1 class="titulo">Visão Geral</h1>
+          <label class="painel-filtro">
+            <span class="sr-only">Setor</span>
+            <select id="painel-setor" aria-label="Setor"></select>
+          </label>
+        </div>
+
+        <div id="painel-msg" class="mensagem mensagem-erro" role="alert" hidden></div>
+
+        <div class="painel-kpis" id="painel-kpis"></div>
+
+        <!-- Mapa de calor do ano -->
+        <section class="cartao painel-cartao">
+          <div class="painel-cartao-topo">
+            <h2 class="subtitulo painel-h2">Mapa de calor — <span id="painel-ano-titulo"></span></h2>
+            <div class="painel-controles">
+              <select id="painel-ano" class="painel-ano" aria-label="Ano" hidden></select>
+            </div>
+          </div>
+          <div class="mapa-rolagem" id="painel-mapa"></div>
+          <div class="mapa-legenda">
+            <div class="mapa-legenda-item">
+              <span>Desvios: menos</span>
+              <div class="mapa-legenda-cores" id="painel-legenda-cores"></div>
+              <span>mais</span>
+            </div>
+            <div class="mapa-legenda-item">
+              <div class="legenda-quadro legenda-treino"></div>
+              <span>Treinamento</span>
+            </div>
+            <div class="mapa-legenda-item">
+              <div class="legenda-quadro legenda-dividido"></div>
+              <span>Desvio e treinamento</span>
+            </div>
+            <div class="mapa-legenda-item">
+              <div class="legenda-quadro legenda-agendado"></div>
+              <span>Treinamento agendado</span>
+            </div>
+            <div class="mapa-legenda-item">
+              <div class="legenda-quadro legenda-tracejado"></div>
+              <span>Dias futuros / antes do início</span>
+            </div>
+            <div class="mapa-legenda-item">
+              <div class="legenda-quadro legenda-sem"></div>
+              <span>Sem registro</span>
+            </div>
+          </div>
+          <div class="mapa-legenda-nota">Os treinamentos aparecem no mapa a partir da Fase 4 (Cronograma).</div>
+          <div class="mapa-resumo" id="painel-dia" aria-live="polite"></div>
+        </section>
+
+        <!-- Mapa por colaborador -->
+        <section class="cartao painel-cartao">
+          <div class="painel-cartao-topo painel-pessoa-topo">
+            <div>
+              <h2 class="subtitulo painel-h2">Mapa por colaborador</h2>
+              <p class="painel-explica">Escolha um colaborador para ver tudo o que foi registrado no nome dele.</p>
+            </div>
+            <label class="painel-pessoa-campo">Colaborador
+              <select id="painel-pessoa"></select>
+            </label>
+          </div>
+
+          <div class="ficha">
+            <div class="ficha-pessoa">
+              <div class="ficha-ini" id="painel-ficha-ini">—</div>
+              <div class="ficha-texto">
+                <div class="ficha-nome" id="painel-ficha-nome">—</div>
+                <div class="ficha-info" id="painel-ficha-info"></div>
+              </div>
+            </div>
+            <div class="ficha-numero">
+              <div class="ficha-valor ficha-vermelho" id="painel-ficha-dev">0</div>
+              <div class="ficha-rotulo">Desvios</div>
+            </div>
+            <div class="ficha-numero">
+              <div class="ficha-valor" id="painel-ficha-tre">0</div>
+              <div class="ficha-rotulo">Treinamentos <span class="ficha-nota">(Fase 4)</span></div>
+            </div>
+            <div class="ficha-top">
+              <div class="ficha-rotulo">Desvio que mais se repete</div>
+              <div class="ficha-top-texto" id="painel-ficha-top">Nenhum desvio</div>
+            </div>
+          </div>
+
+          <div class="mapa-rolagem" id="painel-pessoa-mapa"></div>
+          <div class="mapa-legenda">
+            <div class="mapa-legenda-item"><div class="legenda-quadro" style="background:#D40511"></div><span>Dia com desvio</span></div>
+            <div class="mapa-legenda-item"><div class="legenda-quadro" style="background:#A0040D"></div><span>Mais de um desvio</span></div>
+            <div class="mapa-legenda-item"><div class="legenda-quadro legenda-treino"></div><span>Treinamento</span></div>
+            <div class="mapa-legenda-item"><div class="legenda-quadro legenda-dividido"></div><span>Desvio e treinamento</span></div>
+            <div class="mapa-legenda-item"><div class="legenda-quadro legenda-sem"></div><span>Sem registro</span></div>
+            <div class="mapa-legenda-item"><div class="legenda-quadro legenda-tracejado"></div><span>Dias futuros / antes do início</span></div>
+          </div>
+          <div class="mapa-resumo" id="painel-pessoa-dia" aria-live="polite"></div>
+        </section>
       </section>
 
       <!-- ===== Gemba (js/gemba.js) ===== -->
@@ -273,5 +368,6 @@
   <script src="js/colaboradores.js"></script>
   <script src="js/listas.js"></script>
   <script src="js/gemba.js"></script>
+  <script src="js/painel.js"></script>
 </body>
 </html>
