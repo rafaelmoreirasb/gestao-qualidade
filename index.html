@@ -310,6 +310,9 @@
               <label class="campo">Horário
                 <input type="time" id="crono-hora" value="08:00">
               </label>
+              <label class="campo">Carga horária
+                <input type="text" id="crono-carga" placeholder="Ex.: 00:10 ou 01:30" inputmode="numeric" autocomplete="off" maxlength="5">
+              </label>
             </div>
             <p class="crono-dica">Os participantes você acrescenta depois, abrindo o treinamento.</p>
             <div class="crono-acoes">
@@ -321,7 +324,15 @@
 
         <div class="crono-linha">
           <!-- Calendário do mês -->
-          <section class="cartao crono-calendario">
+          <section class="cartao crono-calendario" id="crono-calendario">
+            <div class="crono-titulo-impressao">Cronograma de treinamentos · Mirassol SSP53</div>
+            <div class="crono-cal-barra crono-nao-imprimir">
+              <button type="button" class="botao botao-contorno crono-botao-barra" id="crono-exportar">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="12" x2="12" y2="18"></line><polyline points="9 15 12 18 15 15"></polyline></svg>
+                Exportar PDF
+              </button>
+              <button type="button" class="botao botao-contorno crono-botao-barra" id="crono-tela-cheia">Tela cheia</button>
+            </div>
             <div class="crono-mes-topo">
               <button type="button" class="crono-seta" id="crono-anterior" aria-label="Mês anterior">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
@@ -342,13 +353,15 @@
             <div class="crono-legenda">
               <span class="crono-legenda-item"><span class="crono-legenda-cor" style="background:#FFCC00"></span>Agendado</span>
               <span class="crono-legenda-item"><span class="crono-legenda-cor" style="background:#1A1A1A"></span>Realizado</span>
-              <span>Clique em um dia com treinamento para abrir; em um dia vazio, para usar a data no novo treinamento.</span>
+              <span class="crono-legenda-item"><span class="crono-legenda-cor crono-legenda-atrasado"></span>Atrasado (data passou e não foi marcado como realizado)</span>
+              <span class="crono-legenda-item"><span class="crono-legenda-cor crono-legenda-fds"></span>Sábado e domingo</span>
+              <span class="crono-nao-imprimir">Clique em um dia com treinamento para abrir; em um dia vazio, para usar a data no novo treinamento.</span>
             </div>
           </section>
 
-          <!-- Próximos treinamentos -->
+          <!-- Aguardando participantes: agendados e sem ninguém marcado -->
           <section class="crono-proximos">
-            <h2 class="subtitulo">Próximos treinamentos</h2>
+            <h2 class="subtitulo">Aguardando participantes</h2>
             <div class="crono-proximos-lista" id="crono-proximos-lista"></div>
           </section>
         </div>
@@ -362,6 +375,7 @@
               <div class="planilha-cabecalho">
                 <div>Data</div>
                 <div>Hora</div>
+                <div>Carga</div>
                 <div>Tema</div>
                 <div>Participantes</div>
                 <div>Situação</div>
@@ -371,10 +385,10 @@
               <div id="crono-vazio" class="planilha-vazio" hidden></div>
             </div>
           </div>
-          <div class="nota">Treinamento sem participantes aparece em vermelho. A lixeira serve só para corrigir lançamento feito errado.</div>
+          <div class="nota">Treinamento sem participantes aparece em vermelho. O status muda para Realizado quando você marca, dentro do treinamento. A lixeira serve só para corrigir lançamento feito errado.</div>
         </section>
 
-        <!-- Janela de participantes -->
+        <!-- Janela do treinamento: carga horária, status e participantes -->
         <div class="crono-fundo" id="crono-janela" hidden>
           <section class="crono-janela" role="dialog" aria-modal="true" aria-labelledby="crono-janela-tema">
             <div class="crono-janela-topo">
@@ -386,6 +400,23 @@
               <button type="button" class="crono-seta" id="crono-janela-x" aria-label="Fechar">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>
               </button>
+            </div>
+            <div class="crono-janela-dados">
+              <div class="crono-janela-bloco">
+                <label for="crono-janela-carga" class="crono-janela-rotulo">Carga horária</label>
+                <div class="crono-janela-linha">
+                  <input type="text" id="crono-janela-carga" class="crono-janela-carga" placeholder="00:10" inputmode="numeric" autocomplete="off" maxlength="5">
+                  <button type="button" class="botao botao-contorno" id="crono-janela-salvar-carga">Salvar</button>
+                </div>
+              </div>
+              <div class="crono-janela-bloco">
+                <div class="crono-janela-rotulo">Status</div>
+                <div class="crono-janela-linha">
+                  <span class="crono-chip" id="crono-janela-chip"></span>
+                  <button type="button" class="botao crono-botao-vermelho" id="crono-janela-status">Marcar como realizado</button>
+                </div>
+                <div class="crono-janela-dica" id="crono-janela-status-dica"></div>
+              </div>
             </div>
             <div class="crono-janela-barra">
               <div class="crono-janela-contagem">Participantes <span id="crono-janela-contagem"></span></div>
