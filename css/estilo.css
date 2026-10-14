@@ -2305,3 +2305,228 @@ body.crono-travado { overflow: hidden; }
   .plano-select-filtro { width: 100%; }
   .plano-acoes .botao { width: 100%; }
 }
+
+/* ---------- Poka-Yoke (Fase 6) ---------- */
+
+.py-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.py-kpis .kpi-valor-texto { font-size: 20px; }
+
+/* Ranking: as colunas são montadas pelo js/pokayoke.js (uma por tipo de erro) */
+.planilha-py .planilha-cabecalho .py-cab-treinar {
+  background: var(--vermelho);
+  color: var(--branco);
+}
+
+.planilha-py .py-cab-tipo {
+  text-align: right;
+  line-height: 1.15;
+  overflow: hidden;
+}
+
+.planilha-py .planilha-linha { height: 32px; }
+
+.planilha-py .planilha-linha.py-treinado { background: var(--amarelo-claro); }
+
+.py-caixa {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--vermelho);
+}
+
+.py-caixa:disabled { cursor: default; opacity: 0.45; }
+
+.py-col-pos { color: #666666; }
+
+.py-col-usuario {
+  font-family: var(--fonte-numeros);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.py-col-usuario.prioridade { font-weight: 700; }
+
+.planilha-py .py-col-treinar { font-weight: 700; }
+.planilha-py .py-col-treinar.zero { color: var(--preto); }
+
+.planilha-py .py-col-tipo.vazio { color: var(--cinza-campo); }
+
+/* Cor mais forte = mais erros */
+.planilha-py .calor-1 { background: var(--vermelho-claro); color: var(--preto); }
+.planilha-py .calor-2 { background: #F0A8AC; color: var(--preto); }
+.planilha-py .calor-3 { background: var(--vermelho); color: var(--branco); }
+
+.py-col-ultimo { font-size: 12px; color: #333333; }
+.py-col-total { color: var(--cinza-texto); }
+
+.py-rodape {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--cinza-texto);
+}
+
+/* Erros por tipo + Treinamentos aplicados */
+.py-dupla {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.py-cartao-tipos {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.py-explica {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--cinza-texto);
+}
+
+.py-tipos {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.py-barra {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.py-barra-topo {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.py-barra-nome { font-weight: 600; }
+
+.py-barra-valor {
+  font-family: var(--fonte-numeros);
+  color: var(--cinza-texto);
+}
+
+.py-barra-trilho {
+  height: 10px;
+  border-radius: 5px;
+  background: #EBEBEB;
+  overflow: hidden;
+}
+
+.py-barra-cheio {
+  height: 100%;
+  border-radius: 5px;
+  background: var(--vermelho);
+}
+
+.py-cartao-treinos {
+  min-width: 0;
+  padding: 20px;
+  border-radius: var(--raio-cartao);
+  background: var(--amarelo);
+  color: var(--preto);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.py-cartao-treinos .py-explica { color: var(--cinza-texto); }
+
+.py-treinos {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.py-treino {
+  padding: 10px 12px;
+  border-radius: var(--raio);
+  background: var(--branco);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.py-treino-nome {
+  font-family: var(--fonte-numeros);
+  font-size: 13px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.py-treino-det {
+  font-size: 12px;
+  color: var(--cinza-subtitulo);
+}
+
+.py-treino-data {
+  flex: none;
+  font-family: var(--fonte-numeros);
+  font-size: 13px;
+  color: var(--vermelho);
+}
+
+.py-vazio-texto {
+  font-size: 14px;
+  color: var(--cinza-texto);
+}
+
+/* Base acumulada + importação */
+.py-importar {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.py-importar-linha {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.py-base {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.py-base svg { flex: none; }
+
+.py-base-titulo {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.py-base-info {
+  font-size: 13px;
+  color: var(--cinza-texto);
+}
+
+@media (max-width: 600px) {
+  .py-importar-linha .botao-arquivo { width: 100%; }
+  .py-dupla { grid-template-columns: 1fr; }
+}

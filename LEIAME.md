@@ -2,13 +2,13 @@
 
 App web da operação DHL Supply Chain Mirassol SSP53 para registrar desvios de processo, treinamentos e planos de ação.
 
-## Situação atual: Fase 5
+## Situação atual: Fase 6
 
 - **Tela de login** por e-mail e senha (Supabase). Senha errada é recusada com a mensagem "E-mail ou senha incorretos".
 - O login fica lembrado no navegador até você clicar em **Sair** (ou a sessão expirar).
 - Depois de entrar: cabeçalho DHL (logo, "Gestão de Processo e Qualidade", "Mirassol SSP53"), menu com as 8 abas, seu e-mail e botão **Sair**.
 - **Menu:** Painel, Gemba, Torre de Aduana, Poka-Yoke, Eficácia, Cronograma, Plano de ação e Colaboradores. A aba aberta fica em vermelho e aparece no endereço (ex.: `#colaboradores`); ao recarregar, você continua nela. Sem login, o menu não aparece.
-- **Abas ainda "Em construção":** Torre de Aduana, Poka-Yoke e Eficácia ("Eficácia do Treinamento").
+- **Abas ainda "Em construção":** Torre de Aduana e Eficácia ("Eficácia do Treinamento").
 
 ### Aba Painel — "Visão Geral" (funcionando)
 
@@ -43,6 +43,29 @@ Registro rápido de desvio em 4 passos, feito para usar também no celular.
 - **+ Adicionar** grava o item novo na lista oficial, sem duplicar. **Processo novo** cria a sua LISTA_MOTIVOS_<NOME> vazia.
 - **LISTA_MOTIVOS_BK** começou vazia: os motivos reais são criados na tela.
 - O registro guarda o **texto** do processo, do motivo e da ação.
+
+### Aba Poka-Yoke (funcionando)
+
+Base acumulada dos erros do Poka-Yoke e ranking de quem precisa de treinamento. Por enquanto o ranking mostra o **login** do usuário (ex.: `ext_mobrafae`); a ligação do login com o colaborador (matrícula e nome) virá numa alteração futura, com planilha própria.
+
+- **4 indicadores:** Erros acumulados na base, Aguardando treinamento (usuários com "A treinar" maior que 0), Treinamentos aplicados e Erro mais pendente (tipo com mais erros ainda sem treino).
+- **Ranking para treinamento** (estilo planilha), com busca pelo login:
+  - colunas: caixa **treinado hoje**, posição, Usuário, **A treinar**, uma coluna por tipo de erro (erros pendentes de cada tipo), Último treino e Total histórico;
+  - **cor mais forte = mais erros pendentes**; os 5 primeiros com erro pendente ficam em negrito;
+  - **"A treinar"** = erros com data **depois** do último treino da pessoa (erro do mesmo dia do treino conta como tratado);
+  - ordem: A treinar (maior primeiro); empate pelo total histórico. Quem está com 0 vai para o fim (o treinado mais recente por último).
+- **Caixa "treinado hoje":** ao marcar, grava o treino de hoje com a quantidade de erros tratados; "A treinar" zera, a pessoa vai para o fim do ranking e o **total histórico continua**. Desmarcar (mesmo dia) serve só para corrigir marcação errada; os erros voltam para "A treinar". Usuário sem nada a treinar fica com a caixa apagada.
+- **Erros por tipo:** barras com o total acumulado de cada tipo.
+- **Treinamentos aplicados** (quadro amarelo): todos os treinos marcados, do mais novo para o mais antigo, com os erros tratados.
+- **Base acumulada + importação** (fim da página): mostra quantos dias de dados há na base, do primeiro ao último dia, e a hora da última importação.
+  - Planilha diária (.xlsx ou .csv, primeira aba), normalmente com os dados do **dia anterior**. Colunas usadas: **Data**, **User** e uma coluna por tipo de erro (Gaiola Errada, Forçou Saída, Falha PokaYoke, Problema QR, QR Sem PokaYoke). **Total Errado** e **%Bipes Corretos** são ignorados (o total é calculado somando os tipos).
+  - Os nomes das colunas são comparados sem acento, espaço, hífen e maiúsculas ("Falha PokaYoke" = "Falha Poka-Yoke").
+  - A planilha é **somada** à base. Cada dia + usuário + tipo entra uma vez só: importar o mesmo dia de novo **não duplica** (a mensagem mostra quantos já estavam na base). Se o mesmo usuário aparecer duas vezes no mesmo dia do mesmo arquivo, os números são somados.
+  - Datas aceitas: data do Excel, 13/10/2026, 13/10/26 ou 2026-10-13 (sempre dia/mês/ano). Linha sem Data ou User válidos é ignorada; data no futuro é recusada; coluna que não é tipo da LISTA_ERROS_POKAYOKE é avisada e não entra. O login é guardado em minúsculas.
+  - Erros importados não são alterados nem apagados pela tela (base acumulada).
+- **Tipos de erro** = itens ativos da **LISTA_ERROS_POKAYOKE** (Gaiola Errada, Forçou Saída, Falha Poka-Yoke, Problema QR e, desde 14/10/2026, **QR Sem PokaYoke**).
+- Os treinos do Poka-Yoke **não** entram no Cronograma nem no mapa de calor do Painel.
+- Ao abrir a aba, os dados são lidos de novo.
 
 ### Aba Cronograma (funcionando)
 
@@ -105,7 +128,11 @@ Ações no formato **5W2H**, com Origem e Status.
 | treinamentos | `sql/003_cronograma.sql` e `sql/004_cronograma_status_carga.sql` (Fase 4) | id, data, hora, tema, **carga_minutos** (carga horária em minutos), **status** (Agendado/Realizado), criado_em. Pode ler, criar, alterar **só** carga e status, e excluir (só lançamento errado) |
 | treinamento_participantes | `sql/003_cronograma.sql` (Fase 4) | id, treinamento_id (sai junto se o treino for excluído), colaborador_id (protege o colaborador de exclusão), criado_em. A mesma pessoa não entra duas vezes no mesmo treino |
 | planos_acao | `sql/005_planos_acao.sql` (Fase 5) | id, o_que, por_que, onde, quem, quando (prazo), como, quanto, origem (Gemba/Torre de Aduana/Poka-Yoke), status (Não iniciada/Em andamento/Concluída), criado_em. O quê, Quem e Quando obrigatórios. Pode ler, criar, alterar e excluir (só lançamento errado) |
+| pokayoke_erros | `sql/006_pokayoke.sql` (Fase 6) | id, data, usuario (login ext_...), tipo_erro, quantidade, chave_linha (data\|usuario\|tipo, única: impede duplicar), importado_em. Pode só ler e importar |
+| pokayoke_treinos | `sql/006_pokayoke.sql` (Fase 6) | id, usuario, data, erros_tratados, criado_em. Um treino por usuário por dia. Pode ler, marcar e desmarcar |
+| pokayoke_ranking e pokayoke_base (resumos) | `sql/006_pokayoke.sql` (Fase 6) | Cálculos prontos no banco (total e pendente por usuário e tipo; dias, datas e total da base), só leitura, com as mesmas regras de login |
 
+- **LISTA_ERROS_POKAYOKE** fica na tabela listas (itens criados pelo `sql/006_pokayoke.sql`).
 - RLS ligado em todas: só o usuário logado lê e grava. Visitante sem login não acessa nada.
 - Os scripts `sql/` são rodados à mão no Supabase (SQL Editor → New query → colar → Run), um por vez, em ordem.
 
@@ -122,7 +149,7 @@ Ações no formato **5W2H**, com Origem e Status.
 ```text
 index.html            página única: cabeçalho, menu, login e uma <section> por aba
 logo.png              logo DHL
-css/estilo.css        cores, fontes e componentes (menu, planilha, Gemba, Painel, Cronograma, Plano de ação e impressão do calendário)
+css/estilo.css        cores, fontes e componentes (menu, planilha, Gemba, Painel, Cronograma, Plano de ação, Poka-Yoke e impressão do calendário)
 js/supabase.js        conexão com o Supabase, entrar, sair (URL e chave pública no topo)
 js/listas.js          leitura e acréscimo de itens nas LISTA_... (arquivo comum)
 js/menu.js            troca de abas
@@ -131,12 +158,14 @@ js/painel.js          aba Painel (indicadores, mapa de calor único e mapa por c
 js/gemba.js           aba Gemba
 js/cronograma.js      aba Cronograma (calendário, PDF, tela cheia, participantes, carga e status)
 js/planoacao.js       aba Plano de ação (5W2H, alterar, status na linha, prazo, filtros e indicadores)
+js/pokayoke.js        aba Poka-Yoke (importação acumulada, ranking, treinado hoje)
 js/colaboradores.js   aba Colaboradores
 sql/001_colaboradores.sql          tabela colaboradores e regras de acesso
 sql/002_gemba.sql                  tabelas listas e registros_gemba, itens iniciais e regras de acesso
 sql/003_cronograma.sql             tabelas treinamentos e treinamento_participantes e regras de acesso
 sql/004_cronograma_status_carga.sql colunas carga_minutos e status e permissão de alterá-las
 sql/005_planos_acao.sql            tabela planos_acao e regras de acesso
+sql/006_pokayoke.sql               LISTA_ERROS_POKAYOKE, tabelas pokayoke_erros e pokayoke_treinos, resumos e regras de acesso
 LEIAME.md             este arquivo
 CHANGELOG.md          histórico de mudanças
 ```
@@ -145,7 +174,7 @@ CHANGELOG.md          histórico de mudanças
 
 - Só a **chave pública** do Supabase fica no código (`js/supabase.js`). A chave secreta nunca entra no código.
 - Só existe um usuário, criado manualmente no Supabase. Ninguém consegue se cadastrar sozinho.
-- Nada do app aparece sem login. Ao clicar em Sair, as listas, o Painel, o Cronograma e o Plano de ação somem da tela.
+- Nada do app aparece sem login. Ao clicar em Sair, as listas, o Painel, o Cronograma, o Plano de ação e o Poka-Yoke somem da tela.
 - Dados de colaboradores: só matrícula, nome, setor e status.
 
 ## Como mudar algo
@@ -156,7 +185,7 @@ CHANGELOG.md          histórico de mudanças
 3. Depois de aprovado: GitHub → **Pull requests** → **New pull request** (base: `main`, compare: `teste`) → **Create pull request** → **Merge pull request**. Nunca apagar o ramo teste.
 4. A Vercel publica o link oficial sozinha em cerca de 1 minuto.
 
-Atenção: o banco (Supabase) é um só para o link de teste e o oficial. Dados criados no teste aparecem também no oficial (treinamentos, registros e ações de teste podem ser apagados pela lixeira).
+Atenção: o banco (Supabase) é um só para o link de teste e o oficial. Dados criados no teste aparecem também no oficial (treinamentos, registros e ações de teste podem ser apagados pela lixeira; dados de teste do Poka-Yoke só pelo SQL Editor do Supabase).
 
 ## Proteção da Vercel
 
