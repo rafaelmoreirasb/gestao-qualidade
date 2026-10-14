@@ -275,10 +275,72 @@
         <div class="cartao em-construcao"><p>Em construção</p></div>
       </section>
 
-      <!-- ===== Poka-Yoke ===== -->
+      <!-- ===== Poka-Yoke (js/pokayoke.js) ===== -->
       <section class="aba" id="aba-pokayoke" data-titulo="Poka-Yoke" hidden>
         <h1 class="titulo">Poka-Yoke</h1>
-        <div class="cartao em-construcao"><p>Em construção</p></div>
+
+        <div id="py-msg-geral" class="mensagem mensagem-erro" role="alert" hidden></div>
+
+        <!-- Indicadores -->
+        <div class="py-kpis" id="py-kpis"></div>
+
+        <!-- Ranking para treinamento -->
+        <section class="cartao cartao-lista">
+          <div class="cartao-topo">
+            <h2 class="subtitulo">Ranking para treinamento</h2>
+            <input type="search" id="py-busca" class="busca" aria-label="Buscar usuário" placeholder="Buscar usuário (ext_...)" autocomplete="off">
+          </div>
+          <div id="py-msg-ranking" class="mensagem" role="status" hidden></div>
+          <div class="planilha-rolagem">
+            <div class="planilha planilha-py" id="py-planilha">
+              <div class="planilha-cabecalho" id="py-cabecalho"></div>
+              <div id="py-linhas"></div>
+              <div id="py-vazio" class="planilha-vazio" hidden></div>
+            </div>
+          </div>
+          <div class="py-rodape">
+            <span id="py-rodape"></span>
+            <span>Cor mais forte = mais erros pendentes</span>
+          </div>
+          <div class="nota">Marque a caixa quando a pessoa for treinada hoje: o "A treinar" zera e ela vai para o fim do ranking, mas o total histórico continua. Se marcou errado, desmarque no mesmo dia.</div>
+        </section>
+
+        <!-- Erros por tipo e Treinamentos aplicados -->
+        <div class="py-dupla">
+          <section class="cartao py-cartao-tipos">
+            <div>
+              <h2 class="subtitulo">Erros por tipo</h2>
+              <p class="py-explica">Total acumulado na base.</p>
+            </div>
+            <div class="py-tipos" id="py-tipos"></div>
+          </section>
+
+          <section class="py-cartao-treinos">
+            <div>
+              <h2 class="subtitulo">Treinamentos aplicados</h2>
+              <p class="py-explica">Fica tudo registrado, mesmo depois do treino.</p>
+            </div>
+            <div class="py-treinos" id="py-treinos"></div>
+          </section>
+        </div>
+
+        <!-- Base acumulada e importação da planilha diária -->
+        <section class="cartao py-importar">
+          <div class="py-importar-linha">
+            <div class="py-base">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="8" ry="3"></ellipse><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"></path><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"></path></svg>
+              <div>
+                <div class="py-base-titulo" id="py-base-titulo">Base acumulada</div>
+                <div class="py-base-info" id="py-base-info"></div>
+              </div>
+            </div>
+            <label class="botao botao-arquivo" id="py-arquivo-rotulo">Escolher planilha (.xlsx ou .csv)
+              <input type="file" id="py-arquivo" accept=".xlsx,.csv">
+            </label>
+          </div>
+          <p class="importar-texto">Colunas usadas: <strong>Data</strong>, <strong>User</strong> e uma coluna por tipo de erro (Gaiola Errada, Forçou Saída, Falha PokaYoke, Problema QR, QR Sem PokaYoke). Total Errado e %Bipes Corretos são ignorados. A planilha é <strong>somada</strong> à base: importar o mesmo dia de novo não duplica nada.</p>
+          <div id="py-msg-importar" class="mensagem" role="status" hidden></div>
+        </section>
       </section>
 
       <!-- ===== Eficácia ===== -->
@@ -610,5 +672,6 @@
   <script src="js/painel.js"></script>
   <script src="js/cronograma.js"></script>
   <script src="js/planoacao.js"></script>
+  <script src="js/pokayoke.js"></script>
 </body>
 </html>
