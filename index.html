@@ -353,13 +353,13 @@
       <section class="aba" id="aba-cronograma" data-titulo="Cronograma" hidden>
         <div class="crono-topo">
           <h1 class="titulo">Cronograma</h1>
-          <button type="button" class="botao crono-botao-vermelho" id="crono-alternar">Fechar</button>
+          <button type="button" class="botao crono-botao-vermelho" id="crono-alternar">+ Novo treinamento</button>
         </div>
 
         <div id="crono-msg-geral" class="mensagem mensagem-erro" role="alert" hidden></div>
 
         <!-- Novo treinamento -->
-        <section class="cartao crono-form" id="crono-form">
+        <section class="cartao crono-form" id="crono-form" hidden>
           <h2 class="subtitulo">Novo treinamento</h2>
           <form id="crono-form-novo" novalidate>
             <div class="crono-campos">
@@ -376,7 +376,32 @@
                 <input type="text" id="crono-carga" placeholder="Ex.: 00:10 ou 01:30" inputmode="numeric" autocomplete="off" maxlength="5">
               </label>
             </div>
-            <p class="crono-dica">Os participantes você acrescenta depois, abrindo o treinamento.</p>
+            <!-- Repetir o mesmo treinamento em vários dias -->
+            <div class="crono-repetir">
+              <label class="crono-repetir-opcao">
+                <input type="checkbox" id="crono-repetir">
+                <span>Repetir em vários dias</span>
+              </label>
+              <div class="crono-repetir-campos" id="crono-repetir-campos" hidden>
+                <label class="campo crono-repetir-ate">Até
+                  <input type="date" id="crono-ate">
+                </label>
+                <div class="crono-repetir-dias">
+                  <div class="crono-repetir-rotulo">Nos dias</div>
+                  <div class="crono-dias-semana" id="crono-dias-semana" role="group" aria-label="Dias da semana">
+                    <label><input type="checkbox" value="1" checked><span>Seg</span></label>
+                    <label><input type="checkbox" value="2" checked><span>Ter</span></label>
+                    <label><input type="checkbox" value="3" checked><span>Qua</span></label>
+                    <label><input type="checkbox" value="4" checked><span>Qui</span></label>
+                    <label><input type="checkbox" value="5" checked><span>Sex</span></label>
+                    <label><input type="checkbox" value="6"><span>Sáb</span></label>
+                    <label><input type="checkbox" value="0"><span>Dom</span></label>
+                  </div>
+                </div>
+                <div class="crono-repetir-resumo" id="crono-repetir-resumo" aria-live="polite"></div>
+              </div>
+            </div>
+            <p class="crono-dica">Os participantes você acrescenta depois, abrindo o treinamento. Ao repetir em vários dias, cada dia vira um treinamento separado (participantes, status e anexos de cada dia).</p>
             <div class="crono-acoes">
               <button type="submit" class="botao crono-botao-vermelho" id="crono-adicionar">Adicionar ao cronograma</button>
               <div id="crono-msg-form" class="mensagem" role="status" hidden></div>
@@ -414,7 +439,7 @@
             </div>
             <div class="crono-legenda">
               <span class="crono-legenda-item"><span class="crono-legenda-cor" style="background:#FFCC00"></span>Agendado</span>
-              <span class="crono-legenda-item"><span class="crono-legenda-cor" style="background:#1A1A1A"></span>Realizado</span>
+              <span class="crono-legenda-item"><span class="crono-legenda-cor crono-legenda-realizado" aria-hidden="true">✓</span>Realizado</span>
               <span class="crono-legenda-item"><span class="crono-legenda-cor crono-legenda-atrasado"></span>Atrasado (data passou e não foi marcado como realizado)</span>
               <span class="crono-legenda-item"><span class="crono-legenda-cor crono-legenda-fds"></span>Sábado e domingo</span>
               <span class="crono-nao-imprimir">Clique em um dia com treinamento para abrir; em um dia vazio, para usar a data no novo treinamento.</span>
@@ -422,7 +447,7 @@
           </section>
 
           <!-- Aguardando participantes: agendados e sem ninguém marcado -->
-          <section class="crono-proximos">
+          <section class="crono-proximos" id="crono-proximos">
             <h2 class="subtitulo">Aguardando participantes</h2>
             <div class="crono-proximos-lista" id="crono-proximos-lista"></div>
           </section>
@@ -430,7 +455,10 @@
 
         <!-- Todos os treinamentos -->
         <section class="cartao cartao-lista">
-          <h2 class="subtitulo">Todos os treinamentos <span class="crono-total" id="crono-total"></span></h2>
+          <div class="cartao-topo">
+            <h2 class="subtitulo">Todos os treinamentos <span class="crono-total" id="crono-total"></span></h2>
+            <input type="search" id="crono-busca" class="busca crono-busca" aria-label="Buscar treinamento" placeholder="Buscar data, tema, participante ou situação" autocomplete="off">
+          </div>
           <div id="crono-msg-lista" class="mensagem" role="status" hidden></div>
           <div class="planilha-rolagem crono-tabela-rolagem">
             <div class="planilha planilha-crono">
@@ -441,16 +469,17 @@
                 <div>Tema</div>
                 <div>Participantes</div>
                 <div>Situação</div>
+                <div>Anexos</div>
                 <div></div>
               </div>
               <div id="crono-linhas"></div>
               <div id="crono-vazio" class="planilha-vazio" hidden></div>
             </div>
           </div>
-          <div class="nota">Treinamento sem participantes aparece em vermelho. O status muda para Realizado quando você marca, dentro do treinamento. A lixeira serve só para corrigir lançamento feito errado.</div>
+          <div class="nota">Treinamento sem participantes aparece em vermelho. O status muda para Realizado quando você marca, dentro do treinamento. Em Anexos, clique no ícone para ver a foto da turma ou a lista de presença. A lixeira serve só para corrigir lançamento feito errado (apaga também os anexos).</div>
         </section>
 
-        <!-- Janela do treinamento: carga horária, status e participantes -->
+        <!-- Janela do treinamento: carga horária, status, anexos e participantes -->
         <div class="crono-fundo" id="crono-janela" hidden>
           <section class="crono-janela" role="dialog" aria-modal="true" aria-labelledby="crono-janela-tema">
             <div class="crono-janela-topo">
@@ -478,6 +507,42 @@
                   <button type="button" class="botao crono-botao-vermelho" id="crono-janela-status">Marcar como realizado</button>
                 </div>
                 <div class="crono-janela-dica" id="crono-janela-status-dica"></div>
+              </div>
+            </div>
+            <!-- Anexos: foto da turma e lista de presença -->
+            <div class="crono-anexos">
+              <div class="crono-janela-rotulo">Anexos</div>
+              <div class="crono-anexo" id="crono-anexo-foto">
+                <svg class="crono-anexo-icone" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                <div class="crono-anexo-texto">
+                  <div class="crono-anexo-nome">Foto da turma <small>JPEG ou PNG</small></div>
+                  <div class="crono-anexo-situacao" id="crono-anexo-foto-situacao"></div>
+                </div>
+                <div class="crono-anexo-botoes">
+                  <button type="button" class="botao botao-contorno crono-botao-anexo" id="crono-anexo-foto-ver">Ver</button>
+                  <label class="botao botao-contorno crono-botao-anexo crono-anexo-escolher" id="crono-anexo-foto-rotulo"><span id="crono-anexo-foto-acao">Anexar</span>
+                    <input type="file" id="crono-anexo-foto-arquivo" accept="image/jpeg,image/png">
+                  </label>
+                  <button type="button" class="botao-lixeira" id="crono-anexo-foto-remover" aria-label="Remover foto" title="Remover foto">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#D40511" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="crono-anexo" id="crono-anexo-lista">
+                <svg class="crono-anexo-icone" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="13" y2="17"></line></svg>
+                <div class="crono-anexo-texto">
+                  <div class="crono-anexo-nome">Lista de presença <small>PDF</small></div>
+                  <div class="crono-anexo-situacao" id="crono-anexo-lista-situacao"></div>
+                </div>
+                <div class="crono-anexo-botoes">
+                  <button type="button" class="botao botao-contorno crono-botao-anexo" id="crono-anexo-lista-ver">Ver</button>
+                  <label class="botao botao-contorno crono-botao-anexo crono-anexo-escolher" id="crono-anexo-lista-rotulo"><span id="crono-anexo-lista-acao">Anexar</span>
+                    <input type="file" id="crono-anexo-lista-arquivo" accept="application/pdf,.pdf">
+                  </label>
+                  <button type="button" class="botao-lixeira" id="crono-anexo-lista-remover" aria-label="Remover lista de presença" title="Remover lista de presença">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#D40511" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg>
+                  </button>
+                </div>
               </div>
             </div>
             <div class="crono-janela-barra">
