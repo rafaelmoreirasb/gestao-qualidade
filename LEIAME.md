@@ -2,7 +2,7 @@
 
 App web da operação DHL Supply Chain Mirassol SSP53 para registrar desvios de processo, treinamentos e planos de ação.
 
-## Situação atual: Fase 6
+## Situação atual: Fase 6 + alteração do Cronograma (15/10/2026)
 
 - **Tela de login** por e-mail e senha (Supabase). Senha errada é recusada com a mensagem "E-mail ou senha incorretos".
 - O login fica lembrado no navegador até você clicar em **Sair** (ou a sessão expirar).
@@ -69,20 +69,24 @@ Base acumulada dos erros do Poka-Yoke e ranking de quem precisa de treinamento. 
 
 ### Aba Cronograma (funcionando)
 
-- Botão vermelho **+ Novo treinamento / Fechar** abre e fecha o formulário.
+- Botão vermelho **+ Novo treinamento / Fechar** abre e fecha o formulário. Ao abrir a aba, o formulário fica **fechado**.
 - **Novo treinamento:** Tema, Data, Horário (começa em 08:00) e **Carga horária** (obrigatória, começa em branco, formato horas:minutos — ex.: 00:10 ou 01:30; digitando só os números os dois-pontos entram sozinhos). Os participantes são acrescentados depois.
+- **Repetir em vários dias:** marcando essa opção aparecem **Até** (data final) e os dias da semana (Seg a Sex já vêm marcados; ao ligar, "Até" sugere a sexta seguinte). O app mostra quantos serão criados, pede confirmação e cria **um treinamento separado para cada dia** (cada um com participantes, status e anexos próprios). Máximo de 60 por lançamento; se algo falhar, nada é gravado.
 - **Calendário do mês** com setas de mês anterior/seguinte:
-  - treino **Agendado** em amarelo, **Realizado** em preto, **Atrasado** (data passou e não foi marcado como realizado) em amarelo com faixa vermelha;
+  - treino **Agendado** em amarelo, **Realizado** em preto com **✓ verde**, **Atrasado** (data passou e não foi marcado como realizado) em amarelo com faixa vermelha;
   - **sábado e domingo** com fundo amarelo bem clarinho; hoje com contorno vermelho;
   - mostra **até 4 treinos por dia**; acima disso, "+N treinamento(s)";
-  - clicar num dia com treino abre o treino; num dia vazio, usa a data no formulário.
+  - clicar num dia com treino abre o treino; num dia vazio, abre o formulário com aquela data.
 - **Exportar PDF:** abre a janela de impressão só com o calendário do mês, em A4 deitado; escolha "Salvar como PDF" (se faltar cor, marque "Gráficos de plano de fundo").
 - **Tela cheia:** o calendário ocupa a tela toda; Esc ou "Sair da tela cheia" volta. No iPhone ele só ocupa a página inteira.
-- **Aguardando participantes** (quadro amarelo à direita): só treinos **Agendados** e **sem nenhum participante**, inclusive os de data já passada (com aviso "Atrasado"). O treino sai do quadro ao marcar um participante ou ao virar Realizado.
-- **Todos os treinamentos:** tabela com Data, Hora, Carga, Tema, Participantes (vermelho = nenhum participante ainda), Situação, botão **Participantes** e lixeira (só para lançamento errado; apaga junto a lista de participantes).
+- **Aguardando participantes** (quadro amarelo à direita, **da altura do calendário**, rola por dentro): só treinos **Agendados** e **sem nenhum participante**, inclusive os de data já passada (com aviso "Atrasado"). O treino sai do quadro ao marcar um participante ou ao virar Realizado. No celular o quadro fica embaixo do calendário, com altura fixa e rolagem.
+- **Todos os treinamentos:** tabela com Data, Hora, Carga, Tema, Participantes (vermelho = nenhum participante ainda), Situação (Realizado com ✓ verde), **Anexos** (ícones verdes de foto e lista; clicar abre o arquivo), botão **Participantes** e lixeira (só para lançamento errado; apaga junto a lista de participantes e os anexos).
+  - Mostra cerca de **10 linhas**; o resto rola dentro da tabela (cabeçalho fixo). Datas mais recentes primeiro.
+  - **Busca** no topo: data (ex.: "15/10" ou "/10"), tema, participante (nome ou matrícula) e situação (agendado, hoje, atrasado, realizado), sem diferenciar acento ou maiúscula. O título mostra "· N de M" quando filtra.
 - **Janela do treinamento** (botão Participantes, clique no calendário ou no quadro da direita):
   - **Carga horária** editável, com botão **Salvar**;
   - **Status:** "Marcar como realizado" (exige pelo menos 1 participante e data de hoje ou anterior) e "Voltar para agendado" (para corrigir engano). Um treino Realizado não pode ficar sem participantes;
+  - **Anexos:** **Foto da turma** (JPEG ou PNG) e **Lista de presença** (PDF, até 10 MB), 1 de cada por treino, com **Anexar / Ver / Trocar / 🗑**. A foto é diminuída no navegador antes de enviar (lado maior até 1600 px). **Ver** abre o arquivo numa aba nova (link temporário de 1 hora). Trocar ou remover apaga o arquivo anterior;
   - **Participantes:** caixas de seleção com busca por nome ou matrícula; só **Ativos** (um desligado que já participou continua aparecendo, marcado "desligado"). Cada caixa é gravada na hora; **Concluir** só fecha.
 - Situação mostrada: **Realizado** (marcado por você), **Atrasado**, **Hoje** ou **Agendado**.
 
@@ -125,7 +129,7 @@ Ações no formato **5W2H**, com Origem e Status.
 | colaboradores | `sql/001_colaboradores.sql` (Fase 1) | id, matricula (única), nome, setor (vazio por enquanto), status (Ativo/Desligado), criado_em |
 | listas | `sql/002_gemba.sql` (Fase 2) | id, lista, item, ordem, ativo, criado_em. Não pode apagar (item removido fica com ativo = falso) |
 | registros_gemba | `sql/002_gemba.sql` (Fase 2) | id, data, colaborador_id, processo, motivo, acao, observacao, criado_em |
-| treinamentos | `sql/003_cronograma.sql` e `sql/004_cronograma_status_carga.sql` (Fase 4) | id, data, hora, tema, **carga_minutos** (carga horária em minutos), **status** (Agendado/Realizado), criado_em. Pode ler, criar, alterar **só** carga e status, e excluir (só lançamento errado) |
+| treinamentos | `sql/003_cronograma.sql` e `sql/004_cronograma_status_carga.sql` (Fase 4) | id, data, hora, tema, **carga_minutos** (carga horária em minutos), **status** (Agendado/Realizado), **foto_caminho** e **lista_caminho** (onde estão os anexos; colunas do `sql/007_cronograma_anexos.sql`), criado_em. Pode ler, criar, alterar **só** carga, status e anexos, e excluir (só lançamento errado) |
 | treinamento_participantes | `sql/003_cronograma.sql` (Fase 4) | id, treinamento_id (sai junto se o treino for excluído), colaborador_id (protege o colaborador de exclusão), criado_em. A mesma pessoa não entra duas vezes no mesmo treino |
 | planos_acao | `sql/005_planos_acao.sql` (Fase 5) | id, o_que, por_que, onde, quem, quando (prazo), como, quanto, origem (Gemba/Torre de Aduana/Poka-Yoke), status (Não iniciada/Em andamento/Concluída), criado_em. O quê, Quem e Quando obrigatórios. Pode ler, criar, alterar e excluir (só lançamento errado) |
 | pokayoke_erros | `sql/006_pokayoke.sql` (Fase 6) | id, data, usuario (login ext_...), tipo_erro, quantidade, chave_linha (data\|usuario\|tipo, única: impede duplicar), importado_em. Pode só ler e importar |
@@ -134,6 +138,7 @@ Ações no formato **5W2H**, com Origem e Status.
 
 - **LISTA_ERROS_POKAYOKE** fica na tabela listas (itens criados pelo `sql/006_pokayoke.sql`).
 - RLS ligado em todas: só o usuário logado lê e grava. Visitante sem login não acessa nada.
+- **Arquivos (Supabase Storage):** pasta **privada** `treinamentos` (criada pelo `sql/007_cronograma_anexos.sql`), só JPEG, PNG e PDF, até 10 MB. Cada treino tem sua subpasta (o número do treino). Só o usuário logado lê, envia e apaga. O plano gratuito do Supabase guarda 1 GB.
 - Os scripts `sql/` são rodados à mão no Supabase (SQL Editor → New query → colar → Run), um por vez, em ordem.
 
 ## Onde cada coisa está
@@ -156,7 +161,7 @@ js/menu.js            troca de abas
 js/planilha.js        leitura de .xlsx e .csv no navegador, sem biblioteca
 js/painel.js          aba Painel (indicadores, mapa de calor único e mapa por colaborador)
 js/gemba.js           aba Gemba
-js/cronograma.js      aba Cronograma (calendário, PDF, tela cheia, participantes, carga e status)
+js/cronograma.js      aba Cronograma (calendário, PDF, tela cheia, vários dias, busca, participantes, carga, status e anexos)
 js/planoacao.js       aba Plano de ação (5W2H, alterar, status na linha, prazo, filtros e indicadores)
 js/pokayoke.js        aba Poka-Yoke (importação acumulada, ranking, treinado hoje)
 js/colaboradores.js   aba Colaboradores
@@ -166,6 +171,7 @@ sql/003_cronograma.sql             tabelas treinamentos e treinamento_participan
 sql/004_cronograma_status_carga.sql colunas carga_minutos e status e permissão de alterá-las
 sql/005_planos_acao.sql            tabela planos_acao e regras de acesso
 sql/006_pokayoke.sql               LISTA_ERROS_POKAYOKE, tabelas pokayoke_erros e pokayoke_treinos, resumos e regras de acesso
+sql/007_cronograma_anexos.sql      colunas de anexos em treinamentos, pasta privada "treinamentos" no Storage e regras de acesso
 LEIAME.md             este arquivo
 CHANGELOG.md          histórico de mudanças
 ```
@@ -174,6 +180,7 @@ CHANGELOG.md          histórico de mudanças
 
 - Só a **chave pública** do Supabase fica no código (`js/supabase.js`). A chave secreta nunca entra no código.
 - Só existe um usuário, criado manualmente no Supabase. Ninguém consegue se cadastrar sozinho.
+- A foto da turma e a lista de presença ficam numa pasta **privada**: só abrem com login, por um link que vale 1 hora.
 - Nada do app aparece sem login. Ao clicar em Sair, as listas, o Painel, o Cronograma, o Plano de ação e o Poka-Yoke somem da tela.
 - Dados de colaboradores: só matrícula, nome, setor e status.
 
