@@ -1594,7 +1594,17 @@ a:hover { color: var(--vermelho-escuro); }
   display: flex;
   flex-direction: column;
   gap: 10px;
+  /* Rola por dentro quando há mais treinos do que cabe no quadro */
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
 }
+
+.crono-proximo { flex: none; }
+
+/* Celular / tela estreita (quadro embaixo do calendário): cerca de 4 cartões e rola */
+.crono-proximos:not(.lado-a-lado) { max-height: 520px; }
 
 .crono-proximo {
   width: 100%;
@@ -1662,13 +1672,15 @@ a:hover { color: var(--vermelho-escuro); }
   color: var(--cinza-texto);
 }
 
-.crono-tabela-rolagem { max-height: 360px; }
+.crono-tabela-rolagem { max-height: 450px; }   /* cerca de 10 linhas; o resto rola dentro da tabela */
 
-.planilha-crono { min-width: 960px; }
+.crono-busca { width: 340px; }
+
+.planilha-crono { min-width: 1040px; }
 
 .planilha-crono .planilha-cabecalho,
 .planilha-crono .planilha-linha {
-  grid-template-columns: 96px 70px 64px minmax(220px, 1.5fr) minmax(240px, 2fr) 110px 170px;
+  grid-template-columns: 96px 70px 64px minmax(220px, 1.5fr) minmax(240px, 2fr) 120px 80px 170px;
 }
 
 .planilha-crono .planilha-linha {
@@ -1926,6 +1938,221 @@ body.crono-travado { overflow: hidden; }
 
 .crono-janela-rodape .botao { padding: 0 22px; }
 
+/* ---------- Cronograma (alteração de 15/10): check verde, vários dias e anexos ---------- */
+
+/* Check verde do treinamento realizado (verde = exceção às cores, como o status Ativo) */
+.crono-check {
+  display: inline-block;
+  margin-right: 4px;
+  color: #3DD06A;
+  font-weight: 800;
+}
+
+.crono-chip.realizado .crono-check { color: #3DD06A; }
+
+.crono-legenda-realizado {
+  background: var(--preto);
+  color: #3DD06A;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 14px;
+  text-align: center;
+}
+
+/* Repetir em vários dias */
+.crono-repetir {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.crono-repetir-opcao {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.crono-repetir-opcao input,
+.crono-dias-semana input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--vermelho);
+}
+
+.crono-repetir-campos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  align-items: flex-end;
+  padding: 12px 14px;
+  border-radius: var(--raio);
+  background: var(--cinza-zebra);
+}
+
+.crono-repetir-ate input {
+  height: 44px;
+  padding: 0 12px;
+  font-size: 15px;
+}
+
+.crono-repetir-dias {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.crono-repetir-rotulo {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.crono-dias-semana {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.crono-dias-semana label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--cinza-borda);
+  border-radius: var(--raio);
+  background: var(--branco);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.crono-dias-semana label:has(input:checked) {
+  background: var(--amarelo-claro);
+  border-color: var(--amarelo);
+}
+
+.crono-repetir-resumo {
+  flex-basis: 100%;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.crono-repetir-resumo.erro { color: var(--vermelho-escuro); }
+
+/* Anexos na janela do treinamento */
+.crono-anexos {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.crono-anexo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px dashed var(--cinza-campo);
+  border-radius: var(--raio);
+  background: var(--branco);
+}
+
+.crono-anexo.anexado {
+  border: 1px solid var(--verde-borda);
+  background: var(--verde-claro);
+}
+
+.crono-anexo-icone { flex: none; }
+
+.crono-anexo-texto {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.crono-anexo-nome {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.crono-anexo-nome small {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--cinza-texto);
+}
+
+.crono-anexo-situacao {
+  font-size: 12px;
+  color: var(--cinza-texto);
+}
+
+.crono-anexo.anexado .crono-anexo-situacao {
+  color: var(--verde);
+  font-weight: 600;
+}
+
+.crono-anexo-botoes {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.crono-botao-anexo {
+  height: 36px;
+  padding: 0 14px;
+  font-size: 14px;
+}
+
+.crono-anexo-escolher {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.crono-anexo-escolher input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.crono-anexo-escolher.ocupado {
+  opacity: 0.6;
+  cursor: wait;
+  pointer-events: none;
+}
+
+.crono-anexo .botao-lixeira { height: 36px; }
+
+/* Coluna Anexos da tabela */
+.planilha-crono .crono-col-anexos {
+  justify-content: center;
+  gap: 4px;
+}
+
+.crono-icone-anexo {
+  width: 32px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--verde-borda);
+  border-radius: var(--raio);
+  background: var(--verde-claro);
+  color: var(--verde);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.crono-icone-anexo:hover { background: #CDEBC9; }
+
+.crono-sem-anexo { color: var(--cinza-campo); }
+
 @media (max-width: 600px) {
   .crono-campos { grid-template-columns: 1fr 1fr; }
   .crono-campo-tema { grid-column: 1 / -1; }
@@ -1933,6 +2160,10 @@ body.crono-travado { overflow: hidden; }
   .crono-janela { padding: 18px 16px; }
   .crono-janela-barra .busca { width: 100%; }
   .crono-calendario.crono-cheia { padding: 12px; }
+  .crono-repetir-ate,
+  .crono-repetir-ate input { width: 100%; }
+  .crono-anexo-botoes { width: 100%; justify-content: flex-end; }
+  .crono-busca { width: 100%; }
 }
 
 /* Exportar PDF: na impressão sai só o calendário do mês, em folha deitada */
