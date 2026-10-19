@@ -2,13 +2,13 @@
 
 App web da operação DHL Supply Chain Mirassol SSP53 para registrar desvios de processo, treinamentos e planos de ação.
 
-## Situação atual: Fase 6 + alteração do Cronograma (15/10/2026)
+## Situação atual: Fase 7 — Eficácia (19/10/2026)
 
 - **Tela de login** por e-mail e senha (Supabase). Senha errada é recusada com a mensagem "E-mail ou senha incorretos".
 - O login fica lembrado no navegador até você clicar em **Sair** (ou a sessão expirar).
 - Depois de entrar: cabeçalho DHL (logo, "Gestão de Processo e Qualidade", "Mirassol SSP53"), menu com as 8 abas, seu e-mail e botão **Sair**.
 - **Menu:** Painel, Gemba, Torre de Aduana, Poka-Yoke, Eficácia, Cronograma, Plano de ação e Colaboradores. A aba aberta fica em vermelho e aparece no endereço (ex.: `#colaboradores`); ao recarregar, você continua nela. Sem login, o menu não aparece.
-- **Abas ainda "Em construção":** Torre de Aduana e Eficácia ("Eficácia do Treinamento").
+- **Aba ainda "Em construção":** Torre de Aduana (pausada até os nomes dos erros serem padronizados).
 
 ### Aba Painel — "Visão Geral" (funcionando)
 
@@ -64,8 +64,32 @@ Base acumulada dos erros do Poka-Yoke e ranking de quem precisa de treinamento. 
   - Datas aceitas: data do Excel, 13/10/2026, 13/10/26 ou 2026-10-13 (sempre dia/mês/ano). Linha sem Data ou User válidos é ignorada; data no futuro é recusada; coluna que não é tipo da LISTA_ERROS_POKAYOKE é avisada e não entra. O login é guardado em minúsculas.
   - Erros importados não são alterados nem apagados pela tela (base acumulada).
 - **Tipos de erro** = itens ativos da **LISTA_ERROS_POKAYOKE** (Gaiola Errada, Forçou Saída, Falha Poka-Yoke, Problema QR e, desde 14/10/2026, **QR Sem PokaYoke**).
-- Os treinos do Poka-Yoke **não** entram no Cronograma nem no mapa de calor do Painel.
+- Os treinos do Poka-Yoke **não** entram no Cronograma nem no mapa de calor do Painel, mas **entram na aba Eficácia**.
 - Ao abrir a aba, os dados são lidos de novo.
+
+### Aba Eficácia — "Eficácia do Treinamento" (funcionando)
+
+Mostra se as pessoas param de repetir o erro depois de um treino. A aba só **lê** o banco (registros do Gemba, colaboradores, treinos e erros do Poka-Yoke); não grava nada. Ao abrir a aba, os dados são lidos de novo. Usa todo o histórico (não usa a data de início do Painel).
+
+- **O que conta como treino:**
+  - **Gemba:** cada **desvio registrado** (a ação tomada no Gemba é a intervenção). O acompanhamento começa no dia do registro.
+  - **Poka-Yoke:** cada marcação **"treinado hoje"**. O erro treinado são os tipos que estavam pendentes naquele dia (ex.: "Gaiola Errada (3), Forçou Saída (1)"). A pessoa aparece pelo login ext_.
+  - **Torre de Aduana:** pausada; o botão mostra o aviso "ainda sem dados".
+  - Os treinamentos do Cronograma **não** entram na Eficácia (eles não dizem qual erro foi treinado).
+- **Regra dos 30 dias:**
+  - **Reincidiu** = repetiu o **mesmo erro** em até 30 dias depois do treino. No Gemba, mesmo colaborador + mesmo processo + mesmo motivo; no Poka-Yoke, novo erro de um dos tipos que estavam pendentes. Mostra "Reincidiu após N dias".
+  - **Eficaz** = passaram os 30 dias sem repetir.
+  - **Em acompanhamento** = ainda dentro dos 30 dias: "Dia N de 30", com barrinha amarela.
+  - Erro no **mesmo dia** do treino não conta como reincidência.
+- **Filtro de origem:** Todas, Gemba, Torre de Aduana e Poka-Yoke. Vale para tudo na aba.
+- **Treinos eficazes** (quadro amarelo): percentual = eficazes ÷ (eficazes + reincidiram), a frase "X de Y treinos sem repetir o erro em 30 dias", a barra Eficaz (preto) / Reincidiu (vermelho) / Em acompanhamento (amarelo claro) e a comparação do mês atual com o anterior em pontos percentuais.
+- **Eficácia por mês:** os últimos 4 meses, pelo **mês em que o resultado saiu** (dia da reincidência ou fim dos 30 dias). Mês atual em vermelho; "—" = sem resultado no mês.
+- **Onde o treino menos funciona:** os 4 erros com maior proporção de reincidência (Gemba: "Processo · Motivo"; Poka-Yoke: cada tipo), ex.: "1 de 2 reincidiram".
+- **Acompanhamento dos treinados** (tabela estilo planilha): Colaborador, Origem, Erro treinado, Treinado em e Situação, com filtros Todos / Reincidiram / Em acompanhamento / Eficazes.
+  - Ordem: Reincidiu primeiro, depois Em acompanhamento, depois Eficaz; dentro de cada grupo, o mais recente primeiro.
+  - **Linha vermelha clara** = reincidiu. Desligado aparece com "(desligado)" em cinza.
+  - Mostra até 500 linhas; acima disso, use os filtros.
+- O prazo de 30 dias fica numa linha só, no topo de `js/eficacia.js` (constante `DIAS_ACOMPANHAMENTO`).
 
 ### Aba Cronograma (funcionando)
 
@@ -154,7 +178,7 @@ Ações no formato **5W2H**, com Origem e Status.
 ```text
 index.html            página única: cabeçalho, menu, login e uma <section> por aba
 logo.png              logo DHL
-css/estilo.css        cores, fontes e componentes (menu, planilha, Gemba, Painel, Cronograma, Plano de ação, Poka-Yoke e impressão do calendário)
+css/estilo.css        cores, fontes e componentes (menu, planilha, Gemba, Painel, Cronograma, Plano de ação, Poka-Yoke, Eficácia e impressão do calendário)
 js/supabase.js        conexão com o Supabase, entrar, sair (URL e chave pública no topo)
 js/listas.js          leitura e acréscimo de itens nas LISTA_... (arquivo comum)
 js/menu.js            troca de abas
@@ -164,6 +188,7 @@ js/gemba.js           aba Gemba
 js/cronograma.js      aba Cronograma (calendário, PDF, tela cheia, vários dias, busca, participantes, carga, status e anexos)
 js/planoacao.js       aba Plano de ação (5W2H, alterar, status na linha, prazo, filtros e indicadores)
 js/pokayoke.js        aba Poka-Yoke (importação acumulada, ranking, treinado hoje)
+js/eficacia.js        aba Eficácia (acompanhamento de 30 dias dos treinos do Gemba e do Poka-Yoke; só lê o banco)
 js/colaboradores.js   aba Colaboradores
 sql/001_colaboradores.sql          tabela colaboradores e regras de acesso
 sql/002_gemba.sql                  tabelas listas e registros_gemba, itens iniciais e regras de acesso
@@ -181,7 +206,7 @@ CHANGELOG.md          histórico de mudanças
 - Só a **chave pública** do Supabase fica no código (`js/supabase.js`). A chave secreta nunca entra no código.
 - Só existe um usuário, criado manualmente no Supabase. Ninguém consegue se cadastrar sozinho.
 - A foto da turma e a lista de presença ficam numa pasta **privada**: só abrem com login, por um link que vale 1 hora.
-- Nada do app aparece sem login. Ao clicar em Sair, as listas, o Painel, o Cronograma, o Plano de ação e o Poka-Yoke somem da tela.
+- Nada do app aparece sem login. Ao clicar em Sair, as listas, o Painel, o Cronograma, o Plano de ação, o Poka-Yoke e a Eficácia somem da tela.
 - Dados de colaboradores: só matrícula, nome, setor e status.
 
 ## Como mudar algo
