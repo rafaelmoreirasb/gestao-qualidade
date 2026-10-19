@@ -2761,3 +2761,329 @@ body.crono-travado { overflow: hidden; }
   .py-importar-linha .botao-arquivo { width: 100%; }
   .py-dupla { grid-template-columns: 1fr; }
 }
+
+/* ---------- Eficácia do Treinamento (js/eficacia.js) ---------- */
+
+.ef-cartao {
+  border-top: 4px solid var(--vermelho);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.ef-topo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.ef-h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.ef-h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.ef-explica {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--cinza-texto);
+}
+
+/* Botões de escolha (origem e situação) */
+.ef-grupo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  background: var(--cinza-fundo);
+  padding: 4px;
+  border-radius: var(--raio);
+}
+
+.ef-opcao {
+  height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--raio);
+  background: transparent;
+  color: #333333;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ef-opcao:hover { background: var(--branco); }
+
+.ef-opcao.marcado {
+  background: var(--vermelho);
+  color: var(--branco);
+}
+
+.ef-blocos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: stretch;
+}
+
+/* Bloco amarelo: Treinos eficazes */
+.ef-destaque {
+  flex: 1 1 280px;
+  background: var(--amarelo);
+  border-radius: var(--raio-cartao);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ef-destaque-rotulo {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ef-destaque-linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.ef-pct {
+  font-family: var(--fonte-numeros);
+  font-size: 56px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ef-delta {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ef-frase { font-size: 13px; }
+
+.ef-barra {
+  display: flex;
+  height: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--branco);
+}
+
+.ef-barra-ok { background: var(--preto); }
+.ef-barra-bad { background: var(--vermelho); }
+.ef-barra-watch { background: var(--amarelo-claro); }
+
+.ef-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ef-legenda > span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ef-quad {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex: none;
+}
+
+.ef-quad-ok { background: var(--preto); }
+.ef-quad-bad { background: var(--vermelho); }
+.ef-quad-watch { background: var(--branco); border: 1px solid var(--preto); }
+
+/* Blocos brancos: por mês e onde menos funciona */
+.ef-bloco {
+  flex: 1 1 260px;
+  border: 1px solid var(--cinza-borda);
+  border-radius: var(--raio-cartao);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ef-bloco-titulo {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cinza-texto);
+}
+
+.ef-meses {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  height: 120px;
+}
+
+.ef-mes {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  height: 100%;
+}
+
+.ef-mes-valor {
+  font-family: var(--fonte-numeros);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ef-mes-barra {
+  width: 100%;
+  max-width: 44px;
+  border-radius: 3px 3px 0 0;
+  background: var(--amarelo);
+}
+
+.ef-mes-barra.atual { background: var(--vermelho); }
+
+.ef-mes-rotulo {
+  font-size: 12px;
+  color: var(--cinza-texto);
+}
+
+.ef-piores {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ef-pior {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ef-pior-topo {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.ef-pior-nome {
+  font-weight: 600;
+  min-width: 0;
+}
+
+.ef-pior-valor {
+  font-family: var(--fonte-numeros);
+  color: var(--cinza-texto);
+  white-space: nowrap;
+}
+
+.ef-pior-trilho {
+  height: 8px;
+  background: #EBEBEB;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.ef-pior-barra {
+  height: 100%;
+  background: var(--vermelho);
+}
+
+.ef-vazio-texto {
+  font-size: 13px;
+  color: var(--cinza-texto);
+}
+
+/* Tabela de acompanhamento */
+.ef-acomp {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ef-rolagem { max-height: 360px; }
+
+.planilha-ef { min-width: 780px; }
+
+.planilha-ef .planilha-cabecalho,
+.planilha-ef .planilha-linha {
+  grid-template-columns: minmax(150px, 1.2fr) 120px minmax(200px, 1.8fr) 100px minmax(190px, 1.3fr);
+}
+
+.planilha-ef .planilha-linha { height: 38px; }
+
+.planilha-ef .planilha-linha.ef-linha-bad { background: var(--vermelho-claro); }
+
+.planilha-ef .ef-col-nome {
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  line-height: 38px;
+}
+
+.planilha-ef .ef-col-nome.desligado {
+  color: var(--cinza-apagado);
+}
+
+.planilha-ef .ef-col-erro {
+  color: #333333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  line-height: 38px;
+}
+
+.planilha-ef .numero { font-size: 12px; }
+
+.planilha-ef .ef-col-situacao { gap: 8px; }
+
+.ef-chip {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.ef-chip-bad { background: var(--vermelho); color: var(--branco); }
+.ef-chip-ok { background: var(--preto); color: var(--branco); }
+.ef-chip-watch { background: var(--amarelo-claro); color: var(--preto); }
+
+.ef-progresso {
+  flex: 1;
+  min-width: 40px;
+  height: 6px;
+  background: #EBEBEB;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.ef-progresso > div {
+  height: 100%;
+  background: var(--amarelo);
+}
+
+@media (max-width: 600px) {
+  .ef-topo .ef-grupo { width: 100%; }
+  .ef-opcao { flex: 1 1 auto; }
+  .ef-pct { font-size: 44px; }
+}
