@@ -343,10 +343,76 @@
         </section>
       </section>
 
-      <!-- ===== Eficácia ===== -->
+      <!-- ===== Eficácia (js/eficacia.js) ===== -->
       <section class="aba" id="aba-eficacia" data-titulo="Eficácia do Treinamento" hidden>
         <h1 class="titulo">Eficácia do Treinamento</h1>
-        <div class="cartao em-construcao"><p>Em construção</p></div>
+
+        <div id="ef-msg-geral" class="mensagem mensagem-erro" role="alert" hidden></div>
+
+        <section class="cartao ef-cartao">
+          <div class="ef-topo">
+            <div>
+              <h2 class="ef-h2">Resultado dos treinamentos</h2>
+              <p class="ef-explica">Depois de cada treino, o sistema acompanha a pessoa por 30 dias. Se ela não repetir o mesmo erro, o treino conta como eficaz.</p>
+            </div>
+            <div class="ef-grupo" id="ef-origens" role="group" aria-label="Origem"></div>
+          </div>
+
+          <div id="ef-aviso" class="mensagem mensagem-ok" role="status" hidden></div>
+
+          <div class="ef-blocos">
+            <div class="ef-destaque">
+              <div class="ef-destaque-rotulo">Treinos eficazes</div>
+              <div class="ef-destaque-linha">
+                <div class="ef-pct" id="ef-pct">—</div>
+                <div class="ef-delta" id="ef-delta"></div>
+              </div>
+              <div class="ef-frase" id="ef-frase"></div>
+              <div class="ef-barra" aria-hidden="true">
+                <div class="ef-barra-ok" id="ef-barra-ok"></div>
+                <div class="ef-barra-bad" id="ef-barra-bad"></div>
+                <div class="ef-barra-watch" id="ef-barra-watch"></div>
+              </div>
+              <div class="ef-legenda">
+                <span><span class="ef-quad ef-quad-ok"></span><span id="ef-leg-ok">Eficaz 0</span></span>
+                <span><span class="ef-quad ef-quad-bad"></span><span id="ef-leg-bad">Reincidiu 0</span></span>
+                <span><span class="ef-quad ef-quad-watch"></span><span id="ef-leg-watch">Em acompanhamento 0</span></span>
+              </div>
+            </div>
+
+            <div class="ef-bloco">
+              <div class="ef-bloco-titulo">Eficácia por mês</div>
+              <div class="ef-meses" id="ef-meses"></div>
+              <div class="nota">Pelo mês em que o resultado saiu (reincidência ou fim dos 30 dias).</div>
+            </div>
+
+            <div class="ef-bloco">
+              <div class="ef-bloco-titulo">Onde o treino menos funciona</div>
+              <div class="ef-piores" id="ef-piores"></div>
+            </div>
+          </div>
+
+          <div class="ef-acomp">
+            <div class="cartao-topo">
+              <h3 class="ef-h3">Acompanhamento dos treinados</h3>
+              <div class="ef-grupo" id="ef-filtros" role="group" aria-label="Situação"></div>
+            </div>
+            <div class="planilha-rolagem ef-rolagem">
+              <div class="planilha planilha-ef">
+                <div class="planilha-cabecalho">
+                  <div>Colaborador</div>
+                  <div>Origem</div>
+                  <div>Erro treinado</div>
+                  <div>Treinado em</div>
+                  <div>Situação</div>
+                </div>
+                <div id="ef-linhas"></div>
+                <div id="ef-vazio" class="planilha-vazio" hidden></div>
+              </div>
+            </div>
+            <div class="nota" id="ef-rodape"></div>
+          </div>
+        </section>
       </section>
 
       <!-- ===== Cronograma (js/cronograma.js) ===== -->
@@ -738,5 +804,6 @@
   <script src="js/cronograma.js"></script>
   <script src="js/planoacao.js"></script>
   <script src="js/pokayoke.js"></script>
+  <script src="js/eficacia.js"></script>
 </body>
 </html>
