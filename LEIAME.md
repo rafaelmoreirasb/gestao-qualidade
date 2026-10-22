@@ -33,7 +33,7 @@ O Painel só **lê** o banco (registros do Gemba, colaboradores, listas e treina
 
 Registro rápido de desvio em 4 passos, feito para usar também no celular.
 
-1. **Colaborador (um ou vários):** busca por nome ou matrícula; mostra até 5 resultados, só **Ativos** e só quem ainda não foi escolhido (Enter escolhe o primeiro). Cada pessoa escolhida vira uma etiqueta com **×** para tirar. Até **30 pessoas** por registro; o processo, o motivo, a ação, a observação e as fotos valem para todas.
+1. **Colaboradores (opcional):** campo **recolhido** que mostra "Nenhum escolhido", os nomes ou "3 escolhidos: Fulano, Ciclano +1". Ao clicar, abre a **lista de todos os Ativos com caixas de seleção**, busca por nome ou matrícula e botão **Limpar**; a lista mostra uns 6 nomes e rola por dentro. Até **30 pessoas** por registro; o processo, o motivo, a ação, a observação e as fotos valem para todas. **Sem ninguém marcado**, o registro é salvo como **"Sem colaborador"**. A lista fecha sozinha depois de salvar.
 2. **Processo:** botões com os itens da LISTA_PROCESSOS, mais o campo **+ Adicionar**.
 3. **Motivo do erro:** lista suspensa com a LISTA_MOTIVOS_<PROCESSO> do processo escolhido, mais **+ Adicionar**. Fica apagada até escolher o processo.
 4. **Ação tomada:** botões da LISTA_ACOES, mais **+ Adicionar**.
@@ -44,13 +44,15 @@ Registro rápido de desvio em 4 passos, feito para usar também no celular.
   - **Cada pessoa vira um desvio** (uma linha no banco), todas com o mesmo **grupo** e as mesmas fotos. Por isso o Painel, a ficha de cada um e a Eficácia contam 1 desvio por pessoa.
   - Tudo ou nada: se o envio falhar no meio, nada é gravado e as fotos já enviadas são apagadas.
 - Depois de salvar, o formulário limpa, mas o **processo continua marcado**.
-- **Registros de hoje** (quadro amarelo): **um cartão por registro salvo**, com os nomes, hora, processo · motivo, ação, observação e miniaturas das fotos (clicar abre a foto grande). A contagem do quadro é de desvios (pessoas). A **lixeira** apaga o registro inteiro (todas as pessoas e as fotos), só para corrigir lançamento feito errado.
-- **Todos os Gemba** (no fim da aba): cartão que **começa fechado**; clicar no título ou na seta abre e fecha. Aberto, mostra a busca e a tabela com **todo o histórico**, o mais recente em cima, cerca de **5 linhas** visíveis e o resto **rolando dentro da tabela**.
+- O antigo quadro "Registros de hoje" saiu da tela (22/10/2026): o registro salvo aparece na hora no topo de **Todos os Gemba**; para ver só os de hoje, busque a data (ex.: `22/10`).
+- **Registro sem colaborador:** 1 desvio sem pessoa ligada. Aparece como "Sem colaborador" na tabela e no Painel, **conta** nos indicadores e no mapa de calor do Painel, não entra na ficha de ninguém e **fica de fora da Eficácia** (não há pessoa para acompanhar).
+- **Todos os Gemba** (no fim da aba): cartão que **começa aberto**; clicar no título ou na seta fecha e abre. Aberto, mostra a busca e a tabela com **todo o histórico**, o mais recente em cima, cerca de **5 linhas** visíveis e o resto **rolando dentro da tabela**.
   - **Uma linha por registro salvo:** Data, Hora, Pessoas, Processo, Motivo, Ação, Observação, Fotos e lixeira. O título mostra o total ("N desvios em M registros").
   - **Pessoas:** no máximo **2 nomes** e um selo "+N" com os demais; passando o mouse aparecem todos.
   - **Busca** (sem diferenciar acentos) por data, hora, nome, matrícula, processo, motivo, ação ou observação. Acha também os nomes escondidos no "+N", e o nome encontrado passa a aparecer primeiro.
   - **Fotos:** "📷 N" abre as miniaturas embaixo da linha; clicar numa abre a foto grande.
-  - **Lixeira:** a mesma de "Registros de hoje" (apaga o registro inteiro e as fotos; só lançamento errado).
+  - **Busca** "sem colab" acha os registros sem colaborador.
+  - **Lixeira:** apaga o registro inteiro (todas as pessoas e as fotos), com confirmação; só para corrigir lançamento feito errado.
   - O que é salvo ou excluído aparece na hora na tabela.
 - **+ Adicionar** grava o item novo na lista oficial, sem duplicar. **Processo novo** cria a sua LISTA_MOTIVOS_<NOME> vazia.
 - **LISTA_MOTIVOS_BK** começou vazia: os motivos reais são criados na tela.
@@ -164,7 +166,7 @@ Ações no formato **5W2H**, com Origem e Status.
 | --- | --- | --- |
 | colaboradores | `sql/001_colaboradores.sql` (Fase 1) | id, matricula (única), nome, setor (vazio por enquanto), status (Ativo/Desligado), criado_em |
 | listas | `sql/002_gemba.sql` (Fase 2) | id, lista, item, ordem, ativo, criado_em. Não pode apagar (item removido fica com ativo = falso) |
-| registros_gemba | `sql/002_gemba.sql` (Fase 2) e `sql/009_gemba_grupo_fotos.sql` | id, data, colaborador_id, processo, motivo, acao, observacao, criado_em, **grupo** (pessoas salvas juntas têm o mesmo; registros antigos têm um próprio) e **fotos** (lista de caminhos na pasta "gemba"). Uma linha por pessoa |
+| registros_gemba | `sql/002_gemba.sql` (Fase 2), `sql/009_gemba_grupo_fotos.sql` e `sql/010_gemba_colaborador_opcional.sql` | id, data, colaborador_id (**opcional** desde o 010: vazio = "Sem colaborador"), processo, motivo, acao, observacao, criado_em, **grupo** (pessoas salvas juntas têm o mesmo; registros antigos têm um próprio) e **fotos** (lista de caminhos na pasta "gemba"). Uma linha por pessoa |
 | treinamentos | `sql/003_cronograma.sql` e `sql/004_cronograma_status_carga.sql` (Fase 4) | id, data, hora, tema, **carga_minutos** (carga horária em minutos), **status** (Agendado/Realizado), **foto_caminho** e **lista_caminho** (onde estão os anexos; colunas do `sql/007_cronograma_anexos.sql`), criado_em. Pode ler, criar, alterar **só** carga, status e anexos, e excluir (só lançamento errado) |
 | treinamento_participantes | `sql/003_cronograma.sql` (Fase 4) | id, treinamento_id (sai junto se o treino for excluído), colaborador_id (protege o colaborador de exclusão), criado_em. A mesma pessoa não entra duas vezes no mesmo treino |
 | planos_acao | `sql/005_planos_acao.sql` (Fase 5) | id, o_que, por_que, onde, quem, quando (prazo), como, quanto, origem (Gemba/Torre de Aduana/Poka-Yoke), status (Não iniciada/Em andamento/Concluída), criado_em. O quê, Quem e Quando obrigatórios. Pode ler, criar, alterar e excluir (só lançamento errado) |
@@ -197,7 +199,7 @@ js/listas.js          leitura e acréscimo de itens nas LISTA_... (arquivo comum
 js/menu.js            troca de abas
 js/planilha.js        leitura de .xlsx e .csv no navegador, sem biblioteca
 js/painel.js          aba Painel (indicadores, mapa de calor único e mapa por colaborador)
-js/gemba.js           aba Gemba (várias pessoas por registro e fotos)
+js/gemba.js           aba Gemba (colaboradores opcionais em lista, várias pessoas por registro, fotos e tabela Todos os Gemba)
 js/cronograma.js      aba Cronograma (calendário, PDF, tela cheia, vários dias, busca, participantes, carga, status e anexos)
 js/planoacao.js       aba Plano de ação (5W2H, alterar, status na linha, prazo, filtros e indicadores)
 js/pokayoke.js        aba Poka-Yoke (importação acumulada, ranking, treinado hoje)
@@ -211,6 +213,7 @@ sql/005_planos_acao.sql            tabela planos_acao e regras de acesso
 sql/006_pokayoke.sql               LISTA_ERROS_POKAYOKE, tabelas pokayoke_erros e pokayoke_treinos, resumos e regras de acesso
 sql/007_cronograma_anexos.sql      colunas de anexos em treinamentos, pasta privada "treinamentos" no Storage e regras de acesso
 sql/009_gemba_grupo_fotos.sql      colunas grupo e fotos em registros_gemba, pasta privada "gemba" no Storage e regras de acesso (o 008 fica reservado para a Torre de Aduana)
+sql/010_gemba_colaborador_opcional.sql   colaborador deixa de ser obrigatório em registros_gemba
 LEIAME.md             este arquivo
 CHANGELOG.md          histórico de mudanças
 ```
