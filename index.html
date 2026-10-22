@@ -176,23 +176,19 @@
         <div class="gemba-linha">
           <section class="cartao gemba-form" aria-label="Novo registro">
 
-            <!-- Passo 1: colaborador -->
+            <!-- Passo 1: colaboradores (um ou vários) -->
             <div class="gemba-passo">
               <div class="gemba-passo-topo">
                 <div class="gemba-numero" aria-hidden="true">1</div>
-                <label for="gemba-busca" class="gemba-passo-titulo">Colaborador</label>
+                <label for="gemba-busca" class="gemba-passo-titulo">Colaborador <span class="gemba-passo-detalhe" id="gemba-colab-contagem"></span></label>
               </div>
-              <div class="gemba-escolhido" id="gemba-colab-escolhido" hidden>
-                <div>
-                  <div class="gemba-escolhido-nome" id="gemba-colab-nome"></div>
-                  <div class="gemba-escolhido-info" id="gemba-colab-info"></div>
-                </div>
-                <button type="button" class="botao-trocar" id="gemba-trocar">Trocar</button>
-              </div>
+              <div class="gemba-escolhidos" id="gemba-escolhidos" aria-label="Pessoas escolhidas" hidden></div>
               <div class="gemba-busca" id="gemba-colab-busca">
                 <input type="search" id="gemba-busca" class="gemba-campo" placeholder="Digite o nome ou a matrícula" autocomplete="off">
                 <div class="gemba-resultados" id="gemba-resultados"></div>
               </div>
+              <div class="gemba-dica">Pode escolher várias pessoas: o mesmo processo, motivo, ação e fotos valem para todas.</div>
+              <div id="gemba-msg-colab" class="mensagem" role="status" hidden></div>
             </div>
 
             <!-- Passo 2: processo -->
@@ -249,6 +245,17 @@
               <span>Observação <span class="gemba-obs-opcional">Opcional</span></span>
               <textarea id="gemba-obs" rows="3" placeholder="Detalhe o que viu, se precisar"></textarea>
             </label>
+
+            <!-- Fotos -->
+            <div class="gemba-fotos">
+              <div class="gemba-fotos-titulo">Fotos <span class="gemba-obs-opcional" id="gemba-fotos-contagem">Opcional · até 6</span></div>
+              <div class="gemba-miniaturas" id="gemba-miniaturas" hidden></div>
+              <label class="botao botao-contorno gemba-foto-botao" id="gemba-foto-rotulo">
+                <span id="gemba-foto-texto">📷 Adicionar fotos</span>
+                <input type="file" id="gemba-foto-arquivo" accept="image/*" multiple>
+              </label>
+              <div id="gemba-msg-fotos" class="mensagem" role="status" hidden></div>
+            </div>
 
             <!-- Salvar -->
             <div class="gemba-salvar">

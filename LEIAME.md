@@ -25,6 +25,7 @@ O Painel só **lê** o banco (registros do Gemba, colaboradores, listas e treina
   - **contorno amarelo** = treinamento ainda **Agendado** (dia futuro, ou dia passado que ainda não foi marcado como realizado);
   - **cinza** = sem registro; **tracejado** = dia futuro ou antes do início da contagem.
 - **Resumo do dia:** passar o mouse num dia (ou tocar, no celular) mostra a data, a contagem e a lista de desvios (hora, colaborador, processo, motivo) e de treinamentos (hora, tema, nº de participantes; avisa se ainda não foi marcado como realizado).
+  - Pessoas registradas juntas no Gemba aparecem **numa linha só**, com todos os nomes. Se o registro tem fotos, aparece o botão **📷 Ver fotos (N)**: mostra as miniaturas e, ao clicar numa, abre a foto grande. O resumo do mapa por colaborador também tem o botão.
 - No computador, o mapa abre rolado até a semana de hoje. Quando houver mais de um ano, aparece um seletor de ano.
 - **Mapa por colaborador:** escolher a pessoa (Ativos primeiro; desligados aparecem com "(desligado)"). Ficha com iniciais, nome, matrícula, setor, total de desvios, **treinamentos realizados de que participou** e o desvio que mais se repete. Abaixo, o mapa só dela, com as mesmas cores e o resumo do dia.
 
@@ -32,14 +33,18 @@ O Painel só **lê** o banco (registros do Gemba, colaboradores, listas e treina
 
 Registro rápido de desvio em 4 passos, feito para usar também no celular.
 
-1. **Colaborador:** busca por nome ou matrícula; mostra até 5 resultados, só **Ativos**. Ao escolher, aparece o cartão com nome, matrícula e setor e o botão **Trocar**.
+1. **Colaborador (um ou vários):** busca por nome ou matrícula; mostra até 5 resultados, só **Ativos** e só quem ainda não foi escolhido (Enter escolhe o primeiro). Cada pessoa escolhida vira uma etiqueta com **×** para tirar. Até **30 pessoas** por registro; o processo, o motivo, a ação, a observação e as fotos valem para todas.
 2. **Processo:** botões com os itens da LISTA_PROCESSOS, mais o campo **+ Adicionar**.
 3. **Motivo do erro:** lista suspensa com a LISTA_MOTIVOS_<PROCESSO> do processo escolhido, mais **+ Adicionar**. Fica apagada até escolher o processo.
 4. **Ação tomada:** botões da LISTA_ACOES, mais **+ Adicionar**.
 
-- **Observação** opcional e botão **Salvar registro**. Se faltar algo, aparece "Falta escolher: …".
+- **Observação** opcional.
+- **Fotos** opcionais: botão **📷 Adicionar fotos** (no celular, tirar na hora ou escolher da galeria), até **6 fotos** por registro, com miniatura e **×** antes de salvar. Cada foto é diminuída no aparelho (lado maior até 1600 px) antes de enviar.
+- Botão **Salvar registro** (mostra "(N pessoas)" quando há mais de uma). Se faltar algo, aparece "Falta escolher: …".
+  - **Cada pessoa vira um desvio** (uma linha no banco), todas com o mesmo **grupo** e as mesmas fotos. Por isso o Painel, a ficha de cada um e a Eficácia contam 1 desvio por pessoa.
+  - Tudo ou nada: se o envio falhar no meio, nada é gravado e as fotos já enviadas são apagadas.
 - Depois de salvar, o formulário limpa, mas o **processo continua marcado**.
-- **Registros de hoje** (quadro amarelo) com **lixeira** só para corrigir lançamento feito errado.
+- **Registros de hoje** (quadro amarelo): **um cartão por registro salvo**, com os nomes, hora, processo · motivo, ação, observação e miniaturas das fotos (clicar abre a foto grande). A contagem do quadro é de desvios (pessoas). A **lixeira** apaga o registro inteiro (todas as pessoas e as fotos), só para corrigir lançamento feito errado.
 - **+ Adicionar** grava o item novo na lista oficial, sem duplicar. **Processo novo** cria a sua LISTA_MOTIVOS_<NOME> vazia.
 - **LISTA_MOTIVOS_BK** começou vazia: os motivos reais são criados na tela.
 - O registro guarda o **texto** do processo, do motivo e da ação.
@@ -152,7 +157,7 @@ Ações no formato **5W2H**, com Origem e Status.
 | --- | --- | --- |
 | colaboradores | `sql/001_colaboradores.sql` (Fase 1) | id, matricula (única), nome, setor (vazio por enquanto), status (Ativo/Desligado), criado_em |
 | listas | `sql/002_gemba.sql` (Fase 2) | id, lista, item, ordem, ativo, criado_em. Não pode apagar (item removido fica com ativo = falso) |
-| registros_gemba | `sql/002_gemba.sql` (Fase 2) | id, data, colaborador_id, processo, motivo, acao, observacao, criado_em |
+| registros_gemba | `sql/002_gemba.sql` (Fase 2) e `sql/009_gemba_grupo_fotos.sql` | id, data, colaborador_id, processo, motivo, acao, observacao, criado_em, **grupo** (pessoas salvas juntas têm o mesmo; registros antigos têm um próprio) e **fotos** (lista de caminhos na pasta "gemba"). Uma linha por pessoa |
 | treinamentos | `sql/003_cronograma.sql` e `sql/004_cronograma_status_carga.sql` (Fase 4) | id, data, hora, tema, **carga_minutos** (carga horária em minutos), **status** (Agendado/Realizado), **foto_caminho** e **lista_caminho** (onde estão os anexos; colunas do `sql/007_cronograma_anexos.sql`), criado_em. Pode ler, criar, alterar **só** carga, status e anexos, e excluir (só lançamento errado) |
 | treinamento_participantes | `sql/003_cronograma.sql` (Fase 4) | id, treinamento_id (sai junto se o treino for excluído), colaborador_id (protege o colaborador de exclusão), criado_em. A mesma pessoa não entra duas vezes no mesmo treino |
 | planos_acao | `sql/005_planos_acao.sql` (Fase 5) | id, o_que, por_que, onde, quem, quando (prazo), como, quanto, origem (Gemba/Torre de Aduana/Poka-Yoke), status (Não iniciada/Em andamento/Concluída), criado_em. O quê, Quem e Quando obrigatórios. Pode ler, criar, alterar e excluir (só lançamento errado) |
@@ -163,6 +168,7 @@ Ações no formato **5W2H**, com Origem e Status.
 - **LISTA_ERROS_POKAYOKE** fica na tabela listas (itens criados pelo `sql/006_pokayoke.sql`).
 - RLS ligado em todas: só o usuário logado lê e grava. Visitante sem login não acessa nada.
 - **Arquivos (Supabase Storage):** pasta **privada** `treinamentos` (criada pelo `sql/007_cronograma_anexos.sql`), só JPEG, PNG e PDF, até 10 MB. Cada treino tem sua subpasta (o número do treino). Só o usuário logado lê, envia e apaga. O plano gratuito do Supabase guarda 1 GB.
+- Pasta **privada** `gemba` (criada pelo `sql/009_gemba_grupo_fotos.sql`), só JPEG e PNG, até 10 MB: fotos do Gemba, uma subpasta por grupo. Só o usuário logado lê, envia e apaga.
 - Os scripts `sql/` são rodados à mão no Supabase (SQL Editor → New query → colar → Run), um por vez, em ordem.
 
 ## Onde cada coisa está
@@ -184,7 +190,7 @@ js/listas.js          leitura e acréscimo de itens nas LISTA_... (arquivo comum
 js/menu.js            troca de abas
 js/planilha.js        leitura de .xlsx e .csv no navegador, sem biblioteca
 js/painel.js          aba Painel (indicadores, mapa de calor único e mapa por colaborador)
-js/gemba.js           aba Gemba
+js/gemba.js           aba Gemba (várias pessoas por registro e fotos)
 js/cronograma.js      aba Cronograma (calendário, PDF, tela cheia, vários dias, busca, participantes, carga, status e anexos)
 js/planoacao.js       aba Plano de ação (5W2H, alterar, status na linha, prazo, filtros e indicadores)
 js/pokayoke.js        aba Poka-Yoke (importação acumulada, ranking, treinado hoje)
@@ -197,6 +203,7 @@ sql/004_cronograma_status_carga.sql colunas carga_minutos e status e permissão 
 sql/005_planos_acao.sql            tabela planos_acao e regras de acesso
 sql/006_pokayoke.sql               LISTA_ERROS_POKAYOKE, tabelas pokayoke_erros e pokayoke_treinos, resumos e regras de acesso
 sql/007_cronograma_anexos.sql      colunas de anexos em treinamentos, pasta privada "treinamentos" no Storage e regras de acesso
+sql/009_gemba_grupo_fotos.sql      colunas grupo e fotos em registros_gemba, pasta privada "gemba" no Storage e regras de acesso (o 008 fica reservado para a Torre de Aduana)
 LEIAME.md             este arquivo
 CHANGELOG.md          histórico de mudanças
 ```

@@ -91,7 +91,7 @@
     const m = String((e && e.message) || '').toLowerCase();
     const code = e && e.code;
     if (code === '42703' || code === '42P01' || code === 'PGRST205' || code === 'PGRST200' || m.includes('could not find') || m.includes('does not exist')) {
-      return 'Faltam tabelas ou colunas no banco. Confira se os arquivos sql/001, sql/002, sql/003 e sql/004 foram rodados no Supabase.';
+      return 'Faltam tabelas ou colunas no banco. Confira se os arquivos sql/001, sql/002, sql/003, sql/004 e sql/009 foram rodados no Supabase.';
     }
     if (code === '42501' || m.includes('permission denied') || m.includes('row-level security')) {
       return 'O banco recusou por falta de permissão.';
@@ -122,7 +122,7 @@
     try {
       const [regs, cols, listas, tres] = await Promise.all([
         lerTudo(() => sb.from('registros_gemba')
-          .select('id, data, colaborador_id, processo, motivo, acao')
+          .select('id, data, grupo, fotos, colaborador_id, processo, motivo, acao')
           .gte('data', INICIO.toISOString())
           .order('data', { ascending: true })
           .order('id', { ascending: true })),
@@ -463,15 +463,69 @@
     caixa.appendChild(l);
   }
 
-  function listaResumo(caixa, textos) {
+  // Cada item pode ser um texto ou { texto, fotos: [caminhos] }.
+  // Com fotos, aparece o botão "📷 Ver fotos (N)".
+  function listaResumo(caixa, itens) {
     const ul = document.createElement('ul');
     ul.className = 'mapa-resumo-lista';
-    textos.forEach((t) => {
+    itens.forEach((t) => {
       const li = document.createElement('li');
-      li.textContent = t;
+      const texto = typeof t === 'string' ? t : t.texto;
+      const fotos = typeof t === 'string' ? [] : (t.fotos || []);
+      li.appendChild(document.createTextNode(texto));
+      if (fotos.length) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'mapa-resumo-fotos-botao';
+        b.textContent = '📷 Ver fotos (' + fotos.length + ')';
+        b.addEventListener('click', (ev) => { ev.stopPropagation(); mostrarFotos(li, b, fotos); });
+        li.appendChild(b);
+      }
       ul.appendChild(li);
     });
     caixa.appendChild(ul);
+  }
+
+  /* ---------------- Fotos do Gemba (pasta privada "gemba") ---------------- */
+
+  // Mostra as miniaturas logo abaixo da linha; clicar abre a foto grande
+  async function mostrarFotos(li, botao, caminhos) {
+    const aberta = li.querySelector('.mapa-resumo-fotos');
+    if (aberta) { aberta.remove(); botao.textContent = '📷 Ver fotos (' + caminhos.length + ')'; return; }
+    botao.disabled = true;
+    botao.textContent = 'Abrindo…';
+    let links = {};
+    try {
+      const { data, error } = await sb.storage.from('gemba').createSignedUrls(caminhos, 3600);
+      if (error) throw error;
+      (data || []).forEach((d) => { if (d && d.signedUrl && d.path) links[d.path] = d.signedUrl; });
+    } catch (e) {
+      links = {};
+    }
+    botao.disabled = false;
+    if (!Object.keys(links).length) {
+      botao.textContent = '📷 Não foi possível abrir as fotos';
+      return;
+    }
+    botao.textContent = '📷 Esconder fotos';
+    const fila = document.createElement('div');
+    fila.className = 'mapa-resumo-fotos';
+    caminhos.forEach((c, i) => {
+      if (!links[c]) return;
+      const a = document.createElement('a');
+      a.className = 'gemba-registro-foto';
+      a.href = links[c];
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.title = 'Abrir foto ' + (i + 1) + ' de ' + caminhos.length;
+      const img = document.createElement('img');
+      img.src = links[c];
+      img.alt = 'Foto ' + (i + 1);
+      img.loading = 'lazy';
+      a.appendChild(img);
+      fila.appendChild(a);
+    });
+    li.appendChild(fila);
   }
 
   function desenharResumoGeral(porDia, treinosPorDia, nomes) {
@@ -501,10 +555,18 @@
       linhaResumo(caixa, 'Nenhum desvio nem treinamento registrado neste dia.', 'mapa-resumo-vazio');
       return;
     }
-    const textos = itens.map((r) => {
-      const c = nomes[r.colaborador_id] || {};
-      return horaDe(r.data) + ' · ' + (c.nome || 'Colaborador') + ' — ' + r.processo + ': ' + r.motivo;
-    }).concat(tre.map(textoTreino));
+    // Pessoas registradas juntas (mesmo grupo) aparecem numa linha só
+    const grupos = [];
+    const porGrupo = {};
+    itens.forEach((r) => {
+      const g = r.grupo || ('linha-' + r.id);
+      if (!porGrupo[g]) { porGrupo[g] = { r, nomes: [] }; grupos.push(porGrupo[g]); }
+      porGrupo[g].nomes.push((nomes[r.colaborador_id] || {}).nome || 'Colaborador');
+    });
+    const textos = grupos.map((g) => ({
+      texto: horaDe(g.r.data) + ' · ' + g.nomes.join(', ') + ' — ' + g.r.processo + ': ' + g.r.motivo,
+      fotos: g.r.fotos || []
+    })).concat(tre.map(textoTreino));
     listaResumo(caixa, textos);
   }
 
@@ -606,7 +668,7 @@
       linhaResumo(caixa, 'Sem registro neste dia.', 'mapa-resumo-vazio');
       return;
     }
-    const textos = itens.map((r) => horaDe(r.data) + ' · ' + r.processo + ': ' + r.motivo + ' · Ação: ' + r.acao)
+    const textos = itens.map((r) => ({ texto: horaDe(r.data) + ' · ' + r.processo + ': ' + r.motivo + ' · Ação: ' + r.acao, fotos: r.fotos || [] }))
       .concat(tre.map((t) => t.hora + ' · Treinamento — ' + t.tema + (t.realizado ? '' : ' (ainda não marcado como realizado)')));
     listaResumo(caixa, textos);
   }
