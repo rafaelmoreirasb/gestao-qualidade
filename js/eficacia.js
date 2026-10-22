@@ -157,7 +157,8 @@
     const porId = {};
     cols.forEach((c) => { porId[c.id] = c; });
     const grupos = {};   // colaborador|processo|motivo → [dias em ordem]
-    const lista = regs.map((r) => {
+    // Registro "Sem colaborador" fica de fora: não há pessoa para acompanhar
+    const lista = regs.filter((r) => r.colaborador_id != null).map((r) => {
       const dia = diaDe(r.data);
       const chave = r.colaborador_id + '|' + r.processo + '|' + r.motivo;
       (grupos[chave] = grupos[chave] || []).push(dia);
