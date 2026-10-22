@@ -176,18 +176,26 @@
         <div class="gemba-linha">
           <section class="cartao gemba-form" aria-label="Novo registro">
 
-            <!-- Passo 1: colaboradores (um ou vários) -->
+            <!-- Passo 1: colaboradores (opcional; lista que começa fechada) -->
             <div class="gemba-passo">
               <div class="gemba-passo-topo">
                 <div class="gemba-numero" aria-hidden="true">1</div>
-                <label for="gemba-busca" class="gemba-passo-titulo">Colaborador <span class="gemba-passo-detalhe" id="gemba-colab-contagem"></span></label>
+                <div class="gemba-passo-titulo">Colaboradores <span class="gemba-obs-opcional">Opcional</span></div>
               </div>
-              <div class="gemba-escolhidos" id="gemba-escolhidos" aria-label="Pessoas escolhidas" hidden></div>
-              <div class="gemba-busca" id="gemba-colab-busca">
-                <input type="search" id="gemba-busca" class="gemba-campo" placeholder="Digite o nome ou a matrícula" autocomplete="off">
-                <div class="gemba-resultados" id="gemba-resultados"></div>
+              <button type="button" class="gemba-lista-abrir" id="gemba-lista-abrir" aria-expanded="false" aria-controls="gemba-lista-corpo">
+                <span class="gemba-lista-resumo" id="gemba-lista-resumo">Nenhum escolhido</span>
+                <span class="crono-seta gemba-seta" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </span>
+              </button>
+              <div class="gemba-lista-corpo" id="gemba-lista-corpo" hidden>
+                <div class="gemba-lista-topo">
+                  <input type="search" id="gemba-busca" class="gemba-campo" placeholder="Buscar nome ou matrícula" aria-label="Buscar colaborador" autocomplete="off">
+                  <button type="button" class="botao botao-contorno gemba-lista-limpar" id="gemba-lista-limpar">Limpar</button>
+                </div>
+                <div class="gemba-lista" id="gemba-lista" role="group" aria-label="Colaboradores Ativos"></div>
+                <div class="gemba-dica">Marque uma ou várias pessoas (só Ativos). O mesmo processo, motivo, ação e fotos valem para todas. Sem ninguém marcado, o registro fica "Sem colaborador".</div>
               </div>
-              <div class="gemba-dica">Pode escolher várias pessoas: o mesmo processo, motivo, ação e fotos valem para todas.</div>
               <div id="gemba-msg-colab" class="mensagem" role="status" hidden></div>
             </div>
 
@@ -264,16 +272,41 @@
             </div>
           </section>
 
-          <!-- Registros de hoje -->
-          <aside class="gemba-hoje" aria-label="Registros de hoje">
-            <div>
-              <div class="gemba-hoje-rotulo">Registros de hoje</div>
-              <div class="gemba-hoje-titulo"><span id="gemba-hoje-data"></span> <span class="gemba-hoje-contagem" id="gemba-hoje-contagem"></span></div>
-            </div>
-            <div id="gemba-msg-hoje" class="mensagem" role="status" hidden></div>
-            <div class="gemba-hoje-lista" id="gemba-hoje-lista"></div>
-          </aside>
         </div>
+
+        <!-- Todos os Gemba (começa aberto; a seta fecha e abre) -->
+        <section class="cartao cartao-lista gemba-todos" aria-labelledby="gemba-todos-titulo">
+          <div class="gemba-todos-topo">
+            <button type="button" class="gemba-todos-abrir aberto" id="gemba-todos-abrir" aria-expanded="true" aria-controls="gemba-todos-corpo">
+              <span class="subtitulo" id="gemba-todos-titulo">Todos os Gemba <span class="crono-total" id="gemba-todos-total"></span></span>
+              <span class="crono-seta gemba-seta" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </span>
+            </button>
+          </div>
+          <div class="gemba-todos-corpo" id="gemba-todos-corpo">
+            <input type="search" id="gemba-todos-busca" class="busca gemba-todos-busca" aria-label="Buscar no Gemba" placeholder="Buscar data, nome, matrícula, processo, motivo ou ação" autocomplete="off">
+            <div id="gemba-msg-todos" class="mensagem" role="status" hidden></div>
+            <div class="planilha-rolagem gemba-todos-rolagem">
+              <div class="planilha planilha-gemba">
+                <div class="planilha-cabecalho">
+                  <div>Data</div>
+                  <div>Hora</div>
+                  <div>Pessoas</div>
+                  <div>Processo</div>
+                  <div>Motivo</div>
+                  <div>Ação</div>
+                  <div>Observação</div>
+                  <div>Fotos</div>
+                  <div></div>
+                </div>
+                <div id="gemba-todos-linhas"></div>
+                <div id="gemba-todos-vazio" class="planilha-vazio" hidden></div>
+              </div>
+            </div>
+            <div class="nota">Uma linha por registro salvo, o mais recente em cima. A coluna Pessoas mostra até 2 nomes (passe o mouse para ver todos); a busca encontra também os nomes escondidos. Em Fotos, clique para ver as miniaturas. Registro sem ninguém marcado aparece como "Sem colaborador". A lixeira serve só para corrigir lançamento feito errado (apaga o registro inteiro e as fotos).</div>
+          </div>
+        </section>
       </section>
 
       <!-- ===== Torre de Aduana ===== -->

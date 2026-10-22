@@ -442,7 +442,7 @@
       const lv = nivel(itens.length);
       const estilo = estiloDiaAtivo(lv < 0 ? null : PALETA_DEV[lv], tre);
       let dica = dataLonga(dia) + '\n' + plural(itens.length, 'desvio', 'desvios') + ' · ' + plural(tre.length, 'treinamento', 'treinamentos');
-      const linhas = itens.map((r) => '• ' + ((nomes[r.colaborador_id] || {}).nome || 'Colaborador') + ' — ' + r.processo)
+      const linhas = itens.map((r) => '• ' + ((nomes[r.colaborador_id] || {}).nome || 'Sem colaborador') + ' — ' + r.processo)
         .concat(tre.map((t) => '• ' + textoTreino(t)));
       if (linhas.length) dica += '\n\n' + linhas.join('\n');
       return Object.assign(estilo, { dica });
@@ -561,7 +561,7 @@
     itens.forEach((r) => {
       const g = r.grupo || ('linha-' + r.id);
       if (!porGrupo[g]) { porGrupo[g] = { r, nomes: [] }; grupos.push(porGrupo[g]); }
-      porGrupo[g].nomes.push((nomes[r.colaborador_id] || {}).nome || 'Colaborador');
+      porGrupo[g].nomes.push((nomes[r.colaborador_id] || {}).nome || 'Sem colaborador');
     });
     const textos = grupos.map((g) => ({
       texto: horaDe(g.r.data) + ' · ' + g.nomes.join(', ') + ' — ' + g.r.processo + ': ' + g.r.motivo,

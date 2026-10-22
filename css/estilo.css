@@ -3273,3 +3273,192 @@ body.crono-travado { overflow: hidden; }
   width: 72px;
   height: 72px;
 }
+
+/* ---------- Gemba: tabela "Todos os Gemba" (alteração 22/10/2026) ---------- */
+
+.gemba-todos { gap: 12px; }
+
+.gemba-todos-topo { display: flex; }
+
+/* O título inteiro é o botão que abre e fecha */
+.gemba-todos-abrir {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--preto);
+  text-align: left;
+  cursor: pointer;
+}
+
+.gemba-todos-abrir .gemba-seta svg { transition: transform 0.15s; }
+.gemba-todos-abrir.aberto .gemba-seta svg { transform: rotate(180deg); }
+.gemba-todos-abrir:hover .gemba-seta { background: var(--amarelo-claro); }
+
+.gemba-todos-corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gemba-todos-busca { width: 420px; }
+
+/* Cerca de 5 linhas; o resto rola dentro da tabela */
+.gemba-todos-rolagem { max-height: 218px; }
+
+.planilha-gemba { min-width: 1100px; }
+
+.planilha-gemba .planilha-cabecalho,
+.planilha-gemba .planilha-linha {
+  grid-template-columns: 96px 60px minmax(200px, 1.6fr) 120px minmax(170px, 1.5fr) minmax(150px, 1.2fr) minmax(150px, 1.2fr) 72px 56px;
+}
+
+.gemba-todos-bloco { background: var(--branco); }
+.gemba-todos-bloco.par,
+.gemba-todos-bloco.par .planilha-linha { background: var(--cinza-zebra); }
+
+.gemba-todos-pessoas {
+  gap: 6px;
+  font-weight: 600;
+}
+
+.gemba-todos-nomes {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gemba-todos-mais {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--amarelo);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.planilha-gemba .gemba-todos-texto {
+  display: block;
+  line-height: 36px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gemba-todos-sem { color: var(--cinza-apagado); }
+
+.gemba-todos-fotos-botao {
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--cinza-campo);
+  border-radius: var(--raio);
+  background: var(--branco);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.gemba-todos-fotos-botao:hover,
+.gemba-todos-fotos-botao.aberto { background: var(--amarelo-claro); }
+
+.gemba-todos-miniaturas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 8px 10px 164px;   /* começa embaixo da coluna Pessoas */
+  border-bottom: 1px solid var(--cinza-linha);
+}
+
+@media (max-width: 600px) {
+  .gemba-todos-busca { width: 100%; }
+  .gemba-todos-miniaturas { padding-left: 8px; }
+}
+
+/* ---------- Gemba: colaboradores em lista recolhida (alteração 22/10/2026) ---------- */
+
+/* Linha recolhida: resumo de quem foi escolhido + seta */
+.gemba-lista-abrir {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 2px 2px 14px;
+  border: 1px solid var(--cinza-campo);
+  border-radius: var(--raio);
+  background: var(--branco);
+  color: var(--cinza-texto);
+  font-size: 16px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gemba-lista-abrir.com-escolha {
+  border: 2px solid var(--vermelho);
+  color: var(--preto);
+  font-weight: 700;
+}
+
+.gemba-lista-abrir .gemba-seta { border: 0; background: transparent; }
+.gemba-lista-abrir .gemba-seta svg { transition: transform 0.15s; }
+.gemba-lista-abrir.aberto .gemba-seta svg { transform: rotate(180deg); }
+.gemba-lista-abrir:hover { background: var(--amarelo-claro); }
+
+.gemba-lista-resumo {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.gemba-lista-corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gemba-lista-topo {
+  display: flex;
+  gap: 8px;
+}
+
+.gemba-lista-topo .gemba-campo { flex: 1; min-width: 0; }
+.gemba-lista-limpar { height: 48px; }
+
+/* Cerca de 6 nomes; o resto rola dentro da lista */
+.gemba-lista {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--cinza-borda);
+  border-radius: var(--raio);
+}
+
+.gemba-lista-item {
+  min-height: 48px;
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #E6E6E6;
+  background: var(--branco);
+  cursor: pointer;
+}
+
+.gemba-lista-item:last-child { border-bottom: 0; }
+.gemba-lista-item:hover { background: var(--amarelo-claro); }
+.gemba-lista-item.marcado { background: var(--cinza-zebra); }
+
+.gemba-lista-item input {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  accent-color: var(--vermelho);
+  cursor: pointer;
+}
+
+.gemba-lista-item .gemba-resultado-nome { flex: 1; min-width: 0; }
