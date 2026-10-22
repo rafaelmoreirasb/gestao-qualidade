@@ -45,6 +45,13 @@ Registro rápido de desvio em 4 passos, feito para usar também no celular.
   - Tudo ou nada: se o envio falhar no meio, nada é gravado e as fotos já enviadas são apagadas.
 - Depois de salvar, o formulário limpa, mas o **processo continua marcado**.
 - **Registros de hoje** (quadro amarelo): **um cartão por registro salvo**, com os nomes, hora, processo · motivo, ação, observação e miniaturas das fotos (clicar abre a foto grande). A contagem do quadro é de desvios (pessoas). A **lixeira** apaga o registro inteiro (todas as pessoas e as fotos), só para corrigir lançamento feito errado.
+- **Todos os Gemba** (no fim da aba): cartão que **começa fechado**; clicar no título ou na seta abre e fecha. Aberto, mostra a busca e a tabela com **todo o histórico**, o mais recente em cima, cerca de **5 linhas** visíveis e o resto **rolando dentro da tabela**.
+  - **Uma linha por registro salvo:** Data, Hora, Pessoas, Processo, Motivo, Ação, Observação, Fotos e lixeira. O título mostra o total ("N desvios em M registros").
+  - **Pessoas:** no máximo **2 nomes** e um selo "+N" com os demais; passando o mouse aparecem todos.
+  - **Busca** (sem diferenciar acentos) por data, hora, nome, matrícula, processo, motivo, ação ou observação. Acha também os nomes escondidos no "+N", e o nome encontrado passa a aparecer primeiro.
+  - **Fotos:** "📷 N" abre as miniaturas embaixo da linha; clicar numa abre a foto grande.
+  - **Lixeira:** a mesma de "Registros de hoje" (apaga o registro inteiro e as fotos; só lançamento errado).
+  - O que é salvo ou excluído aparece na hora na tabela.
 - **+ Adicionar** grava o item novo na lista oficial, sem duplicar. **Processo novo** cria a sua LISTA_MOTIVOS_<NOME> vazia.
 - **LISTA_MOTIVOS_BK** começou vazia: os motivos reais são criados na tela.
 - O registro guarda o **texto** do processo, do motivo e da ação.
