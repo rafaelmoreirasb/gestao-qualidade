@@ -3379,3 +3379,86 @@ body.crono-travado { overflow: hidden; }
   .gemba-todos-busca { width: 100%; }
   .gemba-todos-miniaturas { padding-left: 8px; }
 }
+
+/* ---------- Gemba: colaboradores em lista recolhida (alteração 22/10/2026) ---------- */
+
+/* Linha recolhida: resumo de quem foi escolhido + seta */
+.gemba-lista-abrir {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 2px 2px 14px;
+  border: 1px solid var(--cinza-campo);
+  border-radius: var(--raio);
+  background: var(--branco);
+  color: var(--cinza-texto);
+  font-size: 16px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gemba-lista-abrir.com-escolha {
+  border: 2px solid var(--vermelho);
+  color: var(--preto);
+  font-weight: 700;
+}
+
+.gemba-lista-abrir .gemba-seta { border: 0; background: transparent; }
+.gemba-lista-abrir .gemba-seta svg { transition: transform 0.15s; }
+.gemba-lista-abrir.aberto .gemba-seta svg { transform: rotate(180deg); }
+.gemba-lista-abrir:hover { background: var(--amarelo-claro); }
+
+.gemba-lista-resumo {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.gemba-lista-corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gemba-lista-topo {
+  display: flex;
+  gap: 8px;
+}
+
+.gemba-lista-topo .gemba-campo { flex: 1; min-width: 0; }
+.gemba-lista-limpar { height: 48px; }
+
+/* Cerca de 6 nomes; o resto rola dentro da lista */
+.gemba-lista {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--cinza-borda);
+  border-radius: var(--raio);
+}
+
+.gemba-lista-item {
+  min-height: 48px;
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #E6E6E6;
+  background: var(--branco);
+  cursor: pointer;
+}
+
+.gemba-lista-item:last-child { border-bottom: 0; }
+.gemba-lista-item:hover { background: var(--amarelo-claro); }
+.gemba-lista-item.marcado { background: var(--cinza-zebra); }
+
+.gemba-lista-item input {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  accent-color: var(--vermelho);
+  cursor: pointer;
+}
+
+.gemba-lista-item .gemba-resultado-nome { flex: 1; min-width: 0; }
