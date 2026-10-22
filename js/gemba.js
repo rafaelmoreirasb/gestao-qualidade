@@ -7,6 +7,8 @@
      (um desvio) com o mesmo "grupo".
    - Fotos: diminuídas no navegador e guardadas na pasta privada
      "gemba" do Storage; todas as linhas do grupo têm a mesma lista.
+   - "Todos os Gemba": tabela com todo o histórico (uma linha por
+     registro salvo), busca, rolagem por dentro e seta para abrir/fechar.
    Usa as listas do sistema (js/listas.js).
    ========================================================== */
 
@@ -31,6 +33,9 @@
   let carregando = false;
   let salvando = false;
   let linksFotos = {};        // caminho da foto → link temporário (para as miniaturas)
+  let todos = [];             // todo o histórico (uma linha por pessoa), mais recente primeiro
+  let todosAberto = false;    // cartão "Todos os Gemba" aberto?
+  const fotosAbertas = {};    // grupos com as miniaturas abertas na tabela
 
   // O que está escolhido no formulário
   const sel = { colabs: [], proc: null, motivo: null, acao: null };
@@ -48,6 +53,8 @@
   const motivosDe = (proc) => listas[nomeListaMotivos(proc)] || [];
   const setorTxt = (c) => (c && c.setor) ? c.setor : 'Sem setor';
   const plural = (n, um, varios) => n + ' ' + (n === 1 ? um : varios);
+  const dataBr = (iso) => { const d = new Date(iso); return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear(); };
+  const MAX_NOMES_TABELA = 2;   // nomes visíveis na coluna Pessoas
 
   function novoCodigo() {
     if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
@@ -69,7 +76,7 @@
   }
 
   function limparMsgs() {
-    ['gemba-msg', 'gemba-msg-colab', 'gemba-msg-proc', 'gemba-msg-motivo', 'gemba-msg-acao', 'gemba-msg-fotos', 'gemba-msg-hoje'].forEach((id) => mostrarMsg(id, ''));
+    ['gemba-msg', 'gemba-msg-colab', 'gemba-msg-proc', 'gemba-msg-motivo', 'gemba-msg-acao', 'gemba-msg-fotos', 'gemba-msg-hoje', 'gemba-msg-todos'].forEach((id) => mostrarMsg(id, ''));
   }
 
   function traduzirErro(e) {
@@ -131,10 +138,29 @@
     await prepararLinks();
   }
 
+  // Todo o histórico, para a tabela "Todos os Gemba"
+  async function carregarTodos() {
+    const linhas = [];
+    const PAGINA = 1000;
+    for (let de = 0; ; de += PAGINA) {
+      const { data, error } = await sb.from(TABELA)
+        .select(CAMPOS_REG)
+        .order('data', { ascending: false })
+        .order('id', { ascending: true })
+        .range(de, de + PAGINA - 1);
+      if (error) throw error;
+      linhas.push(...data);
+      if (data.length < PAGINA) break;
+    }
+    todos = linhas;
+  }
+
   // Links temporários (1 hora) para as miniaturas das fotos de hoje
-  async function prepararLinks() {
+  // (ou só das fotos pedidas, quando "lista" é informada)
+  async function prepararLinks(lista) {
     const caminhos = [];
-    hoje.forEach((r) => (r.fotos || []).forEach((c) => { if (!linksFotos[c] && !caminhos.includes(c)) caminhos.push(c); }));
+    (lista || []).forEach((c) => { if (!linksFotos[c] && !caminhos.includes(c)) caminhos.push(c); });
+    if (!lista) hoje.forEach((r) => (r.fotos || []).forEach((c) => { if (!linksFotos[c] && !caminhos.includes(c)) caminhos.push(c); }));
     if (!caminhos.length) return;
     try {
       const { data, error } = await sb.storage.from(PASTA).createSignedUrls(caminhos, 3600);
@@ -159,7 +185,7 @@
       ativos = cols;
       listas = mapa;
       linksFotos = {};
-      await carregarHoje();
+      await Promise.all([carregarHoje(), carregarTodos()]);
       carregadoPara = uid;
       // Quem saiu da lista de Ativos sai da escolha; processo que sumiu também
       sel.colabs = sel.colabs.filter((c) => ativos.some((a) => a.id === c.id));
@@ -168,7 +194,7 @@
       desenharTudo();
     } catch (e) {
       carregadoPara = null;
-      ativos = []; listas = {}; hoje = [];
+      ativos = []; listas = {}; hoje = []; todos = [];
       desenharTudo();
       mostrarMsg('gemba-msg', 'Não foi possível carregar o Gemba. ' + traduzirErro(e), false);
     } finally {
@@ -195,6 +221,7 @@
     desenharFotos();
     desenharBotaoSalvar();
     desenharHoje();
+    desenharTodos();
   }
 
   // Passo 1: pessoas escolhidas (etiquetas) + busca
@@ -381,10 +408,10 @@
   }
 
   // Registros de hoje: um cartão por salvamento (grupo)
-  function gruposDeHoje() {
+  function agruparLinhas(lista) {
     const mapa = {};
     const ordem = [];
-    hoje.forEach((r) => {
+    lista.forEach((r) => {
       const g = r.grupo || ('linha-' + r.id);
       if (!mapa[g]) { mapa[g] = { grupo: r.grupo, linhas: [] }; ordem.push(g); }
       mapa[g].linhas.push(r);
@@ -404,7 +431,7 @@
       return;
     }
     const frag = document.createDocumentFragment();
-    gruposDeHoje().forEach((g) => frag.appendChild(cartaoGrupo(g)));
+    agruparLinhas(hoje).forEach((g) => frag.appendChild(cartaoGrupo(g)));
     caixa.appendChild(frag);
   }
 
@@ -457,18 +484,151 @@
   }
 
   // Abre a foto grande numa aba nova, com um link temporário (vale 1 hora)
-  async function abrirFoto(caminho) {
+  async function abrirFoto(caminho, idMsg) {
     // Abre a aba já no clique (senão o navegador pode bloquear) e depois coloca o endereço
     const aba = window.open('', '_blank');
     if (aba) aba.document.write('<p style="font-family:sans-serif">Abrindo foto…</p>');
     const { data, error } = await sb.storage.from(PASTA).createSignedUrl(caminho, 3600);
     if (error || !data || !data.signedUrl) {
       if (aba) aba.close();
-      mostrarMsg('gemba-msg-hoje', 'Não foi possível abrir a foto. ' + traduzirErro(error || {}), false);
+      mostrarMsg(idMsg || 'gemba-msg-hoje', 'Não foi possível abrir a foto. ' + traduzirErro(error || {}), false);
       return;
     }
     if (aba) aba.location.href = data.signedUrl;
     else window.location.href = data.signedUrl;
+  }
+
+  /* ---------------- Todos os Gemba (tabela) ---------------- */
+
+  function abrirFecharTodos() {
+    todosAberto = !todosAberto;
+    $('gemba-todos-corpo').hidden = !todosAberto;
+    $('gemba-todos-abrir').setAttribute('aria-expanded', String(todosAberto));
+    $('gemba-todos-abrir').classList.toggle('aberto', todosAberto);
+    desenharTodos();
+  }
+
+  // Texto em que a busca procura (sem acento): data, hora, nomes, matrículas, processo, motivo, ação e observação
+  function textoBusca(g) {
+    const r = g.linhas[0];
+    const pessoas = g.linhas.map((x) => nomeDaLinha(x) + ' ' + ((x.colaboradores && x.colaboradores.matricula) || '')).join(' ');
+    return chave([dataBr(r.data), horaDe(r.data), pessoas, r.processo, r.motivo, r.acao, r.observacao || ''].join(' '));
+  }
+
+  function desenharTodos() {
+    const grupos = agruparLinhas(todos);
+    $('gemba-todos-total').textContent = todos.length
+      ? '· ' + plural(todos.length, 'desvio', 'desvios') + ' em ' + plural(grupos.length, 'registro', 'registros')
+      : '';
+    if (!todosAberto) return;
+
+    const q = chave($('gemba-todos-busca').value);
+    const achados = q ? grupos.filter((g) => textoBusca(g).includes(q)) : grupos;
+    const caixa = $('gemba-todos-linhas');
+    caixa.textContent = '';
+    const vazio = $('gemba-todos-vazio');
+    if (!achados.length) {
+      vazio.hidden = false;
+      vazio.textContent = !carregadoPara ? '—' : (grupos.length ? 'Nenhum registro encontrado para "' + $('gemba-todos-busca').value.trim() + '".' : 'Nenhum registro no Gemba ainda.');
+      return;
+    }
+    vazio.hidden = true;
+    const frag = document.createDocumentFragment();
+    achados.forEach((g, i) => frag.appendChild(linhaTodos(g, q, i)));
+    caixa.appendChild(frag);
+  }
+
+  function celula(texto, classe, dica) {
+    const d = el('div', classe || null, texto);
+    if (dica) d.title = dica;
+    return d;
+  }
+
+  function linhaTodos(g, q, i) {
+    const r = g.linhas[0];
+    const bloco = el('div', 'gemba-todos-bloco' + (i % 2 ? ' par' : ''));
+    const linha = el('div', 'planilha-linha');
+
+    // Pessoas: até 2 nomes; na busca, quem bate com o texto aparece primeiro
+    let nomes = g.linhas.map(nomeDaLinha);
+    if (q) {
+      const bate = (n, idx) => chave(n + ' ' + ((g.linhas[idx].colaboradores && g.linhas[idx].colaboradores.matricula) || '')).includes(q);
+      const marcados = nomes.map((n, idx) => ({ n, b: bate(n, idx) }));
+      nomes = marcados.filter((x) => x.b).map((x) => x.n).concat(marcados.filter((x) => !x.b).map((x) => x.n));
+    }
+    const visiveis = nomes.slice(0, MAX_NOMES_TABELA).join(', ');
+    const resto = nomes.length - MAX_NOMES_TABELA;
+    const cPessoas = el('div', 'gemba-todos-pessoas');
+    cPessoas.title = g.linhas.map(nomeDaLinha).join('\n');
+    cPessoas.appendChild(el('span', 'gemba-todos-nomes', visiveis));
+    if (resto > 0) cPessoas.appendChild(el('span', 'gemba-todos-mais', '+' + resto));
+
+    linha.appendChild(celula(dataBr(r.data), 'numero'));
+    linha.appendChild(celula(horaDe(r.data), 'numero'));
+    linha.appendChild(cPessoas);
+    linha.appendChild(celula(r.processo, 'gemba-todos-texto', r.processo));
+    linha.appendChild(celula(r.motivo, 'gemba-todos-texto', r.motivo));
+    linha.appendChild(celula(r.acao, 'gemba-todos-texto', r.acao));
+    linha.appendChild(celula(r.observacao || '—', 'gemba-todos-texto' + (r.observacao ? '' : ' gemba-todos-sem'), r.observacao || ''));
+
+    // Fotos
+    const fotos = r.fotos || [];
+    const chaveG = g.grupo || ('linha-' + r.id);
+    const cFotos = el('div', 'centro');
+    if (fotos.length) {
+      const b = el('button', 'gemba-todos-fotos-botao' + (fotosAbertas[chaveG] ? ' aberto' : ''), '📷 ' + fotos.length);
+      b.type = 'button';
+      b.title = fotosAbertas[chaveG] ? 'Esconder as fotos' : 'Ver as fotos';
+      b.setAttribute('aria-expanded', String(!!fotosAbertas[chaveG]));
+      b.addEventListener('click', async () => {
+        fotosAbertas[chaveG] = !fotosAbertas[chaveG];
+        if (fotosAbertas[chaveG]) {
+          b.disabled = true;
+          await prepararLinks(fotos);
+        }
+        desenharTodos();
+      });
+      cFotos.appendChild(b);
+    } else {
+      cFotos.appendChild(el('span', 'gemba-todos-sem', '—'));
+    }
+    linha.appendChild(cFotos);
+
+    // Lixeira
+    const cLix = el('div', 'centro');
+    const lix = el('button', 'botao-lixeira');
+    lix.type = 'button';
+    lix.title = 'Excluir (só para lançamento feito errado)';
+    lix.setAttribute('aria-label', 'Excluir registro de ' + g.linhas.map(nomeDaLinha).join(', ') + ' em ' + dataBr(r.data) + ' às ' + horaDe(r.data));
+    lix.innerHTML = ICONE_LIXEIRA;
+    lix.addEventListener('click', () => excluir(g, lix, 'gemba-msg-todos'));
+    cLix.appendChild(lix);
+    linha.appendChild(cLix);
+    bloco.appendChild(linha);
+
+    // Miniaturas abertas embaixo da linha
+    if (fotos.length && fotosAbertas[chaveG]) {
+      const fila = el('div', 'gemba-todos-miniaturas');
+      fotos.forEach((caminho, k) => {
+        const b = el('button', 'gemba-registro-foto');
+        b.type = 'button';
+        b.title = 'Abrir foto ' + (k + 1) + ' de ' + fotos.length;
+        b.setAttribute('aria-label', 'Abrir foto ' + (k + 1) + ' de ' + fotos.length);
+        if (linksFotos[caminho]) {
+          const img = document.createElement('img');
+          img.src = linksFotos[caminho];
+          img.alt = '';
+          img.loading = 'lazy';
+          b.appendChild(img);
+        } else {
+          b.textContent = '📷';
+        }
+        b.addEventListener('click', () => abrirFoto(caminho, 'gemba-msg-todos'));
+        fila.appendChild(b);
+      });
+      bloco.appendChild(fila);
+    }
+    return bloco;
   }
 
   /* ---------------- "+ Adicionar" ---------------- */
@@ -718,6 +878,8 @@
         hoje = novas.concat(hoje);
         await prepararLinks();
       }
+      // A tabela "Todos os Gemba" também recebe o registro novo
+      todos = (data || []).slice().sort((a, b) => a.id - b.id).concat(todos);
 
       // Limpa o formulário; o processo continua marcado
       fotosSel.forEach((f) => URL.revokeObjectURL(f.previa));
@@ -751,7 +913,8 @@
     }
   }
 
-  async function excluir(g, botao) {
+  async function excluir(g, botao, idMsg) {
+    const caixaMsg = idMsg || 'gemba-msg-hoje';
     const r = g.linhas[0];
     const nomes = g.linhas.map(nomeDaLinha);
     const fotos = r.fotos || [];
@@ -769,20 +932,26 @@
     const { error } = await consulta;
     if (error) {
       botao.disabled = false;
-      mostrarMsg('gemba-msg-hoje', 'Não foi possível excluir. ' + traduzirErro(error), false);
+      mostrarMsg(caixaMsg, 'Não foi possível excluir. ' + traduzirErro(error), false);
       return;
     }
     await removerArquivos(fotos);
-    hoje = hoje.filter((x) => !ids.includes(x.id) && !(g.grupo && x.grupo === g.grupo));
+    const fica = (x) => !ids.includes(x.id) && !(g.grupo && x.grupo === g.grupo);
+    hoje = hoje.filter(fica);
+    todos = todos.filter(fica);
     desenharHoje();
-    mostrarMsg('gemba-msg-hoje', 'Registro de ' + (nomes.length > 1 ? plural(nomes.length, 'pessoa', 'pessoas') : nomes[0]) + ' excluído.', true);
+    desenharTodos();
+    mostrarMsg(caixaMsg, 'Registro de ' + (nomes.length > 1 ? plural(nomes.length, 'pessoa', 'pessoas') : nomes[0]) + ' excluído.', true);
   }
 
   /* ---------------- Login / saída ---------------- */
 
   function limparTela() {
-    ativos = []; listas = {}; hoje = [];
+    ativos = []; listas = {}; hoje = []; todos = [];
     linksFotos = {};
+    Object.keys(fotosAbertas).forEach((k) => delete fotosAbertas[k]);
+    $('gemba-todos-busca').value = '';
+    if (todosAberto) abrirFecharTodos();
     diaCarregado = '';
     carregadoPara = null;
     sel.colabs = []; sel.proc = null; sel.motivo = null; sel.acao = null;
@@ -824,6 +993,8 @@
   });
   $('gemba-foto-arquivo').addEventListener('change', (ev) => escolherFotos(ev.target));
   $('gemba-salvar').addEventListener('click', salvar);
+  $('gemba-todos-abrir').addEventListener('click', abrirFecharTodos);
+  $('gemba-todos-busca').addEventListener('input', desenharTodos);
 
   // Ao abrir a aba, atualiza a lista de Ativos, as listas e os registros de hoje
   document.addEventListener('gq:aba', (ev) => {
