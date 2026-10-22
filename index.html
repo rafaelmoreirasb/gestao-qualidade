@@ -274,6 +274,40 @@
             <div class="gemba-hoje-lista" id="gemba-hoje-lista"></div>
           </aside>
         </div>
+
+        <!-- Todos os Gemba (começa fechado; a seta abre e fecha) -->
+        <section class="cartao cartao-lista gemba-todos" aria-labelledby="gemba-todos-titulo">
+          <div class="gemba-todos-topo">
+            <button type="button" class="gemba-todos-abrir" id="gemba-todos-abrir" aria-expanded="false" aria-controls="gemba-todos-corpo">
+              <span class="subtitulo" id="gemba-todos-titulo">Todos os Gemba <span class="crono-total" id="gemba-todos-total"></span></span>
+              <span class="crono-seta gemba-seta" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </span>
+            </button>
+          </div>
+          <div class="gemba-todos-corpo" id="gemba-todos-corpo" hidden>
+            <input type="search" id="gemba-todos-busca" class="busca gemba-todos-busca" aria-label="Buscar no Gemba" placeholder="Buscar data, nome, matrícula, processo, motivo ou ação" autocomplete="off">
+            <div id="gemba-msg-todos" class="mensagem" role="status" hidden></div>
+            <div class="planilha-rolagem gemba-todos-rolagem">
+              <div class="planilha planilha-gemba">
+                <div class="planilha-cabecalho">
+                  <div>Data</div>
+                  <div>Hora</div>
+                  <div>Pessoas</div>
+                  <div>Processo</div>
+                  <div>Motivo</div>
+                  <div>Ação</div>
+                  <div>Observação</div>
+                  <div>Fotos</div>
+                  <div></div>
+                </div>
+                <div id="gemba-todos-linhas"></div>
+                <div id="gemba-todos-vazio" class="planilha-vazio" hidden></div>
+              </div>
+            </div>
+            <div class="nota">Uma linha por registro salvo, o mais recente em cima. A coluna Pessoas mostra até 2 nomes (passe o mouse para ver todos); a busca encontra também os nomes escondidos. Em Fotos, clique para ver as miniaturas. A lixeira serve só para corrigir lançamento feito errado (apaga o registro inteiro e as fotos).</div>
+          </div>
+        </section>
       </section>
 
       <!-- ===== Torre de Aduana ===== -->
