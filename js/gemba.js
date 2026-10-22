@@ -1,8 +1,10 @@
 /* ==========================================================
    js/gemba.js
    Aba Gemba: registro rápido de desvio em 4 passos
-   (colaboradores, processo, motivo, ação), observação e fotos
-   opcionais e "Registros de hoje" com lixeira para lançamento errado.
+   (colaboradores — opcional, numa lista que começa fechada —,
+   processo, motivo, ação), observação e fotos opcionais.
+   - Sem colaborador marcado: uma linha com colaborador vazio
+     ("Sem colaborador").
    - Várias pessoas no mesmo registro: cada pessoa vira uma linha
      (um desvio) com o mesmo "grupo".
    - Fotos: diminuídas no navegador e guardadas na pasta privada
@@ -17,8 +19,6 @@
   const TABELA = 'registros_gemba';
   const PASTA = 'gemba';                 // pasta privada do Storage
   const CAMPOS_REG = 'id, data, grupo, fotos, processo, motivo, acao, observacao, colaborador_id, colaboradores(nome, matricula)';
-  const SEMANA = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
-  const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
   const MAX_PESSOAS = 30;
   const MAX_FOTOS = 6;
   const FOTO_LADO_MAX = 1600;            // a foto é reduzida para no máximo 1600 px no lado maior
@@ -27,14 +27,12 @@
 
   let ativos = [];            // colaboradores Ativos (id, matricula, nome, setor)
   let listas = {};            // { LISTA_...: ['item', ...] }
-  let hoje = [];              // linhas de hoje (uma por pessoa), mais recente primeiro
-  let diaCarregado = '';      // dia (AAAA-MM-DD) dos registros na tela
   let carregadoPara = null;   // id do usuário cujos dados estão na tela
   let carregando = false;
   let salvando = false;
   let linksFotos = {};        // caminho da foto → link temporário (para as miniaturas)
   let todos = [];             // todo o histórico (uma linha por pessoa), mais recente primeiro
-  let todosAberto = false;    // cartão "Todos os Gemba" aberto?
+  let todosAberto = true;     // cartão "Todos os Gemba" aberto? (começa aberto)
   const fotosAbertas = {};    // grupos com as miniaturas abertas na tabela
 
   // O que está escolhido no formulário
@@ -46,7 +44,6 @@
   const chave = (s) => textoSemAcento(s).replace(/\s+/g, ' ');
   const limpar = (s) => String(s || '').replace(/\s+/g, ' ').trim();
   const pad = (n) => String(n).padStart(2, '0');
-  const diaDe = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
   const horaDe = (iso) => { const d = new Date(iso); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
   const processos = () => listas[LISTA_PROCESSOS] || [];
   const acoes = () => listas[LISTA_ACOES] || [];
@@ -76,7 +73,7 @@
   }
 
   function limparMsgs() {
-    ['gemba-msg', 'gemba-msg-colab', 'gemba-msg-proc', 'gemba-msg-motivo', 'gemba-msg-acao', 'gemba-msg-fotos', 'gemba-msg-hoje', 'gemba-msg-todos'].forEach((id) => mostrarMsg(id, ''));
+    ['gemba-msg', 'gemba-msg-colab', 'gemba-msg-proc', 'gemba-msg-motivo', 'gemba-msg-acao', 'gemba-msg-fotos', 'gemba-msg-todos'].forEach((id) => mostrarMsg(id, ''));
   }
 
   function traduzirErro(e) {
@@ -120,24 +117,6 @@
     return todos;
   }
 
-  async function carregarHoje() {
-    const ini = new Date();
-    ini.setHours(0, 0, 0, 0);
-    const fim = new Date(ini);
-    fim.setDate(fim.getDate() + 1);
-    const { data, error } = await sb.from(TABELA)
-      .select(CAMPOS_REG)
-      .gte('data', ini.toISOString())
-      .lt('data', fim.toISOString())
-      .order('data', { ascending: false })
-      .order('id', { ascending: true })
-      .limit(2000);
-    if (error) throw error;
-    hoje = data || [];
-    diaCarregado = diaDe(ini);
-    await prepararLinks();
-  }
-
   // Todo o histórico, para a tabela "Todos os Gemba"
   async function carregarTodos() {
     const linhas = [];
@@ -155,12 +134,10 @@
     todos = linhas;
   }
 
-  // Links temporários (1 hora) para as miniaturas das fotos de hoje
-  // (ou só das fotos pedidas, quando "lista" é informada)
+  // Links temporários (1 hora) para as miniaturas das fotos pedidas
   async function prepararLinks(lista) {
     const caminhos = [];
     (lista || []).forEach((c) => { if (!linksFotos[c] && !caminhos.includes(c)) caminhos.push(c); });
-    if (!lista) hoje.forEach((r) => (r.fotos || []).forEach((c) => { if (!linksFotos[c] && !caminhos.includes(c)) caminhos.push(c); }));
     if (!caminhos.length) return;
     try {
       const { data, error } = await sb.storage.from(PASTA).createSignedUrls(caminhos, 3600);
@@ -175,17 +152,12 @@
     if (carregando) return;
     carregando = true;
     mostrarMsg('gemba-msg', '');
-    $('gemba-resultados').textContent = '';
-    const aviso = document.createElement('div');
-    aviso.className = 'gemba-resultado-vazio';
-    aviso.textContent = 'Carregando…';
-    $('gemba-resultados').appendChild(aviso);
     try {
       const [cols, mapa] = await Promise.all([carregarAtivos(), carregarListas()]);
       ativos = cols;
       listas = mapa;
       linksFotos = {};
-      await Promise.all([carregarHoje(), carregarTodos()]);
+      await carregarTodos();
       carregadoPara = uid;
       // Quem saiu da lista de Ativos sai da escolha; processo que sumiu também
       sel.colabs = sel.colabs.filter((c) => ativos.some((a) => a.id === c.id));
@@ -194,7 +166,7 @@
       desenharTudo();
     } catch (e) {
       carregadoPara = null;
-      ativos = []; listas = {}; hoje = []; todos = [];
+      ativos = []; listas = {}; todos = [];
       desenharTudo();
       mostrarMsg('gemba-msg', 'Não foi possível carregar o Gemba. ' + traduzirErro(e), false);
     } finally {
@@ -220,78 +192,94 @@
     desenharAcoes();
     desenharFotos();
     desenharBotaoSalvar();
-    desenharHoje();
     desenharTodos();
   }
 
-  // Passo 1: pessoas escolhidas (etiquetas) + busca
+  // Passo 1: lista de colaboradores (opcional), que começa fechada
+  let listaAberta = false;
+
+  function resumoEscolhidos() {
+    const n = sel.colabs.length;
+    if (!n) return 'Nenhum escolhido';
+    const nomes = sel.colabs.map((c) => c.nome);
+    if (n <= 2) return nomes.join(', ');
+    return n + ' escolhidos: ' + nomes.slice(0, 2).join(', ') + ' +' + (n - 2);
+  }
+
+  function abrirFecharLista(abrir) {
+    listaAberta = typeof abrir === 'boolean' ? abrir : !listaAberta;
+    $('gemba-lista-corpo').hidden = !listaAberta;
+    $('gemba-lista-abrir').setAttribute('aria-expanded', String(listaAberta));
+    $('gemba-lista-abrir').classList.toggle('aberto', listaAberta);
+    if (listaAberta) desenharLista();
+  }
+
   function desenharColab() {
-    const caixa = $('gemba-escolhidos');
-    caixa.textContent = '';
-    caixa.hidden = !sel.colabs.length;
-    sel.colabs.forEach((c) => {
-      const et = el('div', 'gemba-etiqueta');
-      const txt = el('span', 'gemba-etiqueta-texto');
-      txt.appendChild(el('span', 'gemba-etiqueta-nome', c.nome));
-      txt.appendChild(el('span', 'gemba-etiqueta-info', c.matricula + ' · ' + setorTxt(c)));
-      et.appendChild(txt);
-      const x = el('button', 'gemba-etiqueta-tirar', '×');
-      x.type = 'button';
-      x.title = 'Tirar ' + c.nome;
-      x.setAttribute('aria-label', 'Tirar ' + c.nome + ' do registro');
-      x.disabled = salvando;
-      x.addEventListener('click', () => {
-        sel.colabs = sel.colabs.filter((p) => p.id !== c.id);
-        mostrarMsg('gemba-msg-colab', '');
-        desenharColab();
-        desenharBotaoSalvar();
-      });
-      et.appendChild(x);
-      caixa.appendChild(et);
-    });
-    $('gemba-busca').placeholder = sel.colabs.length
-      ? 'Acrescentar outra pessoa (nome ou matrícula)'
-      : 'Digite o nome ou a matrícula';
-    $('gemba-colab-contagem').textContent = sel.colabs.length > 1 ? '· ' + sel.colabs.length + ' pessoas' : '';
-    desenharResultados();
+    $('gemba-lista-resumo').textContent = resumoEscolhidos();
+    $('gemba-lista-abrir').classList.toggle('com-escolha', sel.colabs.length > 0);
+    $('gemba-lista-limpar').disabled = salvando || !sel.colabs.length;
+    if (listaAberta) desenharLista();
   }
 
-  function desenharResultados() {
-    const caixa = $('gemba-resultados');
+  // Todos os Ativos com caixa de seleção; a busca filtra a lista
+  function desenharLista() {
+    const caixa = $('gemba-lista');
     caixa.textContent = '';
+    if (!ativos.length) {
+      caixa.appendChild(el('div', 'gemba-resultado-vazio', carregadoPara
+        ? 'Nenhum colaborador Ativo cadastrado. Cadastre na aba Colaboradores.'
+        : 'Carregando…'));
+      return;
+    }
     const q = chave($('gemba-busca').value);
-    // Com alguém já escolhido, a lista só aparece quando você digita
-    if (sel.colabs.length && !q) { caixa.hidden = true; return; }
-    caixa.hidden = false;
-    const escolhidos = sel.colabs.map((c) => c.id);
-    const achados = ativos.filter((c) => !escolhidos.includes(c.id) &&
-      (!q || chave(c.nome).includes(q) || String(c.matricula).toLowerCase().includes(q))).slice(0, 5);
+    const achados = ativos.filter((c) => !q || chave(c.nome).includes(q) || String(c.matricula).toLowerCase().includes(q));
     if (!achados.length) {
-      caixa.appendChild(el('div', 'gemba-resultado-vazio', ativos.length
-        ? (q ? 'Nenhum colaborador encontrado na base.' : 'Todos os colaboradores Ativos já foram escolhidos.')
-        : 'Nenhum colaborador Ativo cadastrado. Cadastre na aba Colaboradores.'));
+      caixa.appendChild(el('div', 'gemba-resultado-vazio', 'Nenhum colaborador encontrado na base.'));
       return;
     }
+    const escolhidos = sel.colabs.map((c) => c.id);
+    const frag = document.createDocumentFragment();
     achados.forEach((c) => {
-      const b = el('button', 'gemba-resultado');
-      b.type = 'button';
-      b.appendChild(el('span', 'gemba-resultado-nome', c.nome));
-      b.appendChild(el('span', 'gemba-resultado-info', c.matricula + ' · ' + setorTxt(c)));
-      b.addEventListener('click', () => escolherColab(c));
-      caixa.appendChild(b);
+      const marcado = escolhidos.includes(c.id);
+      const rotulo = el('label', 'gemba-lista-item' + (marcado ? ' marcado' : ''));
+      const caixaSel = document.createElement('input');
+      caixaSel.type = 'checkbox';
+      caixaSel.checked = marcado;
+      caixaSel.disabled = salvando;
+      caixaSel.addEventListener('change', () => marcarColab(c, caixaSel.checked, caixaSel));
+      rotulo.appendChild(caixaSel);
+      rotulo.appendChild(el('span', 'gemba-resultado-nome', c.nome));
+      rotulo.appendChild(el('span', 'gemba-resultado-info', c.matricula + ' · ' + setorTxt(c)));
+      frag.appendChild(rotulo);
     });
+    caixa.appendChild(frag);
   }
 
-  function escolherColab(c) {
+  function marcarColab(c, marcar, caixaSel) {
     if (salvando) return;
-    if (sel.colabs.some((p) => p.id === c.id)) return;
-    if (sel.colabs.length >= MAX_PESSOAS) {
-      mostrarMsg('gemba-msg-colab', 'O limite é de ' + MAX_PESSOAS + ' pessoas por registro.', false);
-      return;
+    mostrarMsg('gemba-msg-colab', '');
+    if (marcar) {
+      if (sel.colabs.some((p) => p.id === c.id)) return;
+      if (sel.colabs.length >= MAX_PESSOAS) {
+        caixaSel.checked = false;
+        mostrarMsg('gemba-msg-colab', 'O limite é de ' + MAX_PESSOAS + ' pessoas por registro.', false);
+        return;
+      }
+      sel.colabs.push(c);
+    } else {
+      sel.colabs = sel.colabs.filter((p) => p.id !== c.id);
     }
-    sel.colabs.push(c);
-    $('gemba-busca').value = '';
+    caixaSel.parentNode.classList.toggle('marcado', marcar);
     mostrarMsg('gemba-msg', '');
+    $('gemba-lista-resumo').textContent = resumoEscolhidos();
+    $('gemba-lista-abrir').classList.toggle('com-escolha', sel.colabs.length > 0);
+    $('gemba-lista-limpar').disabled = !sel.colabs.length;
+    desenharBotaoSalvar();
+  }
+
+  function limparEscolha() {
+    if (salvando) return;
+    sel.colabs = [];
     mostrarMsg('gemba-msg-colab', '');
     desenharColab();
     desenharBotaoSalvar();
@@ -407,7 +395,7 @@
     $('gemba-salvar').textContent = n > 1 ? 'Salvar registro (' + n + ' pessoas)' : 'Salvar registro';
   }
 
-  // Registros de hoje: um cartão por salvamento (grupo)
+  // Junta as linhas de um mesmo salvamento (grupo)
   function agruparLinhas(lista) {
     const mapa = {};
     const ordem = [];
@@ -419,71 +407,8 @@
     return ordem.map((g) => mapa[g]);
   }
 
-  function desenharHoje() {
-    const d = new Date();
-    $('gemba-hoje-data').textContent = SEMANA[d.getDay()] + ', ' + d.getDate() + ' de ' + MESES[d.getMonth()];
-    $('gemba-hoje-contagem').textContent = '· ' + hoje.length;
+  const nomeDaLinha = (r) => (r.colaboradores && r.colaboradores.nome) || 'Sem colaborador';
 
-    const caixa = $('gemba-hoje-lista');
-    caixa.textContent = '';
-    if (!hoje.length) {
-      caixa.appendChild(el('div', 'gemba-hoje-vazio', carregadoPara ? 'Nenhum registro hoje ainda.' : '—'));
-      return;
-    }
-    const frag = document.createDocumentFragment();
-    agruparLinhas(hoje).forEach((g) => frag.appendChild(cartaoGrupo(g)));
-    caixa.appendChild(frag);
-  }
-
-  const nomeDaLinha = (r) => (r.colaboradores && r.colaboradores.nome) || 'Colaborador';
-
-  function cartaoGrupo(g) {
-    const r = g.linhas[0];
-    const nomes = g.linhas.map(nomeDaLinha);
-    const c = el('div', 'gemba-registro');
-    const topo = el('div', 'gemba-registro-topo');
-    topo.appendChild(el('span', 'gemba-registro-nome', nomes.length > 1 ? plural(nomes.length, 'pessoa', 'pessoas') : nomes[0]));
-    const dir = el('div', 'gemba-registro-direita');
-    dir.appendChild(el('span', 'gemba-registro-hora', horaDe(r.data)));
-    const lix = el('button', 'botao-lixeira');
-    lix.type = 'button';
-    lix.title = 'Excluir (só para lançamento feito errado)';
-    lix.setAttribute('aria-label', 'Excluir registro de ' + nomes.join(', ') + ' às ' + horaDe(r.data));
-    lix.innerHTML = ICONE_LIXEIRA;
-    lix.addEventListener('click', () => excluir(g, lix));
-    dir.appendChild(lix);
-    topo.appendChild(dir);
-    c.appendChild(topo);
-    if (nomes.length > 1) c.appendChild(el('div', 'gemba-registro-pessoas', nomes.join(' · ')));
-    c.appendChild(el('div', 'gemba-registro-motivo', r.processo + ' · ' + r.motivo));
-    c.appendChild(el('div', 'gemba-registro-acao', 'Ação: ' + r.acao));
-    if (r.observacao) c.appendChild(el('div', 'gemba-registro-obs', r.observacao));
-    const fotos = r.fotos || [];
-    if (fotos.length) {
-      const fila = el('div', 'gemba-registro-fotos');
-      fotos.forEach((caminho, i) => {
-        const b = el('button', 'gemba-registro-foto');
-        b.type = 'button';
-        b.title = 'Abrir foto ' + (i + 1) + ' de ' + fotos.length;
-        b.setAttribute('aria-label', 'Abrir foto ' + (i + 1) + ' de ' + fotos.length);
-        if (linksFotos[caminho]) {
-          const img = document.createElement('img');
-          img.src = linksFotos[caminho];
-          img.alt = '';
-          img.loading = 'lazy';
-          b.appendChild(img);
-        } else {
-          b.textContent = '📷';
-        }
-        b.addEventListener('click', () => abrirFoto(caminho));
-        fila.appendChild(b);
-      });
-      c.appendChild(fila);
-    }
-    return c;
-  }
-
-  // Abre a foto grande numa aba nova, com um link temporário (vale 1 hora)
   async function abrirFoto(caminho, idMsg) {
     // Abre a aba já no clique (senão o navegador pode bloquear) e depois coloca o endereço
     const aba = window.open('', '_blank');
@@ -491,7 +416,7 @@
     const { data, error } = await sb.storage.from(PASTA).createSignedUrl(caminho, 3600);
     if (error || !data || !data.signedUrl) {
       if (aba) aba.close();
-      mostrarMsg(idMsg || 'gemba-msg-hoje', 'Não foi possível abrir a foto. ' + traduzirErro(error || {}), false);
+      mostrarMsg(idMsg || 'gemba-msg-todos', 'Não foi possível abrir a foto. ' + traduzirErro(error || {}), false);
       return;
     }
     if (aba) aba.location.href = data.signedUrl;
@@ -814,8 +739,8 @@
 
   function travarFormulario(travar) {
     ['gemba-busca', 'gemba-novo-proc', 'gemba-add-proc', 'gemba-motivo', 'gemba-novo-motivo', 'gemba-add-motivo',
-      'gemba-nova-acao', 'gemba-add-acao', 'gemba-obs'].forEach((id) => { $(id).disabled = travar; });
-    document.querySelectorAll('#aba-gemba .gemba-opcao, #aba-gemba .gemba-acao, #aba-gemba .gemba-etiqueta-tirar, #aba-gemba .gemba-miniatura-tirar')
+      'gemba-nova-acao', 'gemba-add-acao', 'gemba-obs', 'gemba-lista-limpar'].forEach((id) => { $(id).disabled = travar; });
+    document.querySelectorAll('#aba-gemba .gemba-opcao, #aba-gemba .gemba-acao, #aba-gemba .gemba-lista-item input, #aba-gemba .gemba-miniatura-tirar')
       .forEach((b) => { b.disabled = travar; });
   }
 
@@ -823,7 +748,6 @@
     if (salvando) return;
     if (!carregadoPara) { mostrarMsg('gemba-msg', 'O Gemba ainda não carregou. Espere um instante e tente de novo.', false); return; }
     const falta = [];
-    if (!sel.colabs.length) falta.push('colaborador');
     if (!sel.proc) falta.push('processo');
     if (!sel.motivo) falta.push('motivo');
     if (!sel.acao) falta.push('ação tomada');
@@ -858,8 +782,10 @@
       // 2) Grava uma linha por pessoa, todas de uma vez (tudo ou nada)
       botao.textContent = 'Salvando…';
       const observacao = String($('gemba-obs').value || '').trim();
-      const linhas = pessoas.map((c) => ({
-        colaborador_id: c.id,
+      // Sem ninguém marcado: uma linha "Sem colaborador"
+      const ids = pessoas.length ? pessoas.map((c) => c.id) : [null];
+      const linhas = ids.map((id) => ({
+        colaborador_id: id,
         grupo,
         fotos: enviados,
         processo: sel.proc,
@@ -870,15 +796,7 @@
       const { data, error } = await sb.from(TABELA).insert(linhas).select(CAMPOS_REG);
       if (error) throw error;
 
-      if (diaCarregado !== diaDe(new Date())) {
-        await carregarHoje();
-      } else {
-        // Põe o grupo novo no topo, na ordem em que as pessoas foram escolhidas
-        const novas = (data || []).slice().sort((a, b) => a.id - b.id);
-        hoje = novas.concat(hoje);
-        await prepararLinks();
-      }
-      // A tabela "Todos os Gemba" também recebe o registro novo
+      // O registro novo entra no topo da tabela "Todos os Gemba"
       todos = (data || []).slice().sort((a, b) => a.id - b.id).concat(todos);
 
       // Limpa o formulário; o processo continua marcado
@@ -891,9 +809,11 @@
       $('gemba-busca').value = '';
       ['gemba-msg-colab', 'gemba-msg-proc', 'gemba-msg-motivo', 'gemba-msg-acao', 'gemba-msg-fotos'].forEach((id) => mostrarMsg(id, ''));
       salvando = false;
+      abrirFecharLista(false);
       desenharTudo();
-      const quem = pessoas.length > 1 ? plural(pessoas.length, 'pessoa', 'pessoas') : pessoas[0].nome;
-      mostrarMsg('gemba-msg', 'Registro salvo para ' + quem +
+      const quem = pessoas.length > 1 ? 'para ' + plural(pessoas.length, 'pessoa', 'pessoas')
+        : (pessoas.length ? 'para ' + pessoas[0].nome : 'sem colaborador');
+      mostrarMsg('gemba-msg', 'Registro salvo ' + quem +
         (enviados.length ? ', com ' + plural(enviados.length, 'foto', 'fotos') : '') + '.', true);
     } catch (e) {
       // Nada fica pela metade: apaga as fotos que já tinham subido
@@ -914,12 +834,12 @@
   }
 
   async function excluir(g, botao, idMsg) {
-    const caixaMsg = idMsg || 'gemba-msg-hoje';
+    const caixaMsg = idMsg || 'gemba-msg-todos';
     const r = g.linhas[0];
     const nomes = g.linhas.map(nomeDaLinha);
     const fotos = r.fotos || [];
     const ok = window.confirm(
-      'Excluir o registro das ' + horaDe(r.data) + ' (' + r.processo + ' · ' + r.motivo + ')?\n\n' +
+      'Excluir o registro de ' + dataBr(r.data) + ' às ' + horaDe(r.data) + ' (' + r.processo + ' · ' + r.motivo + ')?\n\n' +
       (nomes.length > 1 ? 'Pessoas (' + nomes.length + '): ' : 'Pessoa: ') + nomes.join(', ') + '\n' +
       (fotos.length ? plural(fotos.length, 'foto também será apagada', 'fotos também serão apagadas') + '.\n' : '') +
       '\nUse a exclusão SÓ para corrigir lançamento feito errado.');
@@ -937,22 +857,22 @@
     }
     await removerArquivos(fotos);
     const fica = (x) => !ids.includes(x.id) && !(g.grupo && x.grupo === g.grupo);
-    hoje = hoje.filter(fica);
     todos = todos.filter(fica);
-    desenharHoje();
     desenharTodos();
-    mostrarMsg(caixaMsg, 'Registro de ' + (nomes.length > 1 ? plural(nomes.length, 'pessoa', 'pessoas') : nomes[0]) + ' excluído.', true);
+    const semNinguem = nomes.length === 1 && !(r.colaboradores && r.colaboradores.nome);
+    mostrarMsg(caixaMsg, semNinguem ? 'Registro sem colaborador excluído.'
+      : 'Registro de ' + (nomes.length > 1 ? plural(nomes.length, 'pessoa', 'pessoas') : nomes[0]) + ' excluído.', true);
   }
 
   /* ---------------- Login / saída ---------------- */
 
   function limparTela() {
-    ativos = []; listas = {}; hoje = []; todos = [];
+    ativos = []; listas = {}; todos = [];
     linksFotos = {};
     Object.keys(fotosAbertas).forEach((k) => delete fotosAbertas[k]);
     $('gemba-todos-busca').value = '';
-    if (todosAberto) abrirFecharTodos();
-    diaCarregado = '';
+    if (!todosAberto) abrirFecharTodos();   // na próxima entrada, a tabela começa aberta
+    abrirFecharLista(false);
     carregadoPara = null;
     sel.colabs = []; sel.proc = null; sel.motivo = null; sel.acao = null;
     fotosSel.forEach((f) => URL.revokeObjectURL(f.previa));
@@ -972,14 +892,10 @@
 
   if (typeof sb === 'undefined' || !sb) return;
 
-  $('gemba-busca').addEventListener('input', desenharResultados);
-  $('gemba-busca').addEventListener('keydown', (ev) => {
-    // Enter escolhe o primeiro da lista
-    if (ev.key !== 'Enter') return;
-    ev.preventDefault();
-    const primeiro = document.querySelector('#gemba-resultados .gemba-resultado');
-    if (primeiro) primeiro.click();
-  });
+  $('gemba-lista-abrir').addEventListener('click', () => abrirFecharLista());
+  $('gemba-busca').addEventListener('input', desenharLista);
+  $('gemba-busca').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') ev.preventDefault(); });
+  $('gemba-lista-limpar').addEventListener('click', limparEscolha);
   $('gemba-motivo').addEventListener('change', (ev) => {
     sel.motivo = ev.target.value || null;
     ev.target.classList.toggle('escolhido', !!sel.motivo);
@@ -996,7 +912,7 @@
   $('gemba-todos-abrir').addEventListener('click', abrirFecharTodos);
   $('gemba-todos-busca').addEventListener('input', desenharTodos);
 
-  // Ao abrir a aba, atualiza a lista de Ativos, as listas e os registros de hoje
+  // Ao abrir a aba, atualiza a lista de Ativos, as listas e a tabela
   document.addEventListener('gq:aba', (ev) => {
     if (ev.detail && ev.detail.aba === 'gemba' && carregadoPara && !salvando) carregarTudo(carregadoPara);
   });
