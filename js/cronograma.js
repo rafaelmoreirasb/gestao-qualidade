@@ -2,7 +2,7 @@
    js/cronograma.js
    Aba Cronograma: criar treinamento (Tema, Data, Horário e
    Carga horária), calendário do mês (com Exportar PDF e Tela
-   cheia), lista "Aguardando participantes", tabela com todos
+   cheia), tabela com todos (busca; no máximo 2 nomes + "+N")
    e janela do treinamento (participantes só Ativos, carga
    horária editável, status Agendado/Realizado e anexos:
    foto da turma e lista de presença).
@@ -99,6 +99,40 @@
     const s = participantes[t.id];
     if (!s || !s.size) return '';
     return colaboradores.filter((c) => s.has(c.id)).map((c) => c.nome).join(', ');
+  }
+
+  // Coluna Participantes da tabela: no máximo 2 nomes + "+N" (igual ao Gemba).
+  // Passando o mouse aparecem todos. Na busca, quem bate com o texto aparece primeiro.
+  const MAX_NOMES_TABELA = 2;
+
+  function celulaPessoas(t) {
+    const s = participantes[t.id];
+    const d = document.createElement('div');
+    if (!s || !s.size) {
+      d.className = 'crono-col-pessoas sem';
+      d.textContent = 'Nenhum participante ainda';
+      return d;
+    }
+    let pessoas = colaboradores.filter((c) => s.has(c.id));
+    const q = semAcento(est.busca);
+    if (q) {
+      const bate = (c) => semAcento(c.nome + ' ' + c.matricula).includes(q);
+      pessoas = pessoas.filter(bate).concat(pessoas.filter((c) => !bate(c)));
+    }
+    d.className = 'crono-col-pessoas';
+    d.title = colaboradores.filter((c) => s.has(c.id)).map((c) => c.nome).join('\n');
+    const nomes = document.createElement('span');
+    nomes.className = 'crono-pessoas-nomes';
+    nomes.textContent = pessoas.slice(0, MAX_NOMES_TABELA).map((c) => c.nome).join(', ');
+    d.appendChild(nomes);
+    const resto = pessoas.length - MAX_NOMES_TABELA;
+    if (resto > 0) {
+      const mais = document.createElement('span');
+      mais.className = 'crono-pessoas-mais';
+      mais.textContent = '+' + resto;
+      d.appendChild(mais);
+    }
+    return d;
   }
 
   function doBanco(t) {
@@ -213,9 +247,7 @@
   function desenharTudo() {
     desenharForm();
     desenharCalendario();
-    desenharPendentes();
     desenharTabela();
-    ajustarAlturaPendentes();
   }
 
   function desenharForm() {
@@ -355,55 +387,6 @@
     setTimeout(() => { if (document.body.classList.contains('crono-imprimindo')) terminar(); }, 1500);
   }
 
-  /* --------- Aguardando participantes --------- */
-
-  // Só treinos Agendados e sem nenhum participante (inclusive os de data já passada)
-  function desenharPendentes() {
-    const caixa = $('crono-proximos-lista');
-    caixa.textContent = '';
-    const pend = ordenados().filter((t) => t.status === 'Agendado' && qtd(t) === 0);
-
-    if (!pend.length) {
-      const v = document.createElement('div');
-      v.className = 'crono-proximo-vazio';
-      v.textContent = 'Nenhum treinamento aguardando participantes.';
-      caixa.appendChild(v);
-      return;
-    }
-
-    pend.forEach((t) => {
-      const atrasado = situacao(t) === 'Atrasado';
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'crono-proximo';
-
-      const topo = document.createElement('span');
-      topo.className = 'crono-proximo-topo';
-      const tema = document.createElement('span');
-      tema.className = 'crono-proximo-tema';
-      tema.textContent = t.tema;
-      const q = document.createElement('span');
-      q.className = 'crono-proximo-quando';
-      q.textContent = quando(t, false);
-      topo.appendChild(tema);
-      topo.appendChild(q);
-      b.appendChild(topo);
-
-      const info = document.createElement('span');
-      info.className = 'crono-proximo-nomes';
-      info.textContent = 'Carga horária: ' + cargaTexto(t.carga);
-      b.appendChild(info);
-
-      const cont = document.createElement('span');
-      cont.className = 'crono-proximo-qtd sem';
-      cont.textContent = (atrasado ? 'Atrasado · ' : '') + 'Sem participantes · clique para adicionar';
-      b.appendChild(cont);
-
-      b.addEventListener('click', () => abrirJanela(t.id));
-      caixa.appendChild(b);
-    });
-  }
-
   /* --------- Tabela com todos --------- */
 
   const ICONE_LIXEIRA = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D40511" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>';
@@ -470,7 +453,6 @@
     const frag = document.createDocumentFragment();
 
     lista.forEach((t) => {
-      const n = qtd(t);
       const linha = document.createElement('div');
       linha.className = 'planilha-linha';
 
@@ -478,7 +460,7 @@
       linha.appendChild(celula('numero', t.hora));
       linha.appendChild(celula('numero', cargaTexto(t.carga)));
       linha.appendChild(celula('crono-col-tema', t.tema));
-      linha.appendChild(celula('crono-col-pessoas' + (n ? '' : ' sem'), n ? nomesDe(t) : 'Nenhum participante ainda'));
+      linha.appendChild(celulaPessoas(t));
 
       const cs = celula('');
       cs.appendChild(chipSituacao(t));
@@ -518,19 +500,6 @@
     } else {
       vazio.hidden = true;
     }
-  }
-
-  /* --------- Quadro "Aguardando participantes" da altura do calendário --------- */
-
-  // Lado a lado (computador): o quadro amarelo fica com a altura do calendário e rola por dentro.
-  // Um embaixo do outro (celular): vale a altura fixa do CSS.
-  function ajustarAlturaPendentes() {
-    const cal = $('crono-calendario');
-    const lado = $('crono-proximos');
-    if (!cal || !lado) return;
-    const ladoALado = !est.cheia && cal.offsetHeight > 0 && Math.abs(lado.offsetTop - cal.offsetTop) < 4;
-    lado.style.height = ladoALado ? cal.offsetHeight + 'px' : '';
-    lado.classList.toggle('lado-a-lado', ladoALado);
   }
 
   /* ---------------- Repetir em vários dias ---------------- */
@@ -775,7 +744,6 @@
   function redesenharDepoisDeMudar() {
     desenharJanela();
     desenharCalendario();
-    desenharPendentes();
     desenharTabela();
   }
 
@@ -1046,10 +1014,6 @@
     document.querySelector('.crono-tabela-rolagem').scrollTop = 0;
     desenharTabela();
   });
-
-  // Quadro amarelo acompanha a altura do calendário
-  if (window.ResizeObserver) new ResizeObserver(ajustarAlturaPendentes).observe($('crono-calendario'));
-  window.addEventListener('resize', ajustarAlturaPendentes);
 
   // Repetir em vários dias
   $('crono-repetir').addEventListener('change', ligarRepetir);
