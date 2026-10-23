@@ -119,7 +119,7 @@ Mostra se as pessoas param de repetir o erro depois de um treino. A aba só **l�
 - **Tela cheia:** o calendário ocupa a tela toda; Esc ou "Sair da tela cheia" volta. No iPhone ele só ocupa a página inteira.
 - O calendário ocupa a **largura toda** (o quadro "Aguardando participantes" foi retirado em 23/10/2026). Treinos sem participantes aparecem na tabela com "Nenhum participante ainda" em vermelho; os atrasados têm faixa vermelha no calendário e chip "Atrasado"; a busca por "agendado" ou "atrasado" mostra só esses.
 - **Todos os treinamentos:** tabela com Data, Hora, Carga, Tema, Participantes (no máximo **2 nomes** + selo **"+N"**, como no Gemba; passando o mouse aparecem todos; vermelho = nenhum participante ainda), Situação (Realizado com ✓ verde), **Anexos** (ícones verdes de foto e lista; clicar abre o arquivo), botão **Participantes** e lixeira (só para lançamento errado; apaga junto a lista de participantes e os anexos).
-  - Mostra cerca de **10 linhas**; o resto rola dentro da tabela (cabeçalho fixo). Datas mais recentes primeiro.
+  - Mostra **6 linhas**; o resto rola dentro da tabela (cabeçalho fixo). Datas mais recentes primeiro.
   - **Busca** no topo: data (ex.: "15/10" ou "/10"), tema, participante (nome ou matrícula) e situação (agendado, hoje, atrasado, realizado), sem diferenciar acento ou maiúscula. Quem bate com a busca aparece entre os 2 nomes visíveis. O título mostra "· N de M" quando filtra.
 - **Janela do treinamento** (botão Participantes, clique no calendário ou no quadro da direita):
   - **Carga horária** editável, com botão **Salvar**;

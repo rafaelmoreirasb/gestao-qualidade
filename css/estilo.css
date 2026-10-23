@@ -1672,7 +1672,7 @@ a:hover { color: var(--vermelho-escuro); }
   color: var(--cinza-texto);
 }
 
-.crono-tabela-rolagem { max-height: 450px; }   /* cerca de 10 linhas; o resto rola dentro da tabela */
+.crono-tabela-rolagem { max-height: 282px; }   /* 6 linhas (cabeçalho 34 + 6 x 41 + borda 2); o resto rola dentro da tabela */
 
 .crono-busca { width: 340px; }
 
