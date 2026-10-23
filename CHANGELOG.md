@@ -32,3 +32,5 @@
 | 22/10/2026 | Gemba (alteração) aprovada | Testada no link de teste e levada para o main (link oficial) junto com a tabela "Todos os Gemba". |
 | 23/10/2026 | Cronograma (alteração) | Retirado o quadro "Aguardando participantes"; o calendário passa a ocupar a largura toda. Na tabela "Todos os treinamentos", a coluna Participantes mostra no máximo 2 nomes + selo "+N" (igual ao Gemba), com todos os nomes ao passar o mouse; na busca, quem bate com o texto aparece primeiro. Sem SQL. Alterados: index.html, css/estilo.css, js/cronograma.js. |
 | 23/10/2026 | Cronograma (alteração) aprovada | Testada no link de teste e levada para o main (link oficial). |
+| 23/10/2026 | Cronograma (alteração) | A tabela "Todos os treinamentos" passa a mostrar 6 linhas (antes cerca de 10); o resto rola dentro da tabela, com o cabeçalho fixo. Sem SQL. Alterado: css/estilo.css. |
+| 23/10/2026 | Cronograma (alteração) aprovada | Testada no link de teste e levada para o main (link oficial). |
