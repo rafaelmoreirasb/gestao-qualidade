@@ -5,15 +5,23 @@
    ========================================================== */
 
 (function () {
-  const ABAS = ['painel', 'gemba', 'torre', 'pokayoke', 'eficacia', 'cronograma', 'planoacao', 'colaboradores'];
+  const ABAS = ['painel', 'gemba', 'torre', 'pokayoke', 'eficacia', 'cronograma', 'planoacao', 'colaboradores', 'pel'];
   const PADRAO = 'painel';
   const TITULO_SITE = 'Gestão de Processo e Qualidade · Mirassol SSP53';
 
   const menu = document.getElementById('menu');
 
+  // Abas que a conta logada pode abrir (null = todas). Definido em js/supabase.js:
+  // Administrador vê todas; Analista e Gestão só a Calculadora PEL.
+  function permitidas() {
+    return Array.isArray(window.gqAbasPermitidas) ? window.gqAbasPermitidas : ABAS;
+  }
+
   function abaDoEndereco() {
     const h = (location.hash || '').replace('#', '').toLowerCase();
-    return ABAS.includes(h) ? h : PADRAO;
+    const lista = permitidas();
+    if (lista.includes(h)) return h;
+    return lista.includes(PADRAO) ? PADRAO : lista[0];
   }
 
   function mostrarAba(nome) {
@@ -38,10 +46,13 @@
 
   mostrarAba(abaDoEndereco());
 
-  // O menu só aparece com alguém logado
-  if (typeof sb !== 'undefined' && sb) {
-    sb.auth.onAuthStateChange((_evento, sessao) => {
-      menu.hidden = !(sessao && sessao.user);
-    });
-  }
+  // Chamado por js/supabase.js depois de carregar o perfil de quem entrou.
+  // (Quando o menu aparece ou some também é decidido lá.)
+  window.gqAtualizarMenu = function () {
+    const lista = permitidas();
+    menu.querySelectorAll('a[data-aba]').forEach((link) => { link.hidden = !lista.includes(link.dataset.aba); });
+    const aba = abaDoEndereco();
+    if ((location.hash || '').replace('#', '') !== aba && lista !== ABAS) history.replaceState(null, '', '#' + aba);
+    mostrarAba(aba);
+  };
 })();

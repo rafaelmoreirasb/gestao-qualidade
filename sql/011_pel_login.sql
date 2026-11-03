@@ -1,10 +1,13 @@
 -- ==========================================================
 -- sql/011_pel_login.sql
--- Calculadora PEL · login, perfis (Gestão / Analista) e dados por site
--- Rodar UMA vez no projeto do Supabase DA CALCULADORA PEL
--- (projeto separado do Gestão de Qualidade; veja o LEIAME.md):
+-- Aba Calculadora PEL · cadastro, perfis (Gestão / Analista) e dados por site
+-- Rodar UMA vez no Supabase (projeto gestao-qualidade):
 -- SQL Editor > New query > colar tudo > Run.
--- Este script só CRIA coisas. Não apaga nenhuma tabela nem dado.
+-- Não apaga nenhuma tabela nem dado. Além de criar as tabelas da PEL,
+-- ele TRANCA as abas atuais (Gemba, Colaboradores, Cronograma, Plano de
+-- ação, Poka-Yoke, Eficácia, Painel e as fotos/anexos) para que só o
+-- Administrador as veja. Quem já tinha login antes deste script vira
+-- Administrador automaticamente.
 -- ==========================================================
 
 -- ----------------------------------------------------------
@@ -13,6 +16,7 @@
 --           analista  -> preenche a calculadora do próprio site
 --           gestao    -> vê todos os sites e edita indicadores e metas
 --           admin     -> tudo da Gestão + libera contas e cadastra sites
+--                        + todas as outras abas do app
 --           bloqueado -> conta sem acesso
 -- ----------------------------------------------------------
 create table if not exists public.pel_perfis (
@@ -182,22 +186,55 @@ create policy "pel_lanc_excluir" on public.pel_lancamentos for delete to authent
   using (public.pel_meu_papel() = 'admin');
 
 -- ----------------------------------------------------------
--- 7) Contas que já existiam antes deste script e usam e-mail DHL
---    ganham um perfil pendente (para aparecerem na tela Usuários)
+-- 7) Quem já tinha login antes deste script vira Administrador
+--    (hoje é só a sua conta, criada à mão no Supabase)
 -- ----------------------------------------------------------
-insert into public.pel_perfis (user_id, email, nome)
-select id, lower(email), coalesce(raw_user_meta_data ->> 'nome', '')
+insert into public.pel_perfis (user_id, email, nome, papel)
+select id, lower(email), coalesce(raw_user_meta_data ->> 'nome', ''), 'admin'
 from auth.users
-where lower(email) like '%@dhl.com'
 on conflict (user_id) do nothing;
 
+-- ----------------------------------------------------------
+-- 8) Trancar as abas atuais: só o Administrador lê e grava
+--    Uma regra "restritiva" é somada às regras que cada tabela já tem:
+--    as regras antigas continuam valendo, e agora também é preciso ser
+--    Administrador. Vale para todas as tabelas do app que não são da PEL
+--    e para as pastas de fotos e anexos (Storage).
+-- ----------------------------------------------------------
+create or replace function public.gq_acesso_total()
+returns boolean language sql stable security definer set search_path = public as $$
+  select coalesce(public.pel_meu_papel() = 'admin', false)
+$$;
+grant execute on function public.gq_acesso_total() to authenticated;
+
+do $$
+declare t record;
+begin
+  for t in
+    select c.relname as tabela
+    from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relkind = 'r' and c.relname not like 'pel\_%'
+  loop
+    execute format('alter table public.%I enable row level security', t.tabela);
+    execute format('drop policy if exists "gq_so_administrador" on public.%I', t.tabela);
+    execute format('create policy "gq_so_administrador" on public.%I as restrictive for all to authenticated using (public.gq_acesso_total()) with check (public.gq_acesso_total())', t.tabela);
+  end loop;
+end $$;
+
+-- Fotos do Gemba e anexos do Cronograma
+do $$
+begin
+  if exists (select 1 from pg_namespace where nspname = 'storage') then
+    execute 'drop policy if exists "gq_so_administrador" on storage.objects';
+    execute 'create policy "gq_so_administrador" on storage.objects as restrictive for all to authenticated using (public.gq_acesso_total()) with check (public.gq_acesso_total())';
+  end if;
+end $$;
+
 -- ==========================================================
--- 8) PASSO FINAL — tornar você o administrador
---    Depois de criar a sua conta na tela da Calculadora e confirmar o
---    e-mail, troque o endereço abaixo pelo seu, tire os dois traços (--)
---    do começo das três linhas e rode SÓ elas numa nova query:
+-- Pronto. Não há passo final: a sua conta já é Administrador.
+-- Se um dia precisar dar Administrador para outra conta pelo SQL:
 --
 -- alter table public.pel_perfis disable trigger pel_perfis_protecao;
--- update public.pel_perfis set papel = 'admin' where email = 'seu.nome@dhl.com';
+-- update public.pel_perfis set papel = 'admin' where email = 'nome@dhl.com';
 -- alter table public.pel_perfis enable trigger pel_perfis_protecao;
 -- ==========================================================

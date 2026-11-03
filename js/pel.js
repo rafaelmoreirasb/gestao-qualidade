@@ -1,8 +1,10 @@
 /* ==========================================================
-   pel/pel.js · Calculadora PEL com login e perfis
-   Papéis: Analista (preenche o próprio site), Gestão (vê todos os
-   sites e edita indicadores e metas) e Administrador (Gestão +
-   libera contas e cadastra sites).
+   js/pel.js · Aba Calculadora PEL
+   Papéis (tabela pel_perfis): Analista (preenche o próprio site),
+   Gestão (vê todos os sites e edita indicadores e metas) e
+   Administrador (Gestão + libera contas, cadastra sites e vê as
+   outras abas do app). O login e o cadastro ficam em js/supabase.js,
+   que avisa esta aba pelo evento "gq:perfil".
    ========================================================== */
 (function(){
 "use strict";
@@ -14,7 +16,7 @@ const TIERS=[
   {min:88, name:"Ouro",           range:"88% a 92,99%"},
   {min:93, name:"Platina",        range:"93% a 100%"},
 ];
-const MEDALS={"Não classifica":"img/medalha-nc.webp","Bronze":"img/medalha-bronze.webp","Prata":"img/medalha-prata.webp","Ouro":"img/medalha-ouro.webp","Platina":"img/medalha-platina.webp"};
+const MEDALS={"Não classifica":"img/pel/medalha-nc.webp","Bronze":"img/pel/medalha-bronze.webp","Prata":"img/pel/medalha-prata.webp","Ouro":"img/pel/medalha-ouro.webp","Platina":"img/pel/medalha-platina.webp"};
 
 /* Indicadores: textos, pesos e metas padrão (a Gestão pode mudar pela tela) */
 const KPIS=[
@@ -81,16 +83,9 @@ function armar(btn,texto,acao){ // botão de confirmação em dois cliques
 }
 
 /* ==========================================================
-   Supabase
-   ========================================================== */
-const configurado=typeof PEL_SUPABASE_URL==="string"&&PEL_SUPABASE_URL.startsWith("https://")&&typeof PEL_SUPABASE_CHAVE_PUBLICA==="string"&&!PEL_SUPABASE_CHAVE_PUBLICA.startsWith("COLE_AQUI")&&window.supabase;
-const sb=configurado?window.supabase.createClient(PEL_SUPABASE_URL,PEL_SUPABASE_CHAVE_PUBLICA,{auth:{persistSession:true,autoRefreshToken:true}}):null;
-const DOMINIO=(typeof PEL_DOMINIO==="string"?PEL_DOMINIO:"@dhl.com").toLowerCase();
-
-/* ==========================================================
    Estado
    ========================================================== */
-let usuario=null;      // conta logada (auth)
+let usuario=null;      // conta logada (auth), recebida de js/supabase.js
 let perfil=null;       // linha de pel_perfis
 let CONFIG=null;       // configuração compartilhada (pel_config)
 let sites=[];          // pel_sites
@@ -328,21 +323,21 @@ async function abrirSite(codigo){
 /* ==========================================================
    Abas e papéis
    ========================================================== */
-function mostrarAba(nome){
-  document.querySelectorAll("#menu button").forEach(b=>{if(b.dataset.aba===nome)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current");});
-  document.querySelectorAll("#tela-app .aba").forEach(s=>s.hidden=s.id!=="aba-"+nome);
+function mostrarSub(nome){
+  document.querySelectorAll("#pel-menu button").forEach(b=>{if(b.dataset.sub===nome)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current");});
+  document.querySelectorAll("#aba-pel .pel-sub").forEach(s=>s.hidden=s.id!=="pel-"+nome);
+  subAtual=nome;
   if(nome==="visao")carregarVisao();
   if(nome==="usuarios")carregarUsuarios();
   if(nome==="sites")carregarAbaSites();
-  if(usuario)local.set("pel:aba:"+usuario.id,nome);
+  if(usuario)local.set("pel:sub:"+usuario.id,nome);
 }
+let subAtual="calc";
 function prepararApp(){
   const p=perfil.papel;
-  document.querySelectorAll("#menu button").forEach(b=>{b.hidden=!!b.dataset.papel&&!b.dataset.papel.split(" ").includes(p);});
-  $("menu").hidden=p==="analista";
+  document.querySelectorAll("#pel-menu button").forEach(b=>{b.hidden=!!b.dataset.papel&&!b.dataset.papel.split(" ").includes(p);});
+  $("pel-menu").hidden=p==="analista";
   $("btn-edit").hidden=!podeEditarCfg();
-  $("usuario-email").textContent=perfil.nome||perfil.email;
-  $("usuario-papel").textContent=PAPEIS[p];$("usuario-papel").className="papel "+p;
   const escolhe=p==="gestao"||p==="admin";
   $("site-escolha").hidden=!escolhe;$("site-fixo").hidden=escolhe;
   $("site-escolha").innerHTML=`<option value="">Escolha um site</option>`+sites.map(s=>`<option value="${esc(s.codigo)}">${esc(s.codigo)}${s.nome?" · "+esc(s.nome):""}</option>`).join("");
@@ -417,7 +412,7 @@ async function carregarAbaSites(){
    Eventos da calculadora
    ========================================================== */
 function ligarCalculadora(){
-  const main=document.querySelector("main");
+  const main=$("aba-pel");
   main.addEventListener("input",e=>{
     const id=e.target.id;let m;
     if((m=id.match(/^w-(.+)$/))){
@@ -472,10 +467,10 @@ function ligarCalculadora(){
   });
   $("btn-edit").addEventListener("click",()=>{
     if(!podeEditarCfg())return;
-    const on=!document.body.classList.contains("editing");
+    const on=!$("aba-pel").classList.contains("editing");
     document.querySelectorAll(".meta-in, .w-in, .lock-in").forEach(el=>{el.readOnly=!on;});
     $("na-mode").disabled=!on;
-    document.body.classList.toggle("editing",on);
+    $("aba-pel").classList.toggle("editing",on);
     $("btn-edit").textContent=on?"Concluir edição":"Editar indicadores";
     $("btn-reset-txt").hidden=!on;
     $("table-note").textContent=on?"Os campos amarelos podem ser editados e valem para todos os sites. Para destacar em negrito, selecione o texto e clique em N (ou Ctrl+B).":"Regra: média do trimestre igual ou maior que a meta soma 100% do peso. Abaixo da meta, soma 0%. Digite N/A no mês para marcar o indicador como não aplicável.";
@@ -500,8 +495,8 @@ function ligarCalculadora(){
    Eventos das abas de Gestão e Administrador
    ========================================================== */
 function ligarAdmin(){
-  $("menu").addEventListener("click",e=>{const b=e.target.closest("button[data-aba]");if(b)mostrarAba(b.dataset.aba);});
-  $("visao-tbody").addEventListener("click",e=>{const tr=e.target.closest("tr[data-site]");if(!tr)return;mostrarAba("calc");abrirSite(tr.dataset.site);});
+  $("pel-menu").addEventListener("click",e=>{const b=e.target.closest("button[data-sub]");if(b)mostrarSub(b.dataset.sub);});
+  $("visao-tbody").addEventListener("click",e=>{const tr=e.target.closest("tr[data-site]");if(!tr)return;mostrarSub("calc");abrirSite(tr.dataset.site);});
   $("filtro-papel").addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b)return;filtroPapel=b.dataset.f;document.querySelectorAll("#filtro-papel .chip").forEach(c=>c.setAttribute("aria-pressed",c===b));desenharUsuarios();});
   $("usuarios-tbody").addEventListener("change",e=>{
     const tr=e.target.closest("tr[data-id]");if(!tr)return;
@@ -534,119 +529,35 @@ function ligarAdmin(){
 }
 
 /* ==========================================================
-   Login, cadastro e senha
+   Início: js/supabase.js avisa quem entrou e qual é o perfil
    ========================================================== */
-const telas=["tela-aguarde","tela-login","tela-status","tela-app"];
-function mostrarTela(id){telas.forEach(t=>$(t).hidden=t!==id);$("area-usuario").hidden=!(id==="tela-app"||id==="tela-status");if(id!=="tela-app")$("menu").hidden=true;}
-function formLogin(nome){["entrar","criar","esqueci","nova-senha"].forEach(f=>$("form-"+f).hidden=f!==nome);aviso("");mostrarTela("tela-login");}
-function aviso(txt,tipo){const m=$("login-mensagem");m.hidden=!txt;m.textContent=txt;m.className="mensagem "+(tipo==="info"?"mensagem-ok":"mensagem-erro");}
-function traduzirErro(erro){
-  const msg=(erro&&erro.message||"").toLowerCase();
-  if(msg.includes("invalid login credentials"))return "E-mail ou senha incorretos.";
-  if(msg.includes("email not confirmed"))return "Seu e-mail ainda não foi confirmado. Abra o link que enviamos para a sua caixa de entrada.";
-  if(msg.includes("already registered")||msg.includes("already been registered"))return "Já existe uma conta com este e-mail. Use Entrar ou Esqueci minha senha.";
-  if(msg.includes("password should be")||msg.includes("weak"))return "Senha fraca. Use pelo menos 8 caracteres, misturando letras e números.";
-  if(msg.includes("signups not allowed")||msg.includes("signup is disabled"))return "O cadastro de novas contas está desligado no Supabase. Fale com o administrador.";
-  if(msg.includes("too many")||msg.includes("rate limit"))return "Muitas tentativas seguidas. Espere alguns minutos e tente de novo.";
-  if(msg.includes("failed to fetch")||msg.includes("network"))return "Não foi possível conectar. Confira a internet e tente de novo.";
-  return "Não foi possível concluir. Tente de novo.";
+let ligado=false, avisoEl=null;
+function avisoAba(txt){
+  $("pel-aviso").hidden=!txt;$("pel-aviso").textContent=txt||"";
+  $("pel-conteudo").hidden=!!txt;
 }
-function emailValido(e){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);}
-function ehDhl(e){return e.toLowerCase().endsWith(DOMINIO);}
-async function ocupado(btn,fn){btn.disabled=true;try{await fn();}finally{btn.disabled=false;}}
-
-function status(titulo,texto){$("status-titulo").textContent=titulo;$("status-texto").textContent=texto;mostrarTela("tela-status");}
-
-async function entrarNoApp(session){
-  usuario=session.user;
-  $("usuario-email").textContent=usuario.email;$("usuario-papel").textContent="";$("usuario-papel").className="papel";
-  const {data,error}=await sb.from("pel_perfis").select("*").eq("user_id",usuario.id).maybeSingle();
-  if(error){status("Não foi possível carregar sua conta","Confira a internet e clique em Verificar de novo.");return;}
-  perfil=data;
-  if(!perfil){status("Conta sem acesso à Calculadora",`A Calculadora PEL aceita só contas com e-mail ${DOMINIO}. Saia e crie uma conta com o seu e-mail DHL.`);return;}
-  $("usuario-email").textContent=perfil.nome||perfil.email;$("usuario-papel").textContent=PAPEIS[perfil.papel];$("usuario-papel").className="papel "+perfil.papel;
-  if(perfil.papel==="pendente"){status("Conta aguardando liberação","Sua conta foi criada. O administrador precisa definir se você é Analista ou Gestão, e qual é o seu site. Assim que ele liberar, clique em Verificar de novo.");return;}
-  if(perfil.papel==="bloqueado"){status("Conta sem acesso","Sua conta está bloqueada na Calculadora PEL. Fale com o administrador.");return;}
-  if(perfil.papel==="analista"&&!perfil.site){status("Falta definir o seu site","Sua conta é de Analista, mas o administrador ainda não escolheu o seu site. Assim que ele escolher, clique em Verificar de novo.");return;}
+async function abrirPEL(){
+  if(!ligado){CONFIG=normConfig({});buildTable();ligarCalculadora();ligarAdmin();ligado=true;}
+  $("aba-pel").classList.remove("editing");
+  avisoAba("Carregando a Calculadora PEL…");
   try{await carregarConfig();await carregarSites();}
-  catch(e){status("Não foi possível carregar a Calculadora","Confira a internet e clique em Verificar de novo.");return;}
+  catch(e){avisoAba("Não foi possível carregar a Calculadora PEL. Confira a internet e recarregue a página.");return;}
+  avisoAba("");
   prepararApp();
-  mostrarTela("tela-app");
-  if(perfil.papel==="analista"){mostrarAba("calc");await abrirSite(perfil.site);}
-  else{
-    const ult=local.get("pel:aba:"+usuario.id), salvo=local.get("pel:site:"+usuario.id);
-    const permitidas=ehAdmin()?["calc","visao","usuarios","sites"]:["calc","visao"];
-    await abrirSite(sites.some(s=>s.codigo===salvo)?salvo:"");
-    mostrarAba(permitidas.includes(ult)?ult:"visao");
-  }
+  if(perfil.papel==="analista"){mostrarSub("calc");await abrirSite(perfil.site);return;}
+  const ult=local.get("pel:sub:"+usuario.id), salvo=local.get("pel:site:"+usuario.id);
+  const permitidas=ehAdmin()?["calc","visao","usuarios","sites"]:["calc","visao"];
+  await abrirSite(sites.some(s=>s.codigo===salvo)?salvo:"");
+  mostrarSub(permitidas.includes(ult)?ult:"visao");
 }
-
-function ligarLogin(){
-  document.querySelectorAll("[data-ir]").forEach(b=>b.addEventListener("click",()=>formLogin(b.dataset.ir)));
-  $("form-entrar").addEventListener("submit",e=>{e.preventDefault();ocupado($("botao-entrar"),async()=>{
-    const email=$("entrar-email").value.trim().toLowerCase(),senha=$("entrar-senha").value;
-    if(!emailValido(email)||!senha){aviso("Digite o e-mail e a senha.");return;}
-    const {data,error}=await sb.auth.signInWithPassword({email,password:senha});
-    if(error){aviso(traduzirErro(error));return;}
-    aviso("");await entrarNoApp(data.session);
-  });});
-  $("form-criar").addEventListener("submit",e=>{e.preventDefault();ocupado($("botao-criar"),async()=>{
-    const nome=$("criar-nome").value.trim(),email=$("criar-email").value.trim().toLowerCase(),s1=$("criar-senha").value,s2=$("criar-senha2").value;
-    if(!nome){aviso("Digite o seu nome.");return;}
-    if(!emailValido(email)){aviso("Digite um e-mail válido.");return;}
-    if(!ehDhl(email)){aviso(`Use o seu e-mail DHL (terminado em ${DOMINIO}).`);return;}
-    if(s1.length<8){aviso("A senha precisa ter pelo menos 8 caracteres.");return;}
-    if(s1!==s2){aviso("As duas senhas não são iguais.");return;}
-    const {data,error}=await sb.auth.signUp({email,password:s1,options:{data:{nome},emailRedirectTo:location.href.split("#")[0]}});
-    if(error){aviso(traduzirErro(error));return;}
-    if(data.session){await entrarNoApp(data.session);return;}
-    $("form-criar").reset();formLogin("entrar");$("entrar-email").value=email;
-    aviso(`Conta criada. Enviamos um e-mail de confirmação para ${email}. Abra o link e depois entre com a sua senha. Se não achar, olhe a caixa de spam.`,"info");
-  });});
-  $("form-esqueci").addEventListener("submit",e=>{e.preventDefault();ocupado($("botao-esqueci"),async()=>{
-    const email=$("esqueci-email").value.trim().toLowerCase();
-    if(!emailValido(email)){aviso("Digite um e-mail válido.");return;}
-    const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.href.split("#")[0]});
-    if(error){aviso(traduzirErro(error));return;}
-    aviso(`Se existir uma conta com ${email}, você vai receber um link para criar uma nova senha.`,"info");
-  });});
-  $("form-nova-senha").addEventListener("submit",e=>{e.preventDefault();ocupado($("botao-nova-senha"),async()=>{
-    const s1=$("nova-senha").value,s2=$("nova-senha2").value;
-    if(s1.length<8){aviso("A senha precisa ter pelo menos 8 caracteres.");return;}
-    if(s1!==s2){aviso("As duas senhas não são iguais.");return;}
-    const {error}=await sb.auth.updateUser({password:s1});
-    if(error){aviso(traduzirErro(error));return;}
-    recuperando=false;history.replaceState(null,"",location.pathname+location.search);
-    const {data}=await sb.auth.getSession();
-    if(data.session)await entrarNoApp(data.session);else{formLogin("entrar");aviso("Senha alterada. Entre com a nova senha.","info");}
-  });});
-  $("botao-sair").addEventListener("click",async()=>{
-    await sb.auth.signOut();usuario=null;perfil=null;document.body.classList.remove("editing");
-    formLogin("entrar");
-  });
-  $("botao-status-recarregar").addEventListener("click",async()=>{
-    const {data}=await sb.auth.getSession();if(data.session)entrarNoApp(data.session);else formLogin("entrar");
-  });
-}
-
-/* ==========================================================
-   Início
-   ========================================================== */
-let recuperando=/type=recovery/.test(location.hash);
-async function iniciar(){
-  if(!sb){$("tela-aguarde").textContent="A Calculadora ainda não está ligada ao Supabase. Cole a Project URL e a chave pública no arquivo pel/config.js (passo a passo no LEIAME.md).";return;}
-  CONFIG=normConfig({});
-  buildTable();fillConfig();
-  ligarLogin();ligarCalculadora();ligarAdmin();
-  sb.auth.onAuthStateChange((evento)=>{
-    if(evento==="PASSWORD_RECOVERY"){recuperando=true;formLogin("nova-senha");}
-  });
-  if(recuperando){formLogin("nova-senha");return;}
-  const {data}=await sb.auth.getSession();
-  if(recuperando)return;
-  if(data.session)await entrarNoApp(data.session);
-  else formLogin("entrar");
-}
-iniciar();
+document.addEventListener("gq:perfil",e=>{
+  const d=e.detail||{};
+  usuario=d.usuario||null; perfil=d.perfil||null;
+  if(usuario&&perfil&&["analista","gestao","admin"].includes(perfil.papel)) abrirPEL();
+});
+// Ao voltar para a aba, atualiza a Visão geral (lançamentos novos dos sites)
+document.addEventListener("gq:aba",e=>{
+  if(e.detail&&e.detail.aba==="pel"&&ligado&&perfil&&subAtual==="visao") carregarVisao();
+});
 
 })();
