@@ -160,6 +160,37 @@ Ações no formato **5W2H**, com Origem e Status.
 - **Regra:** quem sai da empresa vira **Desligado** e o histórico continua. A **lixeira** é só para corrigir cadastro errado. Quem tem registro no Gemba ou participou de treinamento **não pode ser excluído**.
 - **Importar planilha** (.xlsx ou .csv, primeira aba) com as colunas **Nome** e **Matrícula**: só cadastra matrículas novas, como Ativo; não duplica; a planilha não é guardada, só os dados.
 
+## Calculadora PEL (pasta `pel/`, endereço `/pel/`)
+
+Calculadora da nota trimestral do PEL por site, com login próprio e três papéis. Fica no mesmo GitHub e na mesma Vercel, mas usa um **projeto separado do Supabase** (`calculadora-pel`), porque lá qualquer pessoa com e-mail DHL cria a própria conta, e no projeto `gestao-qualidade` o cadastro é fechado e toda conta logada vê todas as abas.
+
+| Papel | O que faz |
+| --- | --- |
+| Pendente | Conta recém-criada. Vê só o aviso "Conta aguardando liberação" |
+| Analista | Preenche os meses da calculadora **do próprio site**. Não muda metas, pesos nem textos |
+| Gestão | Vê **todos os sites** (aba Visão geral) e abre a calculadora de qualquer site em modo leitura. Edita nomes, descrições, fórmulas, pesos e metas (valem para todos os sites) |
+| Administrador | Tudo da Gestão + abas **Usuários** (define papel e site de cada conta) e **Sites** (cadastra sites e troca o trimestre). Também pode preencher qualquer site |
+| Bloqueado | Conta sem acesso |
+
+- **Cadastro:** a pessoa clica em **Criar minha conta**, informa nome, e-mail **@dhl.com** e senha (mínimo 8 caracteres). A conta nasce **Pendente**. E-mail de outro domínio é recusado na tela e, no banco, não ganha perfil.
+- **Liberação:** só o administrador muda o papel e o site, na aba **Usuários**. Analista sem site continua sem acesso até o site ser escolhido. O administrador não consegue tirar o próprio acesso de administrador.
+- **Visão geral:** quantos sites há em cada faixa (Não classifica, Bronze, Prata, Ouro, Platina) e a tabela Regional, Site, Trimestre, Segurança, Eficiência, Processos, Nota final, Classificação e Atualizado em. Clicar num site abre a calculadora dele.
+- **Gravação:** o que o analista digita é salvo sozinho em menos de 1 segundo ("Salvo às 14:32"). O que a Gestão edita em **Editar indicadores** é salvo para todos os sites.
+- **Trimestre:** na aba **Sites**, o administrador define o nome (ex.: `Q4 2026`) e os três meses. Trocar o trimestre faz todos os sites começarem do zero; os trimestres anteriores ficam guardados no banco.
+- A regra de cálculo é a mesma de antes: média dos meses preenchidos ≥ meta soma 100% do peso; SHE não cumprido coloca o site em Não classifica; N/A segue a opção escolhida em "N/A nos meses".
+
+### Como ligar a Calculadora PEL (uma vez só)
+
+1. Em [supabase.com](https://supabase.com), **New project** com o nome `calculadora-pel` (região São Paulo).
+2. **SQL Editor → New query**: colar o `sql/011_pel_login.sql` inteiro e clicar em **Run**.
+3. **Authentication → Sign In / Providers → Email**: deixar **Allow new users to sign up** ligado e **desligar Confirm email**. O e-mail padrão do Supabase só entrega para quem é do time do projeto e no máximo 2 por hora; como toda conta nova precisa da sua liberação, a confirmação por e-mail não é necessária.
+4. **Authentication → URL Configuration**: em **Site URL**, o link oficial terminado em `/pel/`; em **Redirect URLs**, acrescentar também o link de teste terminado em `/pel/`.
+5. **Project Settings → Data API** (Project URL) e **API Keys** (chave pública): colar os dois no `pel/config.js`. Nunca a chave secreta.
+6. Abrir o link `/pel/`, criar a **sua** conta e voltar ao **SQL Editor** para rodar as três linhas do **PASSO FINAL** no fim do `sql/011_pel_login.sql` (trocando pelo seu e-mail). Clicar em **Verificar de novo**: você entra como Administrador.
+7. Na aba **Sites**, cadastrar os sites e conferir o trimestre. Em **Editar indicadores**, preencher as metas. Depois, liberar as contas na aba **Usuários**.
+
+- **Esqueci minha senha** manda um e-mail, então só funciona para todos depois de ligar um SMTP próprio (Authentication → Emails → SMTP Settings; ex.: Brevo, gratuito). Sem isso, o administrador pode excluir a conta em Authentication → Users para a pessoa criar de novo.
+
 ## Banco de dados (Supabase)
 
 | Tabela | Criada em | Campos |
@@ -186,6 +217,7 @@ Ações no formato **5W2H**, com Origem e Status.
 | --- | --- |
 | GitHub `rafaelmoreirasb/gestao-qualidade` (hoje **público**; pode virar privado em Settings → Change visibility) | Guarda o código. Ramo **main** = oficial; ramo **teste** = mudanças em teste |
 | Supabase, projeto `gestao-qualidade` (São Paulo) | Login e banco de dados. Cadastro de novos usuários **desligado** |
+| Supabase, projeto `calculadora-pel` (São Paulo) | Login e banco da Calculadora PEL. Cadastro **ligado** só para e-mail @dhl.com; toda conta nova fica Pendente até o administrador liberar |
 | Vercel, projeto `gestao-qualidade` | Publica o site: **main** → link oficial; **teste** → link de teste fixo (endereço com `git-teste`) |
 
 ## Arquivos
@@ -214,6 +246,12 @@ sql/006_pokayoke.sql               LISTA_ERROS_POKAYOKE, tabelas pokayoke_erros 
 sql/007_cronograma_anexos.sql      colunas de anexos em treinamentos, pasta privada "treinamentos" no Storage e regras de acesso
 sql/009_gemba_grupo_fotos.sql      colunas grupo e fotos em registros_gemba, pasta privada "gemba" no Storage e regras de acesso (o 008 fica reservado para a Torre de Aduana)
 sql/010_gemba_colaborador_opcional.sql   colaborador deixa de ser obrigatório em registros_gemba
+sql/011_pel_login.sql              Calculadora PEL: tabelas pel_perfis, pel_sites, pel_config e pel_lancamentos e regras por papel (rodar no projeto calculadora-pel)
+pel/index.html        Calculadora PEL: login, cadastro, calculadora, Visão geral, Usuários e Sites
+pel/pel.css           estilo da Calculadora PEL (mesmo padrão do site)
+pel/pel.js            lógica da Calculadora PEL (login, papéis, cálculo e gravação)
+pel/config.js         URL e chave pública do projeto calculadora-pel no Supabase
+pel/img/              medalhas do PET (Não classifica, Bronze, Prata, Ouro, Platina)
 LEIAME.md             este arquivo
 CHANGELOG.md          histórico de mudanças
 ```
@@ -225,6 +263,7 @@ CHANGELOG.md          histórico de mudanças
 - A foto da turma e a lista de presença ficam numa pasta **privada**: só abrem com login, por um link que vale 1 hora.
 - Nada do app aparece sem login. Ao clicar em Sair, as listas, o Painel, o Cronograma, o Plano de ação, o Poka-Yoke e a Eficácia somem da tela.
 - Dados de colaboradores: só matrícula, nome, setor e status.
+- **Calculadora PEL:** projeto do Supabase separado. Regras no próprio banco: analista lê e grava só o próprio site, Gestão lê todos sem alterar os lançamentos, conta pendente ou bloqueada não lê nada e só o administrador muda papéis e sites.
 
 ## Como mudar algo
 
