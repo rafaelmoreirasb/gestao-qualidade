@@ -160,6 +160,37 @@ Ações no formato **5W2H**, com Origem e Status.
 - **Regra:** quem sai da empresa vira **Desligado** e o histórico continua. A **lixeira** é só para corrigir cadastro errado. Quem tem registro no Gemba ou participou de treinamento **não pode ser excluído**.
 - **Importar planilha** (.xlsx ou .csv, primeira aba) com as colunas **Nome** e **Matrícula**: só cadastra matrículas novas, como Ativo; não duplica; a planilha não é guardada, só os dados.
 
+## Aba Calculadora PEL e contas por papel (desde 03/11/2026)
+
+A aba **PEL** (`#pel`) calcula a nota trimestral do PEL de cada site. Com ela, o app passou a aceitar **cadastro de contas** (só e-mail @dhl.com) e a ter **papéis**:
+
+| Papel | O que vê e faz |
+| --- | --- |
+| Pendente | Conta recém-criada. Vê só o aviso "Conta aguardando liberação" |
+| Analista | **Só a aba PEL**: preenche os meses da calculadora **do próprio site**. Não muda metas, pesos nem textos |
+| Gestão | **Só a aba PEL**: Visão geral de **todos os sites** e calculadora de qualquer site em modo leitura. Edita nomes, descrições, fórmulas, pesos e metas (valem para todos os sites) |
+| Administrador | **Todas as abas do app** (Painel, Gemba, Colaboradores etc.) + PEL completa, com as subabas **Usuários** (papel e site de cada conta) e **Sites e trimestre**. Também pode preencher qualquer site |
+| Bloqueado | Conta sem acesso |
+
+- **Quem já tinha login** antes do `sql/011_pel_login.sql` virou Administrador automaticamente (a sua conta).
+- **Criar minha conta** (tela de login): nome, e-mail **@dhl.com** e senha (mínimo 8 caracteres). A conta nasce **Pendente**. E-mail de outro domínio é recusado na tela e, no banco, não ganha perfil nem acesso.
+- **As outras abas ficam trancadas no banco:** uma regra extra em todas as tabelas e nas pastas de fotos e anexos exige ser Administrador. Analista e Gestão não leem nem gravam nada delas, mesmo digitando o endereço (ex.: `#gemba`).
+- **Liberação:** só o Administrador muda o papel e o site, na subaba **Usuários**. Analista sem site continua sem acesso até o site ser escolhido. O Administrador não consegue tirar o próprio acesso de administrador.
+- **Visão geral:** quantos sites há em cada faixa e a tabela Regional, Site, Trimestre, Segurança, Eficiência, Processos, Nota final, Classificação e Atualizado em. Clicar num site abre a calculadora dele.
+- **Gravação:** o que o analista digita é salvo sozinho em menos de 1 segundo ("Salvo às 14:32"). O que a Gestão muda em **Editar indicadores** vale para todos os sites.
+- **Trimestre:** em **Sites e trimestre**, o Administrador define o nome (ex.: `Q4 2026`) e os três meses. Trocar o trimestre faz todos os sites começarem do zero; os anteriores ficam guardados no banco.
+- **Regra de cálculo:** média dos meses preenchidos ≥ meta soma 100% do peso; SHE não cumprido coloca o site em Não classifica; N/A segue a opção de "N/A nos meses".
+
+### Como ligar (uma vez só, nesta ordem)
+
+1. **Supabase → SQL Editor → New query:** colar o `sql/011_pel_login.sql` inteiro e clicar em **Run**. Rodar **antes** de subir os arquivos, senão o login mostra "Não foi possível carregar sua conta".
+2. **Authentication → Sign In / Providers → Email:** ligar **Allow new users to sign up** e **desligar Confirm email**. O e-mail padrão do Supabase só entrega para quem é do time do projeto e no máximo 2 por hora; como toda conta nova precisa da sua liberação, a confirmação não é necessária.
+3. **Authentication → URL Configuration:** em **Site URL**, o link oficial; em **Redirect URLs**, acrescentar também o link de teste.
+4. Juntar os arquivos no ramo **teste**, entrar com a sua conta e conferir: todas as abas continuam aparecendo e o selo **Administrador** fica ao lado do seu e-mail.
+5. Na aba **PEL**: cadastrar os sites (**Sites e trimestre**), preencher as metas (**Editar indicadores**) e liberar as contas do time (**Usuários**).
+
+- **Esqueci minha senha** manda um e-mail, então só funciona para todos depois de ligar um SMTP próprio (Authentication → Emails → SMTP Settings; ex.: Brevo, gratuito). Sem isso, o Administrador pode excluir a conta em Authentication → Users para a pessoa criar de novo.
+
 ## Banco de dados (Supabase)
 
 | Tabela | Criada em | Campos |
@@ -175,7 +206,7 @@ Ações no formato **5W2H**, com Origem e Status.
 | pokayoke_ranking e pokayoke_base (resumos) | `sql/006_pokayoke.sql` (Fase 6) | Cálculos prontos no banco (total e pendente por usuário e tipo; dias, datas e total da base), só leitura, com as mesmas regras de login |
 
 - **LISTA_ERROS_POKAYOKE** fica na tabela listas (itens criados pelo `sql/006_pokayoke.sql`).
-- RLS ligado em todas: só o usuário logado lê e grava. Visitante sem login não acessa nada.
+- RLS ligado em todas: só o usuário logado lê e grava. Visitante sem login não acessa nada. Desde o `sql/011_pel_login.sql`, as tabelas e pastas das abas antigas exigem também o papel **Administrador** (regra `gq_so_administrador`).
 - **Arquivos (Supabase Storage):** pasta **privada** `treinamentos` (criada pelo `sql/007_cronograma_anexos.sql`), só JPEG, PNG e PDF, até 10 MB. Cada treino tem sua subpasta (o número do treino). Só o usuário logado lê, envia e apaga. O plano gratuito do Supabase guarda 1 GB.
 - Pasta **privada** `gemba` (criada pelo `sql/009_gemba_grupo_fotos.sql`), só JPEG e PNG, até 10 MB: fotos do Gemba, uma subpasta por grupo. Só o usuário logado lê, envia e apaga.
 - Os scripts `sql/` são rodados à mão no Supabase (SQL Editor → New query → colar → Run), um por vez, em ordem.
@@ -185,7 +216,7 @@ Ações no formato **5W2H**, com Origem e Status.
 | Serviço | Para que serve |
 | --- | --- |
 | GitHub `rafaelmoreirasb/gestao-qualidade` (hoje **público**; pode virar privado em Settings → Change visibility) | Guarda o código. Ramo **main** = oficial; ramo **teste** = mudanças em teste |
-| Supabase, projeto `gestao-qualidade` (São Paulo) | Login e banco de dados. Cadastro de novos usuários **desligado** |
+| Supabase, projeto `gestao-qualidade` (São Paulo) | Login e banco de dados. Cadastro **ligado** desde a aba PEL (só e-mail @dhl.com aceito pelo app); toda conta nova fica Pendente até o Administrador liberar |
 | Vercel, projeto `gestao-qualidade` | Publica o site: **main** → link oficial; **teste** → link de teste fixo (endereço com `git-teste`) |
 
 ## Arquivos
@@ -194,9 +225,9 @@ Ações no formato **5W2H**, com Origem e Status.
 index.html            página única: cabeçalho, menu, login e uma <section> por aba
 logo.png              logo DHL
 css/estilo.css        cores, fontes e componentes (menu, planilha, Gemba, Painel, Cronograma, Plano de ação, Poka-Yoke, Eficácia e impressão do calendário)
-js/supabase.js        conexão com o Supabase, entrar, sair (URL e chave pública no topo)
+js/supabase.js        conexão com o Supabase, entrar, sair, criar conta, esqueci a senha e papel de quem entrou (URL e chave pública no topo)
 js/listas.js          leitura e acréscimo de itens nas LISTA_... (arquivo comum)
-js/menu.js            troca de abas
+js/menu.js            troca de abas (Analista e Gestão só abrem a aba PEL)
 js/planilha.js        leitura de .xlsx e .csv no navegador, sem biblioteca
 js/painel.js          aba Painel (indicadores, mapa de calor único e mapa por colaborador)
 js/gemba.js           aba Gemba (colaboradores opcionais em lista, várias pessoas por registro, fotos e tabela Todos os Gemba)
@@ -214,6 +245,10 @@ sql/006_pokayoke.sql               LISTA_ERROS_POKAYOKE, tabelas pokayoke_erros 
 sql/007_cronograma_anexos.sql      colunas de anexos em treinamentos, pasta privada "treinamentos" no Storage e regras de acesso
 sql/009_gemba_grupo_fotos.sql      colunas grupo e fotos em registros_gemba, pasta privada "gemba" no Storage e regras de acesso (o 008 fica reservado para a Torre de Aduana)
 sql/010_gemba_colaborador_opcional.sql   colaborador deixa de ser obrigatório em registros_gemba
+sql/011_pel_login.sql              aba PEL e papéis: tabelas pel_perfis, pel_sites, pel_config e pel_lancamentos, regras por papel e tranca das outras abas (só Administrador)
+js/pel.js             aba Calculadora PEL (calculadora, Visão geral, Usuários, Sites e trimestre)
+css/pel.css           estilo da aba PEL (tudo dentro de #aba-pel) e das telas de cadastro
+img/pel/              medalhas do PET (Não classifica, Bronze, Prata, Ouro, Platina)
 LEIAME.md             este arquivo
 CHANGELOG.md          histórico de mudanças
 ```
@@ -221,10 +256,11 @@ CHANGELOG.md          histórico de mudanças
 ## Segurança
 
 - Só a **chave pública** do Supabase fica no código (`js/supabase.js`). A chave secreta nunca entra no código.
-- Só existe um usuário, criado manualmente no Supabase. Ninguém consegue se cadastrar sozinho.
+- Desde a aba PEL, qualquer pessoa com e-mail @dhl.com cria a própria conta, mas ela nasce **Pendente** e não vê nada até o Administrador liberar. Analista e Gestão só acessam a aba PEL; as outras abas e as fotos são trancadas no banco para quem não é Administrador.
 - A foto da turma e a lista de presença ficam numa pasta **privada**: só abrem com login, por um link que vale 1 hora.
 - Nada do app aparece sem login. Ao clicar em Sair, as listas, o Painel, o Cronograma, o Plano de ação, o Poka-Yoke e a Eficácia somem da tela.
 - Dados de colaboradores: só matrícula, nome, setor e status.
+- **Aba PEL:** regras no próprio banco: analista lê e grava só o próprio site, Gestão lê todos sem alterar os lançamentos, conta pendente ou bloqueada não lê nada e só o Administrador muda papéis e sites.
 
 ## Como mudar algo
 
