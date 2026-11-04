@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
 <link rel="stylesheet" href="css/estilo.css">
+<link rel="stylesheet" href="css/pel.css">
 </head>
 <body class="carregando">
 
@@ -34,10 +35,12 @@
         <a href="#cronograma" data-aba="cronograma">Cronograma</a>
         <a href="#planoacao" data-aba="planoacao">Plano de ação</a>
         <a href="#colaboradores" data-aba="colaboradores">Colaboradores</a>
+        <a href="#pel" data-aba="pel" title="Calculadora PEL">PEL</a>
       </nav>
 
       <div class="usuario" id="area-usuario" hidden>
         <span class="usuario-email" id="usuario-email"></span>
+        <span class="papel" id="usuario-papel" hidden></span>
         <button type="button" class="botao botao-contorno" id="botao-sair">Sair</button>
       </div>
     </div>
@@ -50,19 +53,74 @@
       Carregando…
     </section>
 
-    <!-- Tela de login -->
+    <!-- Tela de login, cadastro e senha -->
     <section id="tela-login" class="cartao cartao-login" hidden>
-      <h1 class="titulo">Entrar</h1>
       <form id="form-login" novalidate>
+        <h1 class="titulo">Entrar</h1>
         <label class="campo">E-mail
           <input type="email" id="login-email" autocomplete="username" required>
         </label>
         <label class="campo">Senha
           <input type="password" id="login-senha" autocomplete="current-password" required>
         </label>
-        <div id="login-mensagem" class="mensagem mensagem-erro" role="alert" hidden></div>
         <button type="submit" class="botao botao-principal" id="botao-entrar">Entrar</button>
+        <div class="links-login">
+          <button type="button" class="link" data-ir="criar">Criar minha conta</button>
+          <button type="button" class="link" data-ir="esqueci">Esqueci minha senha</button>
+        </div>
       </form>
+
+      <form id="form-criar" novalidate hidden>
+        <h1 class="titulo">Criar conta</h1>
+        <p class="nota-login">Para usar a Calculadora PEL. O administrador libera o acesso depois.</p>
+        <label class="campo">Nome completo
+          <input type="text" id="criar-nome" autocomplete="name" required>
+        </label>
+        <label class="campo">E-mail DHL
+          <input type="email" id="criar-email" autocomplete="username" required>
+          <small>Use o seu e-mail @dhl.com.</small>
+        </label>
+        <label class="campo">Senha
+          <input type="password" id="criar-senha" autocomplete="new-password" minlength="8" required>
+          <small>Mínimo de 8 caracteres.</small>
+        </label>
+        <label class="campo">Repita a senha
+          <input type="password" id="criar-senha2" autocomplete="new-password" minlength="8" required>
+        </label>
+        <button type="submit" class="botao botao-principal" id="botao-criar">Criar conta</button>
+        <div class="links-login"><button type="button" class="link" data-ir="login">Já tenho conta</button></div>
+      </form>
+
+      <form id="form-esqueci" novalidate hidden>
+        <h1 class="titulo">Esqueci minha senha</h1>
+        <p class="nota-login">Enviaremos um link para você criar uma nova senha.</p>
+        <label class="campo">E-mail
+          <input type="email" id="esqueci-email" autocomplete="username" required>
+        </label>
+        <button type="submit" class="botao botao-principal" id="botao-esqueci">Enviar link</button>
+        <div class="links-login"><button type="button" class="link" data-ir="login">Voltar para o login</button></div>
+      </form>
+
+      <form id="form-nova-senha" novalidate hidden>
+        <h1 class="titulo">Criar nova senha</h1>
+        <label class="campo">Nova senha
+          <input type="password" id="nova-senha" autocomplete="new-password" minlength="8" required>
+          <small>Mínimo de 8 caracteres.</small>
+        </label>
+        <label class="campo">Repita a nova senha
+          <input type="password" id="nova-senha2" autocomplete="new-password" minlength="8" required>
+        </label>
+        <button type="submit" class="botao botao-principal" id="botao-nova-senha">Salvar nova senha</button>
+      </form>
+
+      <div id="login-mensagem" class="mensagem mensagem-erro" role="alert" hidden></div>
+    </section>
+
+    <!-- Conta sem acesso liberado (pendente, bloqueada ou sem site) -->
+    <section id="tela-status" class="cartao cartao-status" hidden>
+      <h1 class="titulo" id="status-titulo">Conta aguardando liberação</h1>
+      <p id="status-texto"></p>
+      <div><button type="button" class="botao botao-contorno" id="botao-status-recarregar">Verificar de novo</button></div>
     </section>
 
     <!-- Conteúdo do app: só aparece depois do login -->
@@ -823,6 +881,179 @@
         </section>
       </section>
 
+
+      <!-- ===== Calculadora PEL (js/pel.js) ===== -->
+      <section class="aba" id="aba-pel" data-titulo="Calculadora PEL" hidden>
+        <div class="painel-topo">
+          <h1 class="titulo">Calculadora PEL</h1>
+          <nav class="pel-menu" id="pel-menu" aria-label="Seções da Calculadora PEL" hidden>
+            <button type="button" data-sub="calc">Calculadora</button>
+            <button type="button" data-sub="visao" data-papel="gestao admin">Visão geral</button>
+            <button type="button" data-sub="usuarios" data-papel="admin">Usuários</button>
+            <button type="button" data-sub="sites" data-papel="admin">Sites e trimestre</button>
+          </nav>
+        </div>
+        <div id="pel-aviso" class="mensagem mensagem-ok" hidden></div>
+        <div id="pel-conteudo">
+          <section class="pel-sub" id="pel-calc" hidden>
+        <div class="barra-site">
+          <div class="info">
+            <div><div class="rot">Site</div><div class="val" id="site-fixo"></div><select id="site-escolha" aria-label="Site" hidden></select></div>
+            <div><div class="rot">Trimestre</div><div class="val" id="periodo-rotulo"></div></div>
+            <div id="modo-leitura" class="nota" hidden>Somente leitura: a Gestão acompanha, quem preenche é o analista do site.</div>
+          </div>
+          <span class="salvo" id="salvo" aria-live="polite"></span>
+        </div>
+
+        <section class="cartao painel-cartao" aria-live="polite">
+          <div class="painel-cartao-topo"><h2 class="subtitulo">Classificação</h2><span class="nota">A média de cada indicador considera só os meses preenchidos</span></div>
+          <div class="resultado">
+            <img class="medal-big" id="medal-big" alt="">
+            <div>
+              <div class="ruler" aria-hidden="true">
+                <div class="ruler-track" id="ruler-track"></div>
+                <div class="ruler-marker" id="ruler-marker" style="left:0%"><span class="ruler-label num" id="ruler-label"></span></div>
+                <div class="ruler-ticks" id="ruler-ticks"></div>
+              </div>
+              <div class="next" id="next"></div>
+            </div>
+          </div>
+          <div class="tiers" id="tiers" aria-label="Faixas de classificação"></div>
+        </section>
+
+        <details class="bloco she-panel" id="seguranca" open>
+          <summary class="bloco-topo"><span class="seta" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><h2 class="subtitulo">1 · Segurança (SHE)</h2><span class="bloco-resumo" id="she-note"></span></summary>
+          <div class="bloco-corpo">
+          <div id="she-panel-inner">
+            <div class="she-grid">
+              <div class="she-row head"><span>Indicador</span><span class="c" id="sh-m1">Mês 1</span><span class="c" id="sh-m2">Mês 2</span><span class="c" id="sh-m3">Mês 3</span><span class="c">Status</span></div>
+              <div class="she-row">
+                <div class="k-cell" id="cell-she_psif"></div>
+                <input id="psif-0" inputmode="numeric" placeholder="—"><input id="psif-1" inputmode="numeric" placeholder="—"><input id="psif-2" inputmode="numeric" placeholder="—">
+                <span class="c" id="psif-st"></span>
+              </div>
+              <div class="she-row">
+                <div class="k-cell" id="cell-she_tri"></div>
+                <input id="tri-0" inputmode="decimal" placeholder="—"><input id="tri-1" inputmode="decimal" placeholder="—"><input id="tri-2" inputmode="decimal" placeholder="—">
+                <span class="c" id="tri-st"></span>
+              </div>
+            </div>
+            <div class="she-opts">
+              <label for="tri-meta">Meta TRI do site <input id="tri-meta" class="lock-in" inputmode="decimal" placeholder="—" readonly title="Clique em Editar indicadores para mudar a meta"></label>
+            </div>
+          </div>
+          </div>
+        </details>
+
+        <div class="barra-edicao">
+          <label class="na-sel" for="na-mode">N/A nos meses <select id="na-mode" disabled><option value="ignore">Ignora o indicador</option><option value="zero">Conta 0%</option><option value="full">Conta 100%</option></select></label>
+          <span class="nota" id="w-warn" hidden></span>
+          <span class="nota" id="table-note" data-x="1">Regra: média do trimestre igual ou maior que a meta soma 100% do peso. Abaixo da meta, soma 0%. Digite N/A no mês para marcar o indicador como não aplicável.</span>
+          <button class="btn-ghost" id="btn-reset-txt" type="button" hidden>Restaurar padrão</button>
+          <button class="btn-ghost" id="btn-expand" type="button">Expandir todos</button>
+          <button class="btn-ghost primary" id="btn-edit" type="button">Editar indicadores</button>
+        </div>
+
+        <details class="bloco" id="bloco-efi" open>
+          <summary class="bloco-topo"><span class="seta" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><h2 class="subtitulo">2 · Eficiência</h2><span class="bloco-resumo"><span class="pill wait" id="fora-efi"></span><span class="bloco-pts num" id="sub-efi"></span></span></summary>
+          <div class="bloco-corpo">
+            <div class="scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Indicador</th><th class="c">Peso</th><th class="c">Meta</th>
+                    <th class="c h-m1">Mês 1</th><th class="c h-m2">Mês 2</th><th class="c h-m3">Mês 3</th>
+                    <th class="r">Média Q</th><th class="c">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-efi"></tbody>
+              </table>
+            </div>
+          </div>
+        </details>
+
+        <details class="bloco" id="bloco-proc" open>
+          <summary class="bloco-topo"><span class="seta" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><h2 class="subtitulo">3 · Processos</h2><span class="bloco-resumo"><span class="pill wait" id="fora-proc"></span><span class="bloco-pts num" id="sub-proc"></span></span></summary>
+          <div class="bloco-corpo">
+            <div class="scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Indicador</th><th class="c">Peso</th><th class="c">Meta</th>
+                    <th class="c h-m1">Mês 1</th><th class="c h-m2">Mês 2</th><th class="c h-m3">Mês 3</th>
+                    <th class="r">Média Q</th><th class="c">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-proc"></tbody>
+              </table>
+            </div>
+          </div>
+        </details>
+          </section>
+          <section class="pel-sub" id="pel-visao" hidden>
+        <div class="painel-cartao-topo"><h2 class="subtitulo">Visão geral dos sites</h2><span class="nota" id="visao-periodo"></span></div>
+        <div class="contagem" id="visao-contagem"></div>
+        <section class="cartao painel-cartao">
+          <div class="painel-cartao-topo"><h2 class="subtitulo">Sites</h2><span class="nota">Clique num site para abrir a calculadora dele</span></div>
+          <div class="scroll">
+            <table class="tabela-geral">
+              <thead><tr><th>Regional</th><th>Site</th><th>Trimestre</th><th class="c">Segurança</th><th class="c">Eficiência</th><th class="c">Processos</th><th class="c">Nota final</th><th>Classificação</th><th>Atualizado em</th></tr></thead>
+              <tbody id="visao-tbody"></tbody>
+            </table>
+          </div>
+        </section>
+          </section>
+          <section class="pel-sub" id="pel-usuarios" hidden>
+        <div class="painel-cartao-topo"><h2 class="subtitulo">Usuários</h2><span class="nota">Defina o papel e o site de cada conta. Contas novas chegam como Pendente.</span></div>
+        <section class="cartao painel-cartao">
+          <div class="painel-cartao-topo">
+            <div class="filtro-papel" id="filtro-papel">
+              <button type="button" class="chip" data-f="" aria-pressed="true">Todos</button>
+              <button type="button" class="chip" data-f="pendente" aria-pressed="false">Pendentes</button>
+              <button type="button" class="chip" data-f="analista" aria-pressed="false">Analistas</button>
+              <button type="button" class="chip" data-f="gestao" aria-pressed="false">Gestão</button>
+            </div>
+            <span class="salvo" id="usuarios-msg" aria-live="polite"></span>
+          </div>
+          <div class="scroll">
+            <table class="tabela-adm">
+              <thead><tr><th>Nome</th><th>E-mail</th><th>Criada em</th><th>Papel</th><th>Site</th></tr></thead>
+              <tbody id="usuarios-tbody"></tbody>
+            </table>
+          </div>
+        </section>
+          </section>
+          <section class="pel-sub" id="pel-sites" hidden>
+        <section class="cartao painel-cartao">
+          <div class="painel-cartao-topo"><h2 class="subtitulo">Trimestre em andamento</h2><span class="nota">Ao trocar o trimestre, os sites começam a preencher do zero. Os trimestres anteriores ficam guardados.</span></div>
+          <form id="form-periodo" class="form-linha" novalidate>
+            <label class="campo">Nome do trimestre <input id="periodo-nome" placeholder="Ex.: Q4 2026" required></label>
+            <label class="campo">Mês 1 <input id="periodo-m1" placeholder="Setembro" required></label>
+            <label class="campo">Mês 2 <input id="periodo-m2" placeholder="Outubro" required></label>
+            <label class="campo">Mês 3 <input id="periodo-m3" placeholder="Novembro" required></label>
+            <button type="submit" class="botao botao-vermelho">Salvar trimestre</button>
+          </form>
+          <span class="salvo" id="periodo-msg" aria-live="polite"></span>
+        </section>
+        <section class="cartao painel-cartao">
+          <div class="painel-cartao-topo"><h2 class="subtitulo">Sites cadastrados</h2><span class="salvo" id="sites-msg" aria-live="polite"></span></div>
+          <form id="form-site" class="form-linha" novalidate>
+            <label class="campo">Código <input id="site-codigo" placeholder="Ex.: SSP53" required></label>
+            <label class="campo">Nome <input id="site-nome" placeholder="Ex.: Mirassol"></label>
+            <label class="campo">Regional <input id="site-regional" placeholder="Ex.: SP Interior"></label>
+            <button type="submit" class="botao botao-vermelho">Adicionar site</button>
+          </form>
+          <div class="scroll">
+            <table class="tabela-adm">
+              <thead><tr><th>Código</th><th>Nome</th><th>Regional</th><th>Analistas</th><th></th></tr></thead>
+              <tbody id="sites-tbody"></tbody>
+            </table>
+          </div>
+        </section>
+          </section>
+        </div>
+      </section>
+
     </div>
 
   </main>
@@ -839,5 +1070,6 @@
   <script src="js/planoacao.js"></script>
   <script src="js/pokayoke.js"></script>
   <script src="js/eficacia.js"></script>
+  <script src="js/pel.js"></script>
 </body>
 </html>
