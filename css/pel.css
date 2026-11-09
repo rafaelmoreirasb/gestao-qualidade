@@ -283,3 +283,9 @@
 .papel{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border-radius:999px;background:var(--preto);color:var(--branco)}
 .papel.analista{background:var(--branco);color:var(--preto);border:1px solid var(--preto)}
 .papel.admin{background:var(--vermelho)}
+
+/* ---------- Alteração PEL 1 (09/11/2026): Visão geral ---------- */
+/* Regional estreita (nome curto, ex.: SPI); Site centralizado; atualizado em/por pequenos */
+#aba-pel .tabela-geral .col-reg{width:1%}
+#aba-pel .tabela-geral .pequeno{font-size:11px;color:var(--cinza-texto)}
+#aba-pel .tabela-geral th.pequeno{font-size:11px;color:var(--cinza-subtitulo)}

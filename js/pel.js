@@ -1,9 +1,9 @@
 /* ==========================================================
    js/pel.js · Aba Calculadora PEL
    Papéis (tabela pel_perfis): Analista (preenche o próprio site),
-   Gestão (vê todos os sites e edita indicadores e metas) e
-   Administrador (Gestão + libera contas, cadastra sites e vê as
-   outras abas do app). O login e o cadastro ficam em js/supabase.js,
+   Gestão (vê todos os sites, só leitura) e Administrador (edita
+   indicadores e metas, aprova contas e vê as outras abas do app).
+   O site (Site, Cidade e Regional) é informado pela pessoa no cadastro. O login e o cadastro ficam em js/supabase.js,
    que avisa esta aba pelo evento "gq:perfil".
    ========================================================== */
 (function(){
@@ -92,7 +92,7 @@ let sites=[];          // pel_sites
 let siteAtual="";      // site aberto na calculadora
 let state=blankState();// valores do site aberto
 let podeLancar=false;  // pode preencher os meses
-const podeEditarCfg=()=>perfil&&(perfil.papel==="gestao"||perfil.papel==="admin");
+const podeEditarCfg=()=>perfil&&perfil.papel==="admin"; // só o Administrador edita indicadores
 const ehAdmin=()=>perfil&&perfil.papel==="admin";
 function blankState(){return {vals:{},psif:[],tri:[]};}
 function normConfig(d){
@@ -338,6 +338,7 @@ function prepararApp(){
   document.querySelectorAll("#pel-menu button").forEach(b=>{b.hidden=!!b.dataset.papel&&!b.dataset.papel.split(" ").includes(p);});
   $("pel-menu").hidden=p==="analista";
   $("btn-edit").hidden=!podeEditarCfg();
+  document.querySelector("#aba-pel .na-sel").hidden=p==="analista"; // Analista não vê "N/A nos meses"
   const escolhe=p==="gestao"||p==="admin";
   $("site-escolha").hidden=!escolhe;$("site-fixo").hidden=escolhe;
   $("site-escolha").innerHTML=`<option value="">Escolha um site</option>`+sites.map(s=>`<option value="${esc(s.codigo)}">${esc(s.codigo)}${s.nome?" · "+esc(s.nome):""}</option>`).join("");
@@ -348,11 +349,15 @@ function prepararApp(){
 let visaoLanc=[];
 async function carregarVisao(){
   $("visao-periodo").textContent="Trimestre: "+CONFIG.periodo;
-  $("visao-tbody").innerHTML=`<tr><td colspan="9" class="vazio">Carregando…</td></tr>`;
+  $("visao-tbody").innerHTML=`<tr><td colspan="10" class="vazio">Carregando…</td></tr>`;
   await carregarSites().catch(()=>{});
-  const {data,error}=await sb.from("pel_lancamentos").select("site,dados,atualizado_em").eq("periodo",CONFIG.periodo);
-  if(error){$("visao-tbody").innerHTML=`<tr><td colspan="9" class="vazio">Não foi possível carregar os sites. Recarregue a página.</td></tr>`;return;}
+  const {data,error}=await sb.from("pel_lancamentos").select("site,dados,atualizado_em,atualizado_por").eq("periodo",CONFIG.periodo);
+  if(error){$("visao-tbody").innerHTML=`<tr><td colspan="10" class="vazio">Não foi possível carregar os sites. Recarregue a página.</td></tr>`;return;}
   visaoLanc=data||[];
+  // Nome de quem salvou por último (Gestão e Administrador podem ler os perfis)
+  const nomes={};
+  const {data:pf}=await sb.from("pel_perfis").select("user_id,nome,email");
+  (pf||[]).forEach(p=>{nomes[p.user_id]=p.nome||p.email;});
   const linhas=sites.map(s=>{const l=visaoLanc.find(x=>x.site===s.codigo);const c=l?calcular(Object.assign(blankState(),l.dados||{})):null;return {s,l,c};});
   const cont={};TIERS.forEach(t=>cont[t.name]=0);
   linhas.forEach(x=>{if(x.c&&x.c.comDados)cont[x.c.t.name]++;});
@@ -361,11 +366,11 @@ async function carregarVisao(){
   $("visao-tbody").innerHTML=linhas.length?linhas.map(({s,l,c})=>{
     const tem=c&&c.comDados;
     const she=!c?`<span class="pill wait">—</span>`:c.sheFail?`<span class="pill no">Não cumprido</span>`:(c.psifOk&&c.triOk)?`<span class="pill ok">Cumprido</span>`:`<span class="pill wait">Pendente</span>`;
-    return `<tr data-site="${esc(s.codigo)}"><td>${esc(s.regional||"—")}</td><td><b>${esc(s.codigo)}</b>${s.nome?" · "+esc(s.nome):""}</td><td>${esc(CONFIG.periodo)}</td>
+    return `<tr data-site="${esc(s.codigo)}"><td class="col-reg">${esc(s.regional||"—")}</td><td class="c"><b>${esc(s.codigo)}</b>${s.nome?" · "+esc(s.nome):""}</td><td class="c">${esc(CONFIG.periodo)}</td>
       <td class="c">${she}</td><td class="c num">${tem?nf(c.tot.efi)+"%":"—"}</td><td class="c num">${tem?nf(c.tot.proc)+"%":"—"}</td>
       <td class="c num"><b>${tem?nf(c.score)+"%":"—"}</b></td><td>${tem?`<img class="med" src="${MEDALS[c.t.name]}" alt="">${c.t.name}`:`<span class="nota">Sem lançamentos</span>`}</td>
-      <td>${l?dataHora(l.atualizado_em):"—"}</td></tr>`;
-  }).join(""):`<tr><td colspan="9" class="vazio">Nenhum site cadastrado ainda.${ehAdmin()?" Cadastre na aba Sites.":""}</td></tr>`;
+      <td class="pequeno">${l?dataHora(l.atualizado_em):"—"}</td><td class="pequeno">${l&&l.atualizado_por?esc(nomes[l.atualizado_por]||"—"):"—"}</td></tr>`;
+  }).join(""):`<tr><td colspan="10" class="vazio">Nenhum site cadastrado ainda. Os sites aparecem quando as pessoas criam a conta.</td></tr>`;
 }
 
 /* ---------- Usuários ---------- */
@@ -382,18 +387,23 @@ function desenharUsuarios(){
   $("usuarios-tbody").innerHTML=lista.length?lista.map(p=>{
     const eu=p.user_id===usuario.id;
     return `<tr class="${p.papel==="pendente"?"pendente":""}" data-id="${p.user_id}"><td><b>${esc(p.nome||"—")}</b>${eu?' <span class="nota">(você)</span>':""}</td><td>${esc(p.email)}</td><td>${dataHora(p.criado_em)}</td>
-      <td><select class="u-papel" aria-label="Papel de ${esc(p.email)}" ${eu?"disabled":""}>${Object.keys(PAPEIS).map(k=>`<option value="${k}" ${k===p.papel?"selected":""}>${PAPEIS[k]}</option>`).join("")}</select></td>
-      <td><select class="u-site" aria-label="Site de ${esc(p.email)}"><option value="">—</option>${sites.map(s=>`<option value="${esc(s.codigo)}" ${s.codigo===p.site?"selected":""}>${esc(s.codigo)}${s.nome?" · "+esc(s.nome):""}</option>`).join("")}</select></td></tr>`;
+      <td>${siteTexto(p.site)}</td>
+      <td><select class="u-papel" aria-label="Papel de ${esc(p.email)}" ${eu?"disabled":""}>${Object.keys(PAPEIS).map(k=>`<option value="${k}" ${k===p.papel?"selected":""}>${PAPEIS[k]}</option>`).join("")}</select></td></tr>`;
   }).join(""):`<tr><td colspan="5" class="vazio">Nenhuma conta ${filtroPapel?"com este papel":"ainda"}.</td></tr>`;
+}
+// Site da conta, só para leitura: "SSP53 · Mirassol-SP · SPI"
+function siteTexto(codigo){
+  if(!codigo)return `<span class="nota">Sem site</span>`;
+  const s=sites.find(x=>x.codigo===codigo);
+  return `<b>${esc(codigo)}</b>`+(s?[s.nome,s.regional].filter(Boolean).map(t=>" · "+esc(t)).join(""):"");
 }
 async function alterarUsuario(id,campo,valor){
   const p=perfis.find(x=>x.user_id===id);if(!p)return;
-  if(campo==="papel"&&valor==="analista"&&!p.site){msgSalvo($("usuarios-msg"),"Escolha também o site do analista.",true);}
   msgSalvo($("usuarios-msg"),"Salvando…");
   const {error}=await sb.from("pel_perfis").update({[campo]:valor}).eq("user_id",id);
   if(error){msgSalvo($("usuarios-msg"),"Não foi possível salvar. "+(error.message||""),true);desenharUsuarios();return;}
   p[campo]=valor;
-  msgSalvo($("usuarios-msg"),`${p.nome||p.email}: ${campo==="papel"?"papel "+PAPEIS[valor]:"site "+(valor||"nenhum")} salvo.`);
+  msgSalvo($("usuarios-msg"),`${p.nome||p.email}: papel ${PAPEIS[valor]} salvo.`+(valor==="analista"&&!p.site?" Atenção: esta conta não tem site, então o analista ainda não consegue entrar.":""));
   if(campo==="papel")desenharUsuarios();
 }
 
@@ -485,10 +495,10 @@ function ligarCalculadora(){
     CONFIG.names={};CONFIG.defs={};CONFIG.forms={};CONFIG.weights={};
     fillConfig();render();gravarConfigAgora($("salvo"));
   }));
-  document.querySelectorAll("details.bloco").forEach(d=>{
-    const k="pel:open:"+d.id; if(local.get(k)===false) d.open=false;
-    d.addEventListener("toggle",()=>local.set(k,d.open));
-  });
+}
+/* Segurança, Eficiência e Processos começam sempre fechados */
+function fecharBlocos(){
+  document.querySelectorAll("#aba-pel details.bloco").forEach(d=>{d.open=false;});
 }
 
 /* ==========================================================
@@ -501,15 +511,6 @@ function ligarAdmin(){
   $("usuarios-tbody").addEventListener("change",e=>{
     const tr=e.target.closest("tr[data-id]");if(!tr)return;
     if(e.target.classList.contains("u-papel"))alterarUsuario(tr.dataset.id,"papel",e.target.value);
-    if(e.target.classList.contains("u-site"))alterarUsuario(tr.dataset.id,"site",e.target.value);
-  });
-  $("form-site").addEventListener("submit",async e=>{
-    e.preventDefault();
-    const codigo=$("site-codigo").value.trim().toUpperCase();
-    if(!codigo){msgSalvo($("sites-msg"),"Digite o código do site.",true);return;}
-    const {error}=await sb.from("pel_sites").insert({codigo,nome:$("site-nome").value.trim(),regional:$("site-regional").value.trim()});
-    if(error){msgSalvo($("sites-msg"),error.code==="23505"?"Já existe um site com este código.":"Não foi possível adicionar o site.",true);return;}
-    $("form-site").reset();msgSalvo($("sites-msg"),`Site ${codigo} adicionado.`);carregarAbaSites();
   });
   $("sites-tbody").addEventListener("click",e=>{
     const b=e.target.closest(".s-excluir");if(!b)return;
@@ -539,25 +540,27 @@ function avisoAba(txt){
 async function abrirPEL(){
   if(!ligado){CONFIG=normConfig({});buildTable();ligarCalculadora();ligarAdmin();ligado=true;}
   $("aba-pel").classList.remove("editing");
+  fecharBlocos();
   avisoAba("Carregando a Calculadora PEL…");
   try{await carregarConfig();await carregarSites();}
   catch(e){avisoAba("Não foi possível carregar a Calculadora PEL. Confira a internet e recarregue a página.");return;}
   avisoAba("");
   prepararApp();
   if(perfil.papel==="analista"){mostrarSub("calc");await abrirSite(perfil.site);return;}
-  const ult=local.get("pel:sub:"+usuario.id), salvo=local.get("pel:site:"+usuario.id);
-  const permitidas=ehAdmin()?["calc","visao","usuarios","sites"]:["calc","visao"];
+  const salvo=local.get("pel:site:"+usuario.id);
   await abrirSite(sites.some(s=>s.codigo===salvo)?salvo:"");
-  mostrarSub(permitidas.includes(ult)?ult:"visao");
+  mostrarSub("visao"); // Administrador e Gestão sempre começam na Visão geral
 }
 document.addEventListener("gq:perfil",e=>{
   const d=e.detail||{};
   usuario=d.usuario||null; perfil=d.perfil||null;
   if(usuario&&perfil&&["analista","gestao","admin"].includes(perfil.papel)) abrirPEL();
 });
-// Ao voltar para a aba, atualiza a Visão geral (lançamentos novos dos sites)
+// Ao voltar para a aba: blocos fechados e, para Administrador e Gestão, a Visão geral atualizada
 document.addEventListener("gq:aba",e=>{
-  if(e.detail&&e.detail.aba==="pel"&&ligado&&perfil&&subAtual==="visao") carregarVisao();
+  if(!(e.detail&&e.detail.aba==="pel"&&ligado&&perfil))return;
+  fecharBlocos();
+  if(perfil.papel!=="analista") mostrarSub("visao");
 });
 
 })();
