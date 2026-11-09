@@ -80,6 +80,15 @@
           <input type="email" id="criar-email" autocomplete="username" required>
           <small>Use o seu e-mail @dhl.com.</small>
         </label>
+        <label class="campo">Site
+          <input type="text" id="criar-site" autocomplete="off" maxlength="20" placeholder="Ex.: SSP53" required>
+        </label>
+        <label class="campo">Cidade
+          <input type="text" id="criar-cidade" autocomplete="off" maxlength="60" placeholder="Ex.: Mirassol-SP" required>
+        </label>
+        <label class="campo">Regional
+          <input type="text" id="criar-regional" autocomplete="off" maxlength="30" placeholder="Ex.: SPI" required>
+        </label>
         <label class="campo">Senha
           <input type="password" id="criar-senha" autocomplete="new-password" minlength="8" required>
           <small>Mínimo de 8 caracteres.</small>
@@ -921,7 +930,7 @@
           <div class="tiers" id="tiers" aria-label="Faixas de classificação"></div>
         </section>
 
-        <details class="bloco she-panel" id="seguranca" open>
+        <details class="bloco she-panel" id="seguranca">
           <summary class="bloco-topo"><span class="seta" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><h2 class="subtitulo">1 · Segurança (SHE)</h2><span class="bloco-resumo" id="she-note"></span></summary>
           <div class="bloco-corpo">
           <div id="she-panel-inner">
@@ -954,7 +963,7 @@
           <button class="btn-ghost primary" id="btn-edit" type="button">Editar indicadores</button>
         </div>
 
-        <details class="bloco" id="bloco-efi" open>
+        <details class="bloco" id="bloco-efi">
           <summary class="bloco-topo"><span class="seta" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><h2 class="subtitulo">2 · Eficiência</h2><span class="bloco-resumo"><span class="pill wait" id="fora-efi"></span><span class="bloco-pts num" id="sub-efi"></span></span></summary>
           <div class="bloco-corpo">
             <div class="scroll">
@@ -972,7 +981,7 @@
           </div>
         </details>
 
-        <details class="bloco" id="bloco-proc" open>
+        <details class="bloco" id="bloco-proc">
           <summary class="bloco-topo"><span class="seta" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><h2 class="subtitulo">3 · Processos</h2><span class="bloco-resumo"><span class="pill wait" id="fora-proc"></span><span class="bloco-pts num" id="sub-proc"></span></span></summary>
           <div class="bloco-corpo">
             <div class="scroll">
@@ -997,14 +1006,14 @@
           <div class="painel-cartao-topo"><h2 class="subtitulo">Sites</h2><span class="nota">Clique num site para abrir a calculadora dele</span></div>
           <div class="scroll">
             <table class="tabela-geral">
-              <thead><tr><th>Regional</th><th>Site</th><th>Trimestre</th><th class="c">Segurança</th><th class="c">Eficiência</th><th class="c">Processos</th><th class="c">Nota final</th><th>Classificação</th><th>Atualizado em</th></tr></thead>
+              <thead><tr><th class="col-reg">Regional</th><th class="c">Site</th><th class="c">Trimestre</th><th class="c">Segurança</th><th class="c">Eficiência</th><th class="c">Processos</th><th class="c">Nota final</th><th>Classificação</th><th class="pequeno">Atualizado em</th><th class="pequeno">Atualizado por</th></tr></thead>
               <tbody id="visao-tbody"></tbody>
             </table>
           </div>
         </section>
           </section>
           <section class="pel-sub" id="pel-usuarios" hidden>
-        <div class="painel-cartao-topo"><h2 class="subtitulo">Usuários</h2><span class="nota">Defina o papel e o site de cada conta. Contas novas chegam como Pendente.</span></div>
+        <div class="painel-cartao-topo"><h2 class="subtitulo">Usuários</h2><span class="nota">Aprove as contas novas escolhendo o papel. Contas novas chegam como Pendente; o site é informado pela própria pessoa no cadastro.</span></div>
         <section class="cartao painel-cartao">
           <div class="painel-cartao-topo">
             <div class="filtro-papel" id="filtro-papel">
@@ -1017,7 +1026,7 @@
           </div>
           <div class="scroll">
             <table class="tabela-adm">
-              <thead><tr><th>Nome</th><th>E-mail</th><th>Criada em</th><th>Papel</th><th>Site</th></tr></thead>
+              <thead><tr><th>Nome</th><th>E-mail</th><th>Criada em</th><th>Site</th><th>Papel</th></tr></thead>
               <tbody id="usuarios-tbody"></tbody>
             </table>
           </div>
@@ -1037,15 +1046,10 @@
         </section>
         <section class="cartao painel-cartao">
           <div class="painel-cartao-topo"><h2 class="subtitulo">Sites cadastrados</h2><span class="salvo" id="sites-msg" aria-live="polite"></span></div>
-          <form id="form-site" class="form-linha" novalidate>
-            <label class="campo">Código <input id="site-codigo" placeholder="Ex.: SSP53" required></label>
-            <label class="campo">Nome <input id="site-nome" placeholder="Ex.: Mirassol"></label>
-            <label class="campo">Regional <input id="site-regional" placeholder="Ex.: SP Interior"></label>
-            <button type="submit" class="botao botao-vermelho">Adicionar site</button>
-          </form>
+          <p class="nota">Os sites são cadastrados pela própria pessoa ao criar a conta (Site, Cidade e Regional). Excluir apaga também os lançamentos do site: use só para corrigir site criado errado.</p>
           <div class="scroll">
             <table class="tabela-adm">
-              <thead><tr><th>Código</th><th>Nome</th><th>Regional</th><th>Analistas</th><th></th></tr></thead>
+              <thead><tr><th>Site</th><th>Cidade</th><th>Regional</th><th>Analistas</th><th></th></tr></thead>
               <tbody id="sites-tbody"></tbody>
             </table>
           </div>
