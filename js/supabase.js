@@ -196,19 +196,24 @@ async function iniciar() {
     });
   });
 
-  // Criar conta (só e-mail DHL; nasce Pendente)
+  // Criar conta (só e-mail DHL; nasce Pendente).
+  // Site, Cidade e Regional vão junto: o banco cadastra o site e liga a pessoa a ele.
   el('form-criar').addEventListener('submit', (ev) => {
     ev.preventDefault();
     const nome = el('criar-nome').value.trim();
     const email = el('criar-email').value.trim().toLowerCase();
+    const site = el('criar-site').value.trim().toUpperCase();
+    const cidade = el('criar-cidade').value.trim();
+    const regional = el('criar-regional').value.trim();
     const s1 = el('criar-senha').value, s2 = el('criar-senha2').value;
     if (!nome) { mostrarErroLogin('Digite o seu nome.'); return; }
     if (!emailValido(email)) { mostrarErroLogin('Digite um e-mail válido.'); return; }
     if (!email.endsWith(DOMINIO_CADASTRO)) { mostrarErroLogin('Use o seu e-mail DHL (terminado em ' + DOMINIO_CADASTRO + ').'); return; }
+    if (!site || !cidade || !regional) { mostrarErroLogin('Preencha Site, Cidade e Regional (ex.: SSP53, Mirassol-SP, SPI).'); return; }
     if (s1.length < 8) { mostrarErroLogin('A senha precisa ter pelo menos 8 caracteres.'); return; }
     if (s1 !== s2) { mostrarErroLogin('As duas senhas não são iguais.'); return; }
     ocupado(el('botao-criar'), 'Criando…', async () => {
-      const { data, error } = await sb.auth.signUp({ email, password: s1, options: { data: { nome }, emailRedirectTo: enderecoDoApp() } });
+      const { data, error } = await sb.auth.signUp({ email, password: s1, options: { data: { nome, site, cidade, regional }, emailRedirectTo: enderecoDoApp() } });
       if (error) { mostrarErroLogin(traduzirErroCadastro(error)); return; }
       el('form-criar').reset();
       if (data.session) { await aplicarSessao(data.session, true); return; }
