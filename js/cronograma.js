@@ -212,7 +212,7 @@
     try {
       const [cols, tres, parts] = await Promise.all([
         lerTudo(() => sb.from('colaboradores')
-          .select('id, matricula, nome, status')
+          .select('id, matricula, nome, status, cpf')
           .order('nome', { ascending: true })
           .order('id', { ascending: true })),
         lerTudo(() => sb.from('treinamentos')
@@ -702,10 +702,12 @@
     }
 
     const q = semAcento($('crono-janela-busca').value);
+    const qNum = String($('crono-janela-busca').value || '').replace(/\D/g, '');   // busca por CPF, com ou sem ponto e traço
     // Só Ativos; um desligado que já participou continua aparecendo, marcado
     const pessoas = colaboradores
       .filter((c) => ehAtivo(c) || s.has(c.id))
-      .filter((c) => !q || semAcento(c.nome).includes(q) || String(c.matricula).toLowerCase().includes(q));
+      .filter((c) => !q || semAcento(c.nome).includes(q) || String(c.matricula).toLowerCase().includes(q) ||
+        (qNum.length >= 3 && String(c.cpf || '').includes(qNum)));
 
     const caixa = $('crono-pessoas');
     const rolagem = caixa.scrollTop;
