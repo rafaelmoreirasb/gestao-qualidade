@@ -390,7 +390,7 @@ a:hover { color: var(--vermelho-escuro); }
 .grade-adicionar {
   width: 100%;
   display: grid;
-  grid-template-columns: 130px minmax(0, 1fr);
+  grid-template-columns: 130px minmax(0, 1fr) 170px;
   gap: 10px;
 }
 
@@ -427,12 +427,14 @@ a:hover { color: var(--vermelho-escuro); }
   font-size: 14px;
 }
 
-.planilha-colab { min-width: 640px; }
+.planilha-colab { min-width: 780px; }
 
 .planilha-colab .planilha-cabecalho,
 .planilha-colab .planilha-linha {
-  grid-template-columns: 44px 110px minmax(200px, 2fr) 150px 120px 60px;
+  grid-template-columns: 44px 110px minmax(200px, 2fr) 130px 150px 120px 60px;
 }
+
+.planilha-colab .col-cpf { font-size: 12px; white-space: nowrap; }
 
 .planilha-colab .col-num { color: #666666; }
 .planilha-colab .col-mat { font-size: 12px; }
@@ -549,6 +551,49 @@ a:hover { color: var(--vermelho-escuro); }
   cursor: wait;
   pointer-events: none;
 }
+
+/* Resumo da planilha antes de confirmar (Colaboradores) */
+.sinc-resumo {
+  align-self: stretch;
+  border: 1px solid var(--cinza-borda);
+  border-radius: var(--raio-cartao);
+  background: var(--cinza-zebra);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sinc-titulo { margin: 0 0 4px; font-size: 15px; }
+
+.sinc-itens { display: flex; flex-direction: column; gap: 6px; }
+
+.sinc-grupo {
+  font-size: 14px;
+  border-left: 4px solid var(--cinza-campo);
+  padding: 4px 10px;
+  background: var(--branco);
+}
+
+.sinc-grupo summary { cursor: pointer; }
+.sinc-grupo ul { margin: 6px 0 4px; padding-left: 20px; max-height: 220px; overflow-y: auto; font-size: 13px; }
+.sinc-zero { color: var(--cinza-texto); border-left-color: var(--cinza-linha); }
+.sinc-novo { border-left-color: var(--verde-borda); }
+.sinc-deslig { border-left-color: var(--vermelho); }
+.sinc-volta { border-left-color: var(--amarelo); }
+.sinc-atual { border-left-color: var(--preto); }
+
+.sinc-alerta {
+  background: var(--vermelho-claro);
+  color: var(--vermelho-escuro);
+  border: 2px solid var(--vermelho);
+  border-radius: var(--raio);
+  padding: 10px 12px;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.sinc-botoes { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
 
 /* ---------- Celular ---------- */
 
