@@ -106,7 +106,7 @@
     const PAGINA = 1000;
     for (let de = 0; ; de += PAGINA) {
       const { data, error } = await sb.from('colaboradores')
-        .select('id, matricula, nome, setor')
+        .select('id, matricula, nome, setor, cpf')
         .eq('status', 'Ativo')
         .order('nome', { ascending: true })
         .range(de, de + PAGINA - 1);
@@ -232,7 +232,9 @@
       return;
     }
     const q = chave($('gemba-busca').value);
-    const achados = ativos.filter((c) => !q || chave(c.nome).includes(q) || String(c.matricula).toLowerCase().includes(q));
+    const qNum = String($('gemba-busca').value || '').replace(/\D/g, '');   // busca por CPF, com ou sem ponto e traço
+    const achados = ativos.filter((c) => !q || chave(c.nome).includes(q) || String(c.matricula).toLowerCase().includes(q) ||
+      (qNum.length >= 3 && String(c.cpf || '').includes(qNum)));
     if (!achados.length) {
       caixa.appendChild(el('div', 'gemba-resultado-vazio', 'Nenhum colaborador encontrado na base.'));
       return;
