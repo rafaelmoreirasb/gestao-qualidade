@@ -153,12 +153,13 @@ Ações no formato **5W2H**, com Origem e Status.
 ### Aba Colaboradores (funcionando)
 
 - **Título com contagem:** total, ativos e desligados.
-- **Adicionar manualmente:** matrícula e nome. Matrícula repetida é recusada.
-- **Lista estilo planilha:** #, Matrícula, Nome, Status, Treinamentos e lixeira; busca por nome, matrícula ou status.
+- **Adicionar manualmente:** matrícula, nome e CPF (opcional, 11 números). Matrícula repetida é recusada. Quem for adicionado à mão e não estiver na próxima planilha importada vira Desligado.
+- **Lista estilo planilha:** #, Matrícula, Nome, CPF (completo, 000.000.000-00), Status, Treinamentos e lixeira; busca por nome, matrícula, status ou **CPF** (com ou sem ponto e traço, a partir de 3 números).
 - **Status na própria linha:** Ativo (verde) ou Desligado (vermelho, nome riscado, vai para o fim da lista).
 - **Treinamentos:** quantos treinamentos com status **Realizado** a pessoa participou (atualiza ao abrir a aba).
 - **Regra:** quem sai da empresa vira **Desligado** e o histórico continua. A **lixeira** é só para corrigir cadastro errado. Quem tem registro no Gemba ou participou de treinamento **não pode ser excluído**.
-- **Importar planilha** (.xlsx ou .csv, primeira aba) com as colunas **Nome** e **Matrícula**: só cadastra matrículas novas, como Ativo; não duplica; a planilha não é guardada, só os dados.
+- **Importar planilha** = **sincronizar com a lista de ativos do RH** (.xlsx ou .csv, primeira aba, colunas **Matrícula**, **Nome** e **CPF**; as outras colunas são ignoradas). A planilha deve ter **todos os ativos**. Antes de gravar aparece um **resumo**: novos (entram como Ativo), quem não está na planilha (vira **Desligado**), Desligados que voltaram (reativados), nome ou CPF diferente (atualizados com o da planilha) e sem mudança, com a lista de nomes de cada grupo. Se mais de 20% dos ativos forem virar Desligado, aparece um aviso vermelho. Só grava ao clicar em **Confirmar atualização**; **Cancelar** não muda nada. Ninguém é excluído. CPF vazio ou inválido na planilha não apaga o CPF guardado; CPF sem o zero da frente (Excel) é completado. A planilha não é guardada, só os dados.
+- **Busca por CPF** também no Gemba (passo 1) e na janela de participantes do Cronograma.
 
 ## Aba Calculadora PEL e contas por papel (desde 03/11/2026)
 
@@ -199,7 +200,7 @@ A aba **PEL** (`#pel`) calcula a nota trimestral do PEL de cada site. Com ela, o
 
 | Tabela | Criada em | Campos |
 | --- | --- | --- |
-| colaboradores | `sql/001_colaboradores.sql` (Fase 1) | id, matricula (única), nome, setor (vazio por enquanto), status (Ativo/Desligado), criado_em |
+| colaboradores | `sql/001_colaboradores.sql` (Fase 1) e `sql/013_colaboradores_cpf.sql` | id, matricula (única), nome, setor (vazio por enquanto), status (Ativo/Desligado), criado_em, **cpf** (só os 11 números; não é único, a pessoa pode voltar com outra matrícula) |
 | listas | `sql/002_gemba.sql` (Fase 2) | id, lista, item, ordem, ativo, criado_em. Não pode apagar (item removido fica com ativo = falso) |
 | registros_gemba | `sql/002_gemba.sql` (Fase 2), `sql/009_gemba_grupo_fotos.sql` e `sql/010_gemba_colaborador_opcional.sql` | id, data, colaborador_id (**opcional** desde o 010: vazio = "Sem colaborador"), processo, motivo, acao, observacao, criado_em, **grupo** (pessoas salvas juntas têm o mesmo; registros antigos têm um próprio) e **fotos** (lista de caminhos na pasta "gemba"). Uma linha por pessoa |
 | treinamentos | `sql/003_cronograma.sql` e `sql/004_cronograma_status_carga.sql` (Fase 4) | id, data, hora, tema, **carga_minutos** (carga horária em minutos), **status** (Agendado/Realizado), **foto_caminho** e **lista_caminho** (onde estão os anexos; colunas do `sql/007_cronograma_anexos.sql`), criado_em. Pode ler, criar, alterar **só** carga, status e anexos, e excluir (só lançamento errado) |
@@ -251,6 +252,7 @@ sql/009_gemba_grupo_fotos.sql      colunas grupo e fotos em registros_gemba, pas
 sql/010_gemba_colaborador_opcional.sql   colaborador deixa de ser obrigatório em registros_gemba
 sql/011_pel_login.sql              aba PEL e papéis: tabelas pel_perfis, pel_sites, pel_config e pel_lancamentos, regras por papel e tranca das outras abas (só Administrador)
 sql/012_pel_site_no_cadastro.sql   site, cidade e regional vêm do cadastro; só o Administrador edita indicadores (desfazer: rodar o 011 de novo)
+sql/013_colaboradores_cpf.sql      coluna cpf em colaboradores (11 números) e índice para a busca
 js/pel.js             aba Calculadora PEL (calculadora, Visão geral, Usuários, Sites e trimestre)
 css/pel.css           estilo da aba PEL (tudo dentro de #aba-pel) e das telas de cadastro
 img/pel/              medalhas do PET (Não classifica, Bronze, Prata, Ouro, Platina)
@@ -264,7 +266,7 @@ CHANGELOG.md          histórico de mudanças
 - Desde a aba PEL, qualquer pessoa com e-mail @dhl.com cria a própria conta, mas ela nasce **Pendente** e não vê nada até o Administrador liberar. Analista e Gestão só acessam a aba PEL; as outras abas e as fotos são trancadas no banco para quem não é Administrador.
 - A foto da turma e a lista de presença ficam numa pasta **privada**: só abrem com login, por um link que vale 1 hora.
 - Nada do app aparece sem login. Ao clicar em Sair, as listas, o Painel, o Cronograma, o Plano de ação, o Poka-Yoke e a Eficácia somem da tela.
-- Dados de colaboradores: só matrícula, nome, setor e status.
+- Dados de colaboradores: matrícula, nome, CPF, setor e status (o CPF entrou em 10/11/2026, a pedido). Só o **Administrador** lê a tabela de colaboradores.
 - **Aba PEL:** regras no próprio banco: analista lê e grava só o próprio site, Gestão lê todos sem alterar lançamentos nem indicadores, conta pendente ou bloqueada não lê nada e só o Administrador muda papéis e edita indicadores.
 
 ## Como mudar algo
