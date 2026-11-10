@@ -257,7 +257,7 @@
               </button>
               <div class="gemba-lista-corpo" id="gemba-lista-corpo" hidden>
                 <div class="gemba-lista-topo">
-                  <input type="search" id="gemba-busca" class="gemba-campo" placeholder="Buscar nome ou matrícula" aria-label="Buscar colaborador" autocomplete="off">
+                  <input type="search" id="gemba-busca" class="gemba-campo" placeholder="Buscar nome, matrícula ou CPF" aria-label="Buscar colaborador" autocomplete="off">
                   <button type="button" class="botao botao-contorno gemba-lista-limpar" id="gemba-lista-limpar">Limpar</button>
                 </div>
                 <div class="gemba-lista" id="gemba-lista" role="group" aria-label="Colaboradores Ativos"></div>
@@ -714,7 +714,7 @@
             </div>
             <div class="crono-janela-barra">
               <div class="crono-janela-contagem">Participantes <span id="crono-janela-contagem"></span></div>
-              <input type="search" id="crono-janela-busca" class="busca" aria-label="Buscar colaborador" placeholder="Buscar nome ou matrícula" autocomplete="off">
+              <input type="search" id="crono-janela-busca" class="busca" aria-label="Buscar colaborador" placeholder="Buscar nome, matrícula ou CPF" autocomplete="off">
             </div>
             <div id="crono-janela-msg" class="mensagem" role="status" hidden></div>
             <div class="crono-pessoas" id="crono-pessoas"></div>
@@ -847,9 +847,13 @@
                 <label class="campo">Nome
                   <input type="text" id="colab-nome" autocomplete="off">
                 </label>
+                <label class="campo">CPF
+                  <input type="text" id="colab-cpf" autocomplete="off" inputmode="numeric" placeholder="Opcional">
+                </label>
               </div>
               <button type="submit" class="botao botao-contorno" id="colab-adicionar">+ Adicionar colaborador</button>
               <div id="colab-msg-adicionar" class="mensagem" role="status" hidden></div>
+              <div class="nota">Quem for adicionado aqui e não estiver na próxima planilha importada será marcado como Desligado.</div>
             </form>
           </section>
         </div>
@@ -857,7 +861,7 @@
         <section class="cartao cartao-lista">
           <div class="cartao-topo">
             <h2 class="subtitulo">Lista de colaboradores</h2>
-            <input type="search" id="colab-busca" class="busca" aria-label="Buscar colaborador" placeholder="Buscar nome, matrícula ou status">
+            <input type="search" id="colab-busca" class="busca" aria-label="Buscar colaborador" placeholder="Buscar nome, matrícula ou CPF">
           </div>
           <div id="colab-msg-lista" class="mensagem" role="status" hidden></div>
           <div class="planilha-rolagem">
@@ -866,6 +870,7 @@
                 <div class="direita">#</div>
                 <div>Matrícula</div>
                 <div>Nome</div>
+                <div>CPF</div>
                 <div>Status</div>
                 <div class="direita">Treinamentos</div>
                 <div></div>
@@ -874,7 +879,7 @@
               <div id="colab-vazio" class="planilha-vazio" hidden></div>
             </div>
           </div>
-          <div class="nota">Só colaboradores <strong>Ativos</strong> aparecem na busca do Gemba e na escolha de participantes do Cronograma. Desligados vão para o fim da lista e todo o histórico deles continua registrado. A lixeira serve só para corrigir cadastro feito errado.</div>
+          <div class="nota">A busca encontra o CPF com ou sem ponto e traço. Só colaboradores <strong>Ativos</strong> aparecem na busca do Gemba e na escolha de participantes do Cronograma. Desligados vão para o fim da lista e todo o histórico deles continua registrado. A lixeira serve só para corrigir cadastro feito errado.</div>
         </section>
 
         <section class="cartao cartao-importar">
@@ -882,11 +887,20 @@
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M8 13l3 4"></path><path d="M11 13l-3 4"></path><line x1="13" y1="15" x2="16" y2="15"></line></svg>
             <h2 class="subtitulo">Importar planilha</h2>
           </div>
-          <p class="importar-texto">Excel (.xlsx) ou .csv com as colunas <strong>Nome</strong> e <strong>Matrícula</strong>. Só as matrículas que ainda <strong>não estão na lista</strong> são cadastradas, como Ativo. Quem já está na lista não muda.</p>
+          <p class="importar-texto">Excel (.xlsx) ou .csv com a lista <strong>completa de colaboradores ativos</strong>, com as colunas <strong>Matrícula</strong>, <strong>Nome</strong> e <strong>CPF</strong>. A lista do app fica igual à planilha: quem é <strong>novo</strong> entra como Ativo, quem <strong>não está na planilha</strong> vira Desligado, quem tinha saído e <strong>voltou</strong> é reativado, e nome e CPF são atualizados. Antes de gravar aparece um resumo para você conferir e confirmar. Ninguém é excluído.</p>
           <label class="botao botao-arquivo" id="colab-arquivo-rotulo">Escolher planilha
             <input type="file" id="colab-arquivo" accept=".xlsx,.csv">
           </label>
           <div id="colab-msg-importar" class="mensagem" role="status" hidden></div>
+          <div id="colab-sinc" class="sinc-resumo" hidden>
+            <h3 class="sinc-titulo" id="colab-sinc-titulo"></h3>
+            <div id="colab-sinc-itens" class="sinc-itens"></div>
+            <div id="colab-sinc-alerta" class="sinc-alerta" role="alert" hidden></div>
+            <div class="sinc-botoes">
+              <button type="button" class="botao botao-principal" id="colab-sinc-confirmar">Confirmar atualização</button>
+              <button type="button" class="botao botao-contorno" id="colab-sinc-cancelar">Cancelar</button>
+            </div>
+          </div>
         </section>
       </section>
 
