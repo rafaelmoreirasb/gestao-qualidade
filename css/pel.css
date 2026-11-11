@@ -299,3 +299,27 @@
 #aba-pel .mv:disabled{opacity:.3;cursor:default}
 /* No modo de edição, o nome do grupo BPP continua visível ao lado das setas */
 #aba-pel.editing tr.parent .k-name.view{display:inline;cursor:default}
+/* Lixeira (excluir indicador), só no modo de edição */
+#aba-pel .rm{display:none;flex:none;min-width:22px;height:22px;padding:0 5px;border:1px solid var(--cinza-campo);border-radius:3px;background:var(--branco);color:var(--vermelho);font-size:11px;font-weight:800;cursor:pointer}
+#aba-pel.editing .rm{display:inline-block}
+#aba-pel .rm:hover{background:var(--vermelho-claro);border-color:var(--vermelho)}
+#aba-pel .rm[data-armado]{background:var(--vermelho);color:var(--branco);border-color:var(--vermelho)}
+/* Linha do fim de cada bloco: + Novo indicador e os excluídos (só no modo de edição) */
+#aba-pel .so-edicao{display:none}
+#aba-pel.editing tr.so-edicao{display:table-row}
+#aba-pel.editing .she-row.so-edicao{display:flex}
+#aba-pel .so-edicao td,#aba-pel .she-row.so-edicao{background:var(--branco)!important}
+#aba-pel .she-row.so-edicao,#aba-pel tr.so-edicao td{gap:8px 14px;flex-wrap:wrap;align-items:center}
+#aba-pel tr.so-edicao td>*{margin-right:12px}
+#aba-pel .excluidos{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center}
+#aba-pel .chip-volta{height:28px;padding:0 10px;border:1px dashed var(--cinza-campo);border-radius:999px;background:var(--cinza-fundo);color:var(--cinza-subtitulo);font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+#aba-pel .chip-volta:hover{background:var(--amarelo-claro);border-color:var(--preto);color:var(--preto)}
+/* Segurança: coluna Meta em cada indicador */
+#aba-pel .she-row{grid-template-columns:minmax(0,1fr) 90px repeat(3,100px) 100px}
+#aba-pel .she-row input.meta-in{text-align:center}
+#aba-pel .she-row input.meta-in[readonly]{border-color:transparent;background:transparent;font-weight:700;cursor:default}
+#aba-pel .she-row input.meta-in[readonly]:focus{outline:none}
+#aba-pel.editing .she-row input.meta-in{background:var(--amarelo-claro)}
+@media (max-width:600px){
+#aba-pel .she-row{grid-template-columns:minmax(0,1fr) 50px repeat(3,52px) 70px;gap:5px}
+}

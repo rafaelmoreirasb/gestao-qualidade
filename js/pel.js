@@ -42,8 +42,8 @@ const KPIS=[
  {id:"pa",   p:"proc",tag:"PDCA",name:"Planos de ação no prazo",w:5,u:"%",d:"max",def:"Progresso e fechamento das ações corretivas das auditorias OE e mensais, garantindo a solução das causas raiz e evitando recorrência.",form:"Planos de ação / PDCA concluídos no prazo / Total de planos com vencimento no período"},
 ];
 const SHE_ITEMS=[
- {id:"she_psif",name:"PSIF · Lesão grave ou fatalidade potencial",def:"Métrica de segurança que indica o número de ocorrências, registráveis ou não, com potencial de causar lesão grave (permanente) ou fatalidade. Entram os eventos E2 e E3. O site não pode registrar nenhum PSIF.",form:"Soma de PSIF do site no mês = 0"},
- {id:"she_tri",name:"TRI · Total de incidentes registráveis",def:"Mede a frequência de acidentes com tratamento médico (MTC), trabalho restrito (RWC), perda de tempo (LTA) ou fatalidade (FAT), a cada 200.000 horas trabalhadas. Deve ficar igual ou menor que a meta do site.",form:"TRI = (LTA + RWC + MTC + FAT) × 200.000 / HHT"},
+ {id:"she_psif",kind:"psif",fixedMeta:0,name:"PSIF · Lesão grave ou fatalidade potencial",def:"Métrica de segurança que indica o número de ocorrências, registráveis ou não, com potencial de causar lesão grave (permanente) ou fatalidade. Entram os eventos E2 e E3. O site não pode registrar nenhum PSIF.",form:"Soma de PSIF do site no mês = 0"},
+ {id:"she_tri",kind:"max",name:"TRI · Total de incidentes registráveis",def:"Mede a frequência de acidentes com tratamento médico (MTC), trabalho restrito (RWC), perda de tempo (LTA) ou fatalidade (FAT), a cada 200.000 horas trabalhadas. Deve ficar igual ou menor que a meta do site.",form:"TRI = (LTA + RWC + MTC + FAT) × 200.000 / HHT"},
 ];
 
 const MESES_PADRAO=["Setembro","Outubro","Novembro"];
@@ -94,20 +94,38 @@ let state=blankState();// valores do site aberto
 let podeLancar=false;  // pode preencher os meses
 const podeEditarCfg=()=>perfil&&perfil.papel==="admin"; // só o Administrador edita indicadores
 const ehAdmin=()=>perfil&&perfil.papel==="admin";
-function blankState(){return {vals:{},psif:[],tri:[]};}
+function blankState(){return {vals:{},psif:[],tri:[],she:{}};}
 function normConfig(d){
   d=d&&typeof d==="object"?d:{};
-  return {names:d.names||{},defs:d.defs||{},forms:d.forms||{},weights:d.weights||{},metas:d.metas||{},
+  const c={names:d.names||{},defs:d.defs||{},forms:d.forms||{},weights:d.weights||{},metas:d.metas||{},
     triMeta:d.triMeta??null,naMode:d.naMode||"ignore",periodo:d.periodo||PERIODO_PADRAO,
     meses:Array.isArray(d.meses)&&d.meses.length===3?d.meses:MESES_PADRAO.slice(),
-    ordem:d.ordem&&typeof d.ordem==="object"?d.ordem:{}};
+    ordem:d.ordem&&typeof d.ordem==="object"?d.ordem:{},
+    extras:Array.isArray(d.extras)?d.extras:[],        // indicadores criados pelo Administrador
+    removidos:Array.isArray(d.removidos)?d.removidos:[]}; // indicadores excluídos (os valores ficam guardados)
+  // A meta do TRI ficava em "Meta TRI do site" (triMeta); agora fica na linha do TRI.
+  // triMeta continua sendo gravado junto, para a versão anterior do app ainda funcionar se for preciso voltar.
+  if(c.triMeta!=null&&c.metas.she_tri===undefined)c.metas.she_tri=c.triMeta;
+  return c;
 }
+
+/* ---------- Indicadores ativos (padrão + criados − excluídos) ---------- */
+function extraComoKpi(x){return {id:x.id,p:x.p,tag:"",name:"Novo indicador",w:0,u:"%",d:"max",def:"",form:"",extra:true};}
+function extraComoShe(x){return {id:x.id,kind:"max",name:"Novo indicador",def:"",form:"",extra:true};}
+function excluido(k){return CONFIG.removidos.includes(k.id)||(k.grp==="bpp"&&CONFIG.removidos.includes("bpp"));}
+function todosKpis(){return [...KPIS,...CONFIG.extras.filter(x=>x.p==="efi"||x.p==="proc").map(extraComoKpi)];}
+function todosShe(){return [...SHE_ITEMS,...CONFIG.extras.filter(x=>x.p==="she").map(extraComoShe)];}
+function kpisAtivos(){return todosKpis().filter(k=>!excluido(k));}
+function sheAtivos(){return todosShe().filter(k=>!excluido(k));}
+function acharIndicador(id){return todosKpis().find(k=>k.id===id)||todosShe().find(k=>k.id===id);}
+// Valores mensais de um indicador da Segurança (PSIF e TRI continuam nos campos antigos)
+function sheVals(d,id){return id==="she_psif"?(d.psif||[]):id==="she_tri"?(d.tri||[]):((d.she||{})[id]||[]);}
 
 function nameOf(k){return CONFIG.names[k.id]||k.name}
 function defOf(k){return CONFIG.defs[k.id]!==undefined?CONFIG.defs[k.id]:k.def}
 function formOf(k){return CONFIG.forms[k.id]!==undefined?CONFIG.forms[k.id]:k.form}
 function wOf(k){const w=CONFIG.weights[k.id];return (w!==null&&w!==undefined)?w:k.w}
-function maxOf(g){return KPIS.filter(k=>k.p===g).reduce((a,k)=>a+wOf(k),0)}
+function maxOf(g){return kpisAtivos().filter(k=>k.p===g).reduce((a,k)=>a+wOf(k),0)}
 function metaOf(k){const m=CONFIG.metas[k.id];return (m!==null&&m!==undefined)?m:(k.fixedMeta!==undefined?k.fixedMeta:null)}
 function naRule(){return {ignore:"ignorado no cálculo (o peso sai da conta)",zero:"conta como 0% do peso",full:"conta como 100% do peso"}[CONFIG.naMode]||""}
 
@@ -133,93 +151,129 @@ function evalKpi(k,d){
 }
 function calcular(d){
   const res={}, tot={efi:0,proc:0}, naW={efi:0,proc:0}; let comDados=0;
-  for(const k of KPIS){
+  for(const k of kpisAtivos()){
     const r=evalKpi(k,d);res[k.id]=r;
     if(r.na){ if(CONFIG.naMode==="full") tot[k.p]+=wOf(k); else if(CONFIG.naMode!=="zero") naW[k.p]+=wOf(k); }
     else tot[k.p]+=r.pts;
     if(r.avg!==null) comDados++;
   }
+  // Segurança (pré-requisito): PSIF = nenhum mês acima da meta (0); TRI e novos = média do trimestre até a meta
   const num=a=>(a||[]).filter(v=>v!==null&&v!==undefined&&v!=="");
-  const ps=num(d.psif), tr=num(d.tri);
-  const psifFail=ps.some(v=>v>0), psifOk=ps.length>0&&!psifFail;
-  const triAvg=tr.length?tr.reduce((a,b)=>a+b,0)/tr.length:null;
-  const triFail=triAvg!==null&&CONFIG.triMeta!=null&&triAvg>CONFIG.triMeta+1e-9;
-  const triOk=triAvg!==null&&CONFIG.triMeta!=null&&!triFail;
-  const sheFail=psifFail||triFail;
+  const she={}; let sheFail=false, sheOk=true;
+  for(const k of sheAtivos()){
+    const vs=num(sheVals(d,k.id)), meta=metaOf(k);
+    const r={meta,n:vs.length,soma:vs.reduce((a,b)=>a+b,0),avg:vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null,fail:false,ok:false};
+    if(meta!=null&&vs.length){
+      r.fail=k.kind==="psif"?vs.some(v=>v>meta+1e-9):r.avg>meta+1e-9;
+      r.ok=!r.fail;
+    }
+    she[k.id]=r; if(r.fail)sheFail=true; if(!r.ok)sheOk=false;
+  }
+  if(!sheAtivos().length)sheOk=false;
   const totalW=maxOf("efi")+maxOf("proc");
   const activeW=totalW-naW.efi-naW.proc;
   const score=activeW>0?+((tot.efi+tot.proc)*100/activeW).toFixed(2):0;
   const t=sheFail?TIERS[0]:tierOf(score);
-  return {res,tot,naW,ps,psifFail,psifOk,triAvg,triFail,triOk,sheFail,totalW,activeW,score,t,comDados};
+  return {res,tot,naW,she,sheFail,sheOk,totalW,activeW,score,t,comDados};
 }
 
 /* ==========================================================
    Calculadora: montagem da tabela
    ========================================================== */
 const CHEV='<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-/* Botões ▲▼ (só aparecem em "Editar indicadores"): mudam a ordem dentro do bloco */
+/* Controles do modo "Editar indicadores": ▲▼ (ordem dentro do bloco) e lixeira (excluir) */
 function botoesOrdem(g,u){
-  return `<span class="mover"><button type="button" class="mv" data-g="${g}" data-u="${u}" data-d="-1" title="Subir" aria-label="Subir">▲</button><button type="button" class="mv" data-g="${g}" data-u="${u}" data-d="1" title="Descer" aria-label="Descer">▼</button></span>`;
+  return `<span class="mover"><button type="button" class="mv" data-g="${g}" data-u="${u}" data-d="-1" title="Subir" aria-label="Subir">▲</button><button type="button" class="mv" data-g="${g}" data-u="${u}" data-d="1" title="Descer" aria-label="Descer">▼</button></span><button type="button" class="rm" data-u="${u}" title="Excluir indicador (clique duas vezes)" aria-label="Excluir indicador">✕</button>`;
 }
 function celulaIndicador(k,g){
   return `<div class="k-head">${g?botoesOrdem(g,k.id):""}<button type="button" class="k-toggle" aria-expanded="false" aria-label="Ver descrição e fórmula">${CHEV}</button><span class="k-name view" id="vname-${k.id}">${esc(nameOf(k))}</span><input class="ed ed-name" id="name-${k.id}" aria-label="Nome do indicador" value="${esc(nameOf(k))}"></div>
   <div class="k-info"><div class="k-lbl">Descrição <button type="button" class="b-btn" data-t="def-${k.id}" title="Negrito (Ctrl+B): selecione o texto e clique">N</button></div><div class="k-def view" id="vdef-${k.id}">${rich(defOf(k))}</div><textarea class="ed ed-def" id="def-${k.id}" rows="3" aria-label="Descrição do indicador">${esc(defOf(k))}</textarea>
   <div class="k-lbl">Fórmula <button type="button" class="b-btn" data-t="form-${k.id}" title="Negrito (Ctrl+B): selecione o texto e clique">N</button></div><div class="k-form view" id="vform-${k.id}">${rich(formOf(k))}</div><textarea class="ed ed-form" id="form-${k.id}" rows="2" aria-label="Fórmula do indicador">${esc(formOf(k))}</textarea></div>`;
 }
+const NOME_BPP="BPP · Perdas Operativas SVC";
+/* Linha do fim de cada bloco (só no modo de edição): + Novo indicador e os excluídos */
+function rodapeEdicao(g){
+  const exc=CONFIG.removidos.filter(u=>ordemPadraoTodos(g).includes(u));
+  const nomeU=u=>u==="bpp"?NOME_BPP:nameOf(acharIndicador(u)||{id:u,name:u});
+  return `<button type="button" class="btn-ghost add-ind" data-g="${g}">+ Novo indicador</button>`+
+    (exc.length?`<span class="excluidos"><span class="nota">Excluídos:</span> ${exc.map(u=>`<button type="button" class="chip-volta" data-u="${u}" title="Trazer de volta">↺ ${esc(nomeU(u))}</button>`).join(" ")}</span>`:"");
+}
 function buildTable(){
   for(const g of ["efi","proc"]){
-    let html="", lastTag=null;
-    for(const k of KPIS.filter(x=>x.p===g)){
-      const isSub=k.grp==="bpp";
-      if(isSub&&lastTag!=="BPP"){
-        html+=`<tr class="parent" id="row-bpp" data-u="bpp"><td class="k-cell"><div class="k-head">${botoesOrdem(g,"bpp")}<button type="button" class="k-toggle" aria-expanded="false" aria-label="Ver descrição e fórmula">${CHEV}</button><span class="k-name view">BPP · Perdas Operativas SVC</span></div>
+    let html="";
+    const ativos=kpisAtivos().filter(x=>x.p===g);
+    for(const u of ordemDe(g)){
+      if(u==="bpp"){
+        html+=`<tr class="parent" id="row-bpp" data-u="bpp"><td class="k-cell"><div class="k-head">${botoesOrdem(g,"bpp")}<button type="button" class="k-toggle" aria-expanded="false" aria-label="Ver descrição e fórmula">${CHEV}</button><span class="k-name view">${NOME_BPP}</span></div>
           <div class="k-info"><div class="k-lbl">Descrição</div><div class="k-def">KPI de perda monetária do Programa de Proteção ao Comprador, calculado a partir das perdas por Perda, Atraso e Dano na estação e por Embalagem danificada, dividido pelo volume transportado. Cada subitem tem a sua meta e vale 2%, somando 8%.</div>
           <div class="k-lbl">Fórmula</div><div class="k-form">Perdas BPP (Lost, Delayed e Damaged at station + Damaged) / GMV do cluster</div></div></td>
           <td class="c"><span class="pts num" id="w-bpp"></span></td><td class="c"><span class="nota">4 subitens</span></td><td></td><td></td><td></td><td></td><td class="c" id="st-bpp"></td></tr>`;
       }
-      lastTag=k.tag;
-      html+=`<tr class="${isSub?"sub":""}" data-u="${isSub?"bpp":k.id}">
+      for(const k of ativos.filter(x=>(x.grp==="bpp"?"bpp":x.id)===u)){
+        const isSub=k.grp==="bpp";
+        html+=`<tr class="${isSub?"sub":""}" data-u="${u}">
         <td class="k-cell">${celulaIndicador(k,isSub?"":g)}</td>
-        <td class="c in"><input class="w-in" id="w-${k.id}" inputmode="decimal" readonly aria-label="Peso ${esc(k.name)}"></td>
-        <td class="in c"><div class="meta-cell"><input id="meta-${k.id}" class="meta-in" inputmode="decimal" placeholder="—" readonly aria-label="Meta ${esc(k.name)}"></div></td>
-        ${[0,1,2].map(i=>`<td class="in c"><input id="v-${k.id}-${i}" class="v-in" inputmode="text" placeholder="—" aria-label="${esc(k.name)} mês ${i+1}"></td>`).join("")}
+        <td class="c in"><input class="w-in" id="w-${k.id}" inputmode="decimal" readonly aria-label="Peso ${esc(nameOf(k))}"></td>
+        <td class="in c"><div class="meta-cell"><input id="meta-${k.id}" class="meta-in" inputmode="decimal" placeholder="—" readonly aria-label="Meta ${esc(nameOf(k))}"></div></td>
+        ${[0,1,2].map(i=>`<td class="in c"><input id="v-${k.id}-${i}" class="v-in" inputmode="text" placeholder="—" aria-label="${esc(nameOf(k))} mês ${i+1}"></td>`).join("")}
         <td class="r"><span class="avg" id="avg-${k.id}">—</span><div class="avg-n" id="avgn-${k.id}"></div></td>
         <td class="c" id="st-${k.id}"></td>
       </tr>`;
+      }
     }
+    html+=`<tr class="so-edicao"><td colspan="8">${rodapeEdicao(g)}</td></tr>`;
     $("tbody-"+g).innerHTML=html;
   }
-  for(const k of SHE_ITEMS){ $("cell-"+k.id).innerHTML=celulaIndicador(k,"she"); $("cell-"+k.id).closest(".she-row").dataset.u=k.id; }
+  // Segurança: cabeçalho + uma linha por indicador (com Meta) + rodapé de edição
+  let she=`<div class="she-row head"><span>Indicador</span><span class="c">Meta</span><span class="c" id="sh-m1">${esc(CONFIG.meses[0])}</span><span class="c" id="sh-m2">${esc(CONFIG.meses[1])}</span><span class="c" id="sh-m3">${esc(CONFIG.meses[2])}</span><span class="c">Status</span></div>`;
+  const sheMap=Object.fromEntries(sheAtivos().map(k=>[k.id,k]));
+  for(const u of ordemDe("she")){
+    const k=sheMap[u];if(!k)continue;
+    const base=k.id==="she_psif"?"psif":k.id==="she_tri"?"tri":"she-"+k.id;
+    she+=`<div class="she-row" data-u="${k.id}">
+      <div class="k-cell" id="cell-${k.id}">${celulaIndicador(k,"she")}</div>
+      <input id="meta-${k.id}" class="meta-in" inputmode="decimal" placeholder="—" readonly aria-label="Meta ${esc(nameOf(k))}">
+      ${[0,1,2].map(i=>`<input id="${base}-${i}" inputmode="${k.kind==="psif"?"numeric":"decimal"}" placeholder="—" aria-label="${esc(nameOf(k))} mês ${i+1}">`).join("")}
+      <span class="c" id="st-${k.id}"></span>
+    </div>`;
+  }
+  she+=`<div class="she-row so-edicao">${rodapeEdicao("she")}</div>`;
+  $("she-grid").innerHTML=she;
   $("tiers").innerHTML=TIERS.map(t=>`<div class="tier" data-name="${t.name}"><img src="${MEDALS[t.name]}" alt=""><div><div class="t-n">${t.name}</div><div class="t-r">${t.range}</div></div></div>`).join("");
   const segs=[[0,70,"#c0392b"],[70,80,"#a8683f"],[80,88,"#a9acaf"],[88,93,"#d1a020"],[93,100,"#6f808b"]];
   $("ruler-track").innerHTML=segs.map(s=>`<span style="width:${s[1]-s[0]}%;background:${s[2]}"></span>`).join("");
   $("ruler-ticks").innerHTML=[0,70,80,88,93,100].map(v=>`<span class="num" style="left:${v}%">${v}</span>`).join("");
+  marcarSetas();
 }
 
 /* ---------- Ordem dos indicadores (Segurança, Eficiência e Processos) ----------
    Cada bloco tem a sua lista. O BPP é uma unidade só ("bpp"): os 4 subitens andam juntos. */
-function ordemPadrao(g){
-  if(g==="she")return SHE_ITEMS.map(k=>k.id);
+function ordemPadraoTodos(g){ // todos, inclusive os excluídos
+  if(g==="she")return todosShe().map(k=>k.id);
   const out=[];
-  KPIS.filter(k=>k.p===g).forEach(k=>{const u=k.grp==="bpp"?"bpp":k.id;if(!out.includes(u))out.push(u);});
+  todosKpis().filter(k=>k.p===g).forEach(k=>{const u=k.grp==="bpp"?"bpp":k.id;if(!out.includes(u))out.push(u);});
   return out;
 }
+function ordemPadrao(g){return ordemPadraoTodos(g).filter(u=>!CONFIG.removidos.includes(u));}
 function ordemDe(g){
   const padrao=ordemPadrao(g), salva=Array.isArray(CONFIG.ordem[g])?CONFIG.ordem[g]:[];
   const lista=salva.filter(u=>padrao.includes(u));
   padrao.forEach(u=>{if(!lista.includes(u))lista.push(u);});
   return lista;
 }
-function aplicarOrdem(){
+function marcarSetas(){
   for(const g of ["she","efi","proc"]){
-    const caixa=g==="she"?document.querySelector("#aba-pel .she-grid"):$("tbody-"+g);
-    const ordem=ordemDe(g);
-    ordem.forEach(u=>caixa.querySelectorAll(`:scope > [data-u="${u}"]`).forEach(el=>caixa.appendChild(el)));
+    const ordem=ordemDe(g), caixa=g==="she"?$("she-grid"):$("tbody-"+g);
     caixa.querySelectorAll(".mv").forEach(b=>{
       const i=ordem.indexOf(b.dataset.u);
       b.disabled=b.dataset.d==="-1"?i<=0:i>=ordem.length-1;
     });
   }
+}
+/* Remonta a calculadora depois de mudar ordem, incluir ou excluir */
+function reconstruir(){
+  buildTable();fillConfig();fillValores();render();
+  modoEdicao($("aba-pel").classList.contains("editing"));
 }
 function moverIndicador(g,u,d){
   if(!podeEditarCfg())return;
@@ -227,33 +281,49 @@ function moverIndicador(g,u,d){
   if(i<0||j<0||j>=ordem.length)return;
   [ordem[i],ordem[j]]=[ordem[j],ordem[i]];
   CONFIG.ordem[g]=ordem;
-  aplicarOrdem();gravarConfig();
+  reconstruir();gravarConfig();
+}
+function novoIndicador(g){
+  if(!podeEditarCfg())return;
+  const id="x"+Date.now().toString(36);
+  CONFIG.extras.push({id,p:g});
+  reconstruir();gravarConfig();
+  const campo=$("name-"+id);if(campo.focus){campo.focus();campo.select();}
+}
+function excluirIndicador(u){
+  if(!podeEditarCfg())return;
+  if(!CONFIG.removidos.includes(u))CONFIG.removidos.push(u);
+  reconstruir();gravarConfig();
+}
+function voltarIndicador(u){
+  if(!podeEditarCfg())return;
+  CONFIG.removidos=CONFIG.removidos.filter(x=>x!==u);
+  reconstruir();gravarConfig();
 }
 
 /* Preenche textos, metas e pesos a partir da configuração */
 function fillConfig(){
   [0,1,2].forEach(i=>{document.querySelectorAll(".h-m"+(i+1)).forEach(el=>el.textContent=CONFIG.meses[i]);$("sh-m"+(i+1)).textContent=CONFIG.meses[i];});
   $("periodo-rotulo").textContent=CONFIG.periodo;
-  for(const k of [...KPIS,...SHE_ITEMS]){
+  for(const k of [...kpisAtivos(),...sheAtivos()]){
     $("vname-"+k.id).textContent=nameOf(k);$("name-"+k.id).value=nameOf(k);
     $("vdef-"+k.id).innerHTML=rich(defOf(k));$("def-"+k.id).value=defOf(k);
     $("vform-"+k.id).innerHTML=rich(formOf(k));$("form-"+k.id).value=formOf(k);
   }
-  for(const k of KPIS){ $("meta-"+k.id).value=fmtPct(metaOf(k)); $("w-"+k.id).value=fmtPct(wOf(k)); }
-  $("tri-meta").value=fmtIn(CONFIG.triMeta);
+  for(const k of kpisAtivos()){ $("meta-"+k.id).value=fmtPct(metaOf(k)); $("w-"+k.id).value=fmtPct(wOf(k)); }
+  for(const k of sheAtivos()){ $("meta-"+k.id).value=fmtIn(metaOf(k)); }
   $("na-mode").value=CONFIG.naMode;
-  aplicarOrdem();
 }
 /* Preenche os meses a partir do lançamento do site */
 function fillValores(){
-  for(const k of KPIS){
+  for(const k of kpisAtivos()){
     const v=state.vals[k.id]||[];
     [0,1,2].forEach(i=>{const el=$(`v-${k.id}-${i}`);el.value=fmtIn(v[i]);el.classList.toggle("na",v[i]==="NA");el.readOnly=!podeLancar;});
   }
-  [0,1,2].forEach(i=>{
-    $("psif-"+i).value=fmtIn((state.psif||[])[i]);$("tri-"+i).value=fmtIn((state.tri||[])[i]);
-    $("psif-"+i).readOnly=!podeLancar;$("tri-"+i).readOnly=!podeLancar;
-  });
+  for(const k of sheAtivos()){
+    const base=k.id==="she_psif"?"psif":k.id==="she_tri"?"tri":"she-"+k.id, v=sheVals(state,k.id);
+    [0,1,2].forEach(i=>{const el=$(`${base}-${i}`);el.value=fmtIn(v[i]);el.readOnly=!podeLancar;});
+  }
   $("pel-calc").classList.toggle("somente-leitura",!podeLancar);
   $("modo-leitura").hidden=podeLancar;
 }
@@ -263,7 +333,7 @@ function fillValores(){
    ========================================================== */
 function render(){
   const c=calcular(state);
-  for(const k of KPIS){
+  for(const k of kpisAtivos()){
     const r=c.res[k.id];
     $("avg-"+k.id).textContent=fmt(r.avg,"%");
     $("avgn-"+k.id).textContent=r.n?(r.n===3?"média dos 3 meses":`média de ${r.n} ${r.n>1?"meses":"mês"}`):"";
@@ -276,17 +346,20 @@ function render(){
   }
   $("sub-efi").textContent=`${nf(c.tot.efi)}% de ${nf(maxOf("efi")-c.naW.efi)}%`;
   $("sub-proc").textContent=`${nf(c.tot.proc)}% de ${nf(maxOf("proc")-c.naW.proc)}%`;
-  {const subs=KPIS.filter(k=>k.grp==="bpp");const wsum=subs.reduce((a,k)=>a+wOf(k),0);const ok=subs.filter(k=>c.res[k.id].ok).length;const any=subs.some(k=>c.res[k.id].avg!==null);
+  {const subs=kpisAtivos().filter(k=>k.grp==="bpp");const wsum=subs.reduce((a,k)=>a+wOf(k),0);const ok=subs.filter(k=>c.res[k.id].ok).length;const any=subs.some(k=>c.res[k.id].avg!==null);
    $("w-bpp").textContent=nf(wsum)+"%";$("st-bpp").innerHTML=any?`<span class="pill ${ok===subs.length?"ok":ok?"warn":"no"}">${ok} de ${subs.length} na meta</span>`:`<span class="pill wait">Sem dados</span>`;}
-  for(const g of ["efi","proc"]){const fora=KPIS.filter(k=>k.p===g&&c.res[k.id].avg!==null&&!c.res[k.id].ok).length;const com=KPIS.some(k=>k.p===g&&c.res[k.id].avg!==null);const el=$("fora-"+g);el.textContent=!com?"Sem dados":fora?`${fora} fora da meta`:"Tudo na meta";el.className="pill "+(!com?"wait":fora?"no":"ok");}
+  for(const g of ["efi","proc"]){const fora=kpisAtivos().filter(k=>k.p===g&&c.res[k.id].avg!==null&&!c.res[k.id].ok).length;const com=kpisAtivos().some(k=>k.p===g&&c.res[k.id].avg!==null);const el=$("fora-"+g);el.textContent=!com?"Sem dados":fora?`${fora} fora da meta`:"Tudo na meta";el.className="pill "+(!com?"wait":fora?"no":"ok");}
 
-  $("psif-st").innerHTML=c.ps.length?(c.psifFail?`<span class="pill no">${c.ps.reduce((a,b)=>a+b,0)} PSIF</span>`:`<span class="pill ok">Zero</span>`):`<span class="pill wait">Sem dados</span>`;
-  $("tri-st").innerHTML=c.triAvg===null?`<span class="pill wait">Sem dados</span>`:CONFIG.triMeta==null?`<span class="pill wait">Sem meta</span>`:c.triFail?`<span class="pill no">${fmt(c.triAvg,"")}</span>`:`<span class="pill ok">${fmt(c.triAvg,"")}</span>`;
+  for(const k of sheAtivos()){
+    const r=c.she[k.id];
+    const txt=k.kind==="psif"?(r.soma?r.soma+" PSIF":"Zero"):fmt(r.avg,"");
+    $("st-"+k.id).innerHTML=!r.n?`<span class="pill wait">Sem dados</span>`:r.meta==null?`<span class="pill wait">Sem meta</span>`:`<span class="pill ${r.fail?"no":"ok"}">${txt}</span>`;
+  }
   const wWarn=$("w-warn");wWarn.hidden=false;
   wWarn.innerHTML=Math.abs(c.totalW-100)<1e-6?`<span class="pill ok">Soma dos pesos: 100%</span>`:`<span class="pill no">Soma dos pesos: ${nf(c.totalW)}%</span> Ajuste para fechar 100%.`;
   const t=c.t, zeroed=c.sheFail, score=c.score;
   $("seguranca").classList.toggle("fail",zeroed);
-  $("she-note").innerHTML=zeroed?`<span class="pill no">Não cumprido · site em Não classifica</span>`:(c.psifOk&&c.triOk)?`<span class="pill ok">Cumprido</span>`:`<span class="pill wait">Pendente</span>`;
+  $("she-note").innerHTML=zeroed?`<span class="pill no">Não cumprido · site em Não classifica</span>`:c.sheOk?`<span class="pill ok">Cumprido</span>`:`<span class="pill wait">Pendente</span>`;
   $("medal-big").src=MEDALS[t.name];$("medal-big").alt="Medalha "+t.name;
   const lab=$("ruler-label");
   lab.textContent=score.toLocaleString("pt-BR",{maximumFractionDigits:2})+"% · "+t.name;lab.classList.toggle("blocked",zeroed);
@@ -299,7 +372,7 @@ function render(){
   else if(idx===TIERS.length-1) html=`<b>Faixa máxima.</b> Sobram ${nf(score-93)}% acima do corte de Platina (93%).`;
   else{
     const nt=TIERS[idx+1], gap=nt.min-score;
-    const cand=KPIS.filter(k=>!c.res[k.id].ok&&c.res[k.id].need&&c.res[k.id].need.t!=="impossível"&&c.res[k.id].avg!==null).sort((a,b)=>wOf(b)-wOf(a));
+    const cand=kpisAtivos().filter(k=>!c.res[k.id].ok&&c.res[k.id].need&&c.res[k.id].need.t!=="impossível"&&c.res[k.id].avg!==null).sort((a,b)=>wOf(b)-wOf(a));
     const recuperavel=cand.reduce((a,k)=>a+wOf(k),0);
     html=`<b>Faltam ${nf(gap)}% para ${nt.name} (${nt.min}%).</b> `;
     if(cand.length){
@@ -405,7 +478,7 @@ async function carregarVisao(){
   linhas.sort((a,b)=>(b.c&&b.c.comDados?b.c.score:-1)-(a.c&&a.c.comDados?a.c.score:-1));
   $("visao-tbody").innerHTML=linhas.length?linhas.map(({s,l,c})=>{
     const tem=c&&c.comDados;
-    const she=!c?`<span class="pill wait">—</span>`:c.sheFail?`<span class="pill no">Não cumprido</span>`:(c.psifOk&&c.triOk)?`<span class="pill ok">Cumprido</span>`:`<span class="pill wait">Pendente</span>`;
+    const she=!c?`<span class="pill wait">—</span>`:c.sheFail?`<span class="pill no">Não cumprido</span>`:c.sheOk?`<span class="pill ok">Cumprido</span>`:`<span class="pill wait">Pendente</span>`;
     return `<tr data-site="${esc(s.codigo)}"><td class="col-reg">${esc(s.regional||"—")}</td><td class="c"><b>${esc(s.codigo)}</b>${s.nome?" · "+esc(s.nome):""}</td><td class="c">${esc(CONFIG.periodo)}</td>
       <td class="c">${she}</td><td class="c num">${tem?nf(c.tot.efi)+"%":"—"}</td><td class="c num">${tem?nf(c.tot.proc)+"%":"—"}</td>
       <td class="c num"><b>${tem?nf(c.score)+"%":"—"}</b></td><td>${tem?`<img class="med" src="${MEDALS[c.t.name]}" alt="">${c.t.name}`:`<span class="nota">Sem lançamentos</span>`}</td>
@@ -466,27 +539,27 @@ function ligarCalculadora(){
   main.addEventListener("input",e=>{
     const id=e.target.id;let m;
     if((m=id.match(/^w-(.+)$/))){
-      const k=KPIS.find(x=>x.id===m[1]);if(!k||!podeEditarCfg())return;
+      const k=todosKpis().find(x=>x.id===m[1]);if(!k||!podeEditarCfg())return;
       const v=parseNum(e.target.value);
       if(v===null||v===k.w)delete CONFIG.weights[k.id]; else CONFIG.weights[k.id]=Math.max(0,v);
       gravarConfig();render();return;
     }
     if((m=id.match(/^(name|def|form)-(.+)$/))){
-      const k=KPIS.find(x=>x.id===m[2])||SHE_ITEMS.find(x=>x.id===m[2]);if(!k||!podeEditarCfg())return;
+      const k=acharIndicador(m[2]);if(!k||!podeEditarCfg())return;
       const v=e.target.value;
       if(m[1]==="name"){ if(v.trim()===""||v===k.name)delete CONFIG.names[k.id]; else CONFIG.names[k.id]=v; $("vname-"+k.id).textContent=nameOf(k); }
       else if(m[1]==="def"){ if(v===k.def)delete CONFIG.defs[k.id]; else CONFIG.defs[k.id]=v; $("vdef-"+k.id).innerHTML=rich(defOf(k)); }
       else { if(v===k.form)delete CONFIG.forms[k.id]; else CONFIG.forms[k.id]=v; $("vform-"+k.id).innerHTML=rich(formOf(k)); }
       gravarConfig();render();return;
     }
-    if((m=id.match(/^meta-(.+)$/))){ if(!podeEditarCfg())return; const v=parseNum(e.target.value); if(v===null)delete CONFIG.metas[m[1]]; else CONFIG.metas[m[1]]=v; gravarConfig();render();return; }
-    if(id==="tri-meta"){ if(!podeEditarCfg())return; CONFIG.triMeta=parseNum(e.target.value); gravarConfig();render();return; }
+    if((m=id.match(/^meta-(.+)$/))){ if(!podeEditarCfg())return; const v=parseNum(e.target.value); if(v===null)delete CONFIG.metas[m[1]]; else CONFIG.metas[m[1]]=v; if(m[1]==="she_tri")CONFIG.triMeta=v; gravarConfig();render();return; }
     if(!podeLancar)return;
     if((m=id.match(/^v-(.+)-(\d)$/))){
       const v=parseVal(e.target.value);(state.vals[m[1]]=state.vals[m[1]]||[])[+m[2]]=v;
       if(v==="NA"){e.target.value="N/A";e.target.classList.add("na");}else e.target.classList.remove("na");
     }
     else if((m=id.match(/^(psif|tri)-(\d)$/))){(state[m[1]]=state[m[1]]||[])[+m[2]]=parseNum(e.target.value);}
+    else if((m=id.match(/^she-(.+)-(\d)$/))){state.she=state.she||{};(state.she[m[1]]=state.she[m[1]]||[])[+m[2]]=parseNum(e.target.value);}
     else return;
     gravarLancamento();render();
   });
@@ -496,7 +569,7 @@ function ligarCalculadora(){
   });
   main.addEventListener("focusout",e=>{
     const el=e.target; if(!el.matches||!el.matches(".meta-in, .w-in"))return;
-    const v=parseNum(el.value); el.value=v===null?"":fmtPct(v);
+    const v=parseNum(el.value); el.value=v===null?"":(el.closest(".she-row")?fmtIn(v):fmtPct(v));
   });
   function boldWrap(ta){
     const a=ta.selectionStart,b=ta.selectionEnd,v=ta.value;
@@ -512,6 +585,9 @@ function ligarCalculadora(){
   function setOpen(tr,on){tr.classList.toggle("aberto",on);const b=tr.querySelector(".k-toggle");if(b)b.setAttribute("aria-expanded",on);}
   main.addEventListener("click",e=>{
     const mv=e.target.closest(".mv");if(mv){moverIndicador(mv.dataset.g,mv.dataset.u,+mv.dataset.d);return;}
+    const rm=e.target.closest(".rm");if(rm){armar(rm,"Excluir?",()=>excluirIndicador(rm.dataset.u));return;}
+    const add=e.target.closest(".add-ind");if(add){novoIndicador(add.dataset.g);return;}
+    const volta=e.target.closest(".chip-volta");if(volta){voltarIndicador(volta.dataset.u);return;}
     const b=e.target.closest(".b-btn");if(b){const ta=$(b.dataset.t);if(ta.tagName==="TEXTAREA")boldWrap(ta);return;}
     const t=e.target.closest(".k-toggle, .k-name.view");
     if(t){const tr=t.closest("tr, .she-row");if(tr)setOpen(tr,!tr.classList.contains("aberto"));}
@@ -519,12 +595,7 @@ function ligarCalculadora(){
   $("btn-edit").addEventListener("click",()=>{
     if(!podeEditarCfg())return;
     const on=!$("aba-pel").classList.contains("editing");
-    document.querySelectorAll(".meta-in, .w-in, .lock-in").forEach(el=>{el.readOnly=!on;});
-    $("na-mode").disabled=!on;
-    $("aba-pel").classList.toggle("editing",on);
-    $("btn-edit").textContent=on?"Concluir edição":"Editar indicadores";
-    $("btn-reset-txt").hidden=!on;
-    $("table-note").textContent=on?"Os campos amarelos podem ser editados e valem para todos os sites. Para destacar em negrito, selecione o texto e clique em N (ou Ctrl+B).":"Regra: média do trimestre igual ou maior que a meta soma 100% do peso. Abaixo da meta, soma 0%. Digite N/A no mês para marcar o indicador como não aplicável.";
+    modoEdicao(on);
     if(!on)gravarConfigAgora($("salvo"));
   });
   $("btn-expand").addEventListener("click",e=>{
@@ -533,9 +604,21 @@ function ligarCalculadora(){
     rows.forEach(r=>setOpen(r,open));e.target.textContent=open?"Recolher todos":"Expandir todos";
   });
   $("btn-reset-txt").addEventListener("click",e=>armar(e.target,"Clique de novo para restaurar",()=>{
-    CONFIG.names={};CONFIG.defs={};CONFIG.forms={};CONFIG.weights={};CONFIG.ordem={};
-    fillConfig();render();gravarConfigAgora($("salvo"));
+    // Volta textos, pesos e ordem de fábrica; os indicadores criados e os excluídos continuam como estão
+    const criados=CONFIG.extras.map(x=>x.id);
+    const soCriados=o=>Object.fromEntries(Object.entries(o).filter(([id])=>criados.includes(id)));
+    CONFIG.names=soCriados(CONFIG.names);CONFIG.defs=soCriados(CONFIG.defs);CONFIG.forms=soCriados(CONFIG.forms);CONFIG.weights=soCriados(CONFIG.weights);CONFIG.ordem={};
+    reconstruir();gravarConfigAgora($("salvo"));
   }));
+}
+/* Liga ou desliga o modo "Editar indicadores" (só Administrador) */
+function modoEdicao(on){
+  document.querySelectorAll("#aba-pel .meta-in, #aba-pel .w-in, #aba-pel .lock-in").forEach(el=>{el.readOnly=!on;});
+  $("na-mode").disabled=!on;
+  $("aba-pel").classList.toggle("editing",on);
+  $("btn-edit").textContent=on?"Concluir edição":"Editar indicadores";
+  $("btn-reset-txt").hidden=!on;
+  $("table-note").textContent=on?"Os campos amarelos podem ser editados e valem para todos os sites. ▲▼ mudam a ordem, ✕ exclui (clique duas vezes) e + Novo indicador, no fim de cada bloco, acrescenta. Para destacar em negrito, selecione o texto e clique em N (ou Ctrl+B).":"Regra: média do trimestre igual ou maior que a meta soma 100% do peso. Abaixo da meta, soma 0%. Digite N/A no mês para marcar o indicador como não aplicável.";
 }
 /* Segurança, Eficiência e Processos começam sempre fechados */
 function fecharBlocos(){
@@ -580,12 +663,12 @@ function avisoAba(txt){
 }
 async function abrirPEL(){
   if(!ligado){CONFIG=normConfig({});buildTable();ligarCalculadora();ligarAdmin();ligado=true;}
-  $("aba-pel").classList.remove("editing");
   fecharBlocos();
   avisoAba("Carregando a Calculadora PEL…");
   try{await carregarConfig();await carregarSites();}
   catch(e){avisoAba("Não foi possível carregar a Calculadora PEL. Confira a internet e recarregue a página.");return;}
   avisoAba("");
+  buildTable();modoEdicao(false);
   prepararApp();
   if(perfil.papel==="analista"){mostrarSub("calc");await abrirSite(perfil.site);return;}
   const salvo=local.get("pel:site:"+usuario.id);
