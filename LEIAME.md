@@ -2,7 +2,7 @@
 
 App web da operação DHL Supply Chain Mirassol SSP53 para registrar desvios de processo, treinamentos e planos de ação.
 
-## Situação atual: Fase 9 — Calculadora PEL e contas por papel + Alteração PEL 1 (09/11/2026)
+## Situação atual: Fase 9 — Calculadora PEL e contas por papel + Alterações PEL 1 (09/11/2026) e PEL 2 (11/11/2026)
 
 - **Tela de login** por e-mail e senha (Supabase). Senha errada é recusada com a mensagem "E-mail ou senha incorretos".
 - O login fica lembrado no navegador até você clicar em **Sair** (ou a sessão expirar).
@@ -179,10 +179,22 @@ A aba **PEL** (`#pel`) calcula a nota trimestral do PEL de cada site. Com ela, o
 - **As outras abas ficam trancadas no banco:** uma regra extra em todas as tabelas e nas pastas de fotos e anexos exige ser Administrador. Analista e Gestão não leem nem gravam nada delas, mesmo digitando o endereço (ex.: `#gemba`).
 - **Liberação:** na subaba **Usuários** o Administrador só aprova e escolhe o **papel**; o site da conta aparece como texto (Site · Cidade · Regional) e não é trocado pela tela. O Administrador não consegue tirar o próprio acesso de administrador.
 - **A aba PEL abre sempre na Visão geral** (Administrador e Gestão; o Analista vai direto à calculadora do site dele). Na Calculadora, os blocos Segurança, Eficiência e Processos começam sempre **fechados**.
-- **Visão geral:** quantos sites há em cada faixa e a tabela Regional (estreita), Site (centralizado, ex.: `SSP53 · Mirassol-SP`), Trimestre, Segurança, Eficiência, Processos, Nota final, Classificação, **Atualizado em** e **Atualizado por** (nome de quem salvou por último; os dois em letra pequena). Clicar num site abre a calculadora dele.
+- **Topo da Calculadora** no padrão DHL: título "Calculadora PEL" grande com faixa vermelha e a faixa do site em amarelo DHL com linha vermelha (site em letra grande, ex.: **SSP53 · Mirassol-SP**). O selo **Soma dos pesos** fica no fim da calculadora, abaixo de Processos.
+- **Tela do Analista** mais limpa: sem o texto da regra, sem "Expandir todos", sem a nota "A média de cada indicador…" e sem "N/A nos meses".
+- **Visão geral:** quantos sites há em cada faixa e a tabela Regional (estreita), Site (centralizado, ex.: `SSP53 · Mirassol-SP`), Trimestre, Segurança, Eficiência, Processos, Nota final, Classificação, **Atualizado em** e **Atualizado por** (nome de quem salvou por último; os dois em letra pequena). A linha de cada site é o resultado do **trimestre**. Clicar num site abre a calculadora dele.
+  - **Seta à esquerda** (começa fechada): abre uma linha **por mês já lançado** (mês sem nenhum valor não aparece; site sem nada lançado fica sem a seta), com Segurança, Eficiência, Processos, Nota e Classificação **só daquele mês**, mais **Atualizado em** e **Atualizado por** daquele mês. A data e a pessoa de cada mês são guardadas a partir de 11/11/2026 (meses mexidos antes aparecem com "—" até alguém mexer de novo).
 - **Gravação:** o que o analista digita é salvo sozinho em menos de 1 segundo ("Salvo às 14:32"). O que o Administrador muda em **Editar indicadores** vale para todos os sites. O Analista não vê a opção "N/A nos meses" (pode digitar N/A no mês).
 - **Trimestre:** em **Sites e trimestre**, o Administrador define o nome (ex.: `Q4 2026`) e os três meses. Trocar o trimestre faz todos os sites começarem do zero; os anteriores ficam guardados no banco.
-- **Regra de cálculo:** média dos meses preenchidos ≥ meta soma 100% do peso; SHE não cumprido coloca o site em Não classifica; N/A segue a opção de "N/A nos meses".
+- **Regra de cálculo:** média dos meses preenchidos dentro da meta soma 100% do peso; fora, soma 0%. N/A segue a opção de "N/A nos meses".
+  - **Sentido da meta** (símbolo ao lado da Meta): **≥** = quanto maior, melhor; **≤** = quanto menor, melhor. De fábrica são **≤** os 4 subitens do **BPP**, o **Delay GM** e qualquer indicador com **"Delay"** no nome (ex.: Delay H&B); os outros são ≥. O Administrador troca clicando no símbolo, em Editar indicadores.
+  - **Segurança (SHE) é pré-requisito**, com uma **Meta em cada indicador**: PSIF com meta 0 (algum mês acima = Não classifica); TRI e indicadores novos da Segurança = média do trimestre igual ou menor que a meta (acima = Não classifica). A antiga "Meta TRI do site" virou a meta na linha do TRI.
+  - **"?" ao lado do status Fora** (e do TRI acima da meta): mostra quanto o indicador precisa fechar no(s) próximo(s) mês(es) para entrar na meta, ou avisa que não dá mais. A antiga caixa amarela "Faltam X% para…" saiu.
+- **Editar indicadores** (só Administrador): além de nomes, descrições, fórmulas, pesos e metas:
+  - **▲▼** mudam a ordem dentro do bloco (o BPP anda com os 4 subitens juntos);
+  - **✕** exclui o indicador (dois cliques; o BPP sai inteiro). Ele some da tela e da nota, mas os valores lançados ficam guardados; **Excluídos: ↺ nome**, no fim do bloco, traz de volta;
+  - **+ Novo indicador**, no fim de cada bloco (Segurança, Eficiência e Processos), acrescenta um indicador com nome, descrição, fórmula, peso e meta;
+  - **Restaurar padrão** volta textos, pesos e ordem de fábrica, sem apagar os indicadores criados nem trazer de volta os excluídos.
+  - Tudo isso vale para todos os sites e fica guardado na configuração da PEL (sem SQL).
 - **Escolher o site:** o Administrador (para preencher) e a Gestão (para ver) escolhem primeiro o site no campo **Site**, no topo da Calculadora, ou clicam no site na Visão geral. Sem site escolhido, os campos dos meses ficam travados. O Analista já abre no próprio site.
 - **Sites e trimestre:** lista dos sites (Site, Cidade, Regional, Analistas) com **Excluir** (confirmação em dois cliques), que apaga também os lançamentos daquele site em todos os trimestres: use só para corrigir site criado errado.
 
