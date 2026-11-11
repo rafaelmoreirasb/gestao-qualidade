@@ -342,3 +342,20 @@
 #aba-pel .tabela-geral tbody tr:nth-child(even) td{background:transparent}
 #aba-pel .tabela-geral tbody tr.listra td{background:var(--cinza-zebra)}
 #aba-pel .tabela-geral tbody tr[data-site]:hover td{background:var(--amarelo-claro)}
+
+/* ---------- Destaque do nome da ferramenta e do site (padrão DHL: amarelo, vermelho, letra forte) ---------- */
+#aba-pel > .painel-topo .titulo{font-size:36px;font-weight:800;letter-spacing:-.02em;position:relative;padding-bottom:10px}
+#aba-pel > .painel-topo .titulo::after{content:"";position:absolute;left:0;bottom:0;width:64px;height:5px;background:var(--vermelho);border-radius:2px}
+#aba-pel .barra-site{background:var(--amarelo);border:0;border-bottom:4px solid var(--vermelho);border-radius:var(--raio-cartao);padding:16px 22px}
+#aba-pel .barra-site .info{gap:8px 36px;align-items:flex-end}
+#aba-pel .barra-site .rot{color:var(--preto);opacity:.7}
+#aba-pel .barra-site .val{font-size:20px}
+#aba-pel #site-fixo{font-size:28px;font-weight:800;letter-spacing:-.01em;line-height:1.15}
+#aba-pel .barra-site select{height:46px;font-size:20px;font-weight:800;border-color:var(--preto)}
+#aba-pel .barra-site .salvo{color:var(--preto);opacity:.75}
+#aba-pel .barra-site .nota{color:var(--preto)}
+@media (max-width:600px){
+#aba-pel > .painel-topo .titulo{font-size:28px}
+#aba-pel #site-fixo{font-size:22px}
+#aba-pel .barra-site select{font-size:17px}
+}
