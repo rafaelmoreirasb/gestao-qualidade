@@ -289,3 +289,80 @@
 #aba-pel .tabela-geral .col-reg{width:1%}
 #aba-pel .tabela-geral .pequeno{font-size:11px;color:var(--cinza-texto)}
 #aba-pel .tabela-geral th.pequeno{font-size:11px;color:var(--cinza-subtitulo)}
+
+/* ---------- Alteração PEL 2 (11/11/2026): ordem dos indicadores ---------- */
+/* Botões ▲▼ ao lado do nome, só no modo "Editar indicadores" */
+#aba-pel .mover{display:none;flex-direction:column;gap:2px;flex:none}
+#aba-pel.editing .mover{display:inline-flex}
+#aba-pel .mv{width:24px;height:16px;padding:0;border:1px solid var(--cinza-campo);border-radius:3px;background:var(--branco);color:var(--preto);font-size:9px;line-height:1;cursor:pointer}
+#aba-pel .mv:hover:not(:disabled){background:var(--amarelo-claro);border-color:var(--preto)}
+#aba-pel .mv:disabled{opacity:.3;cursor:default}
+/* No modo de edição, o nome do grupo BPP continua visível ao lado das setas */
+#aba-pel.editing tr.parent .k-name.view{display:inline;cursor:default}
+/* Lixeira (excluir indicador), só no modo de edição */
+#aba-pel .rm{display:none;flex:none;min-width:22px;height:22px;padding:0 5px;border:1px solid var(--cinza-campo);border-radius:3px;background:var(--branco);color:var(--vermelho);font-size:11px;font-weight:800;cursor:pointer}
+#aba-pel.editing .rm{display:inline-block}
+#aba-pel .rm:hover{background:var(--vermelho-claro);border-color:var(--vermelho)}
+#aba-pel .rm[data-armado]{background:var(--vermelho);color:var(--branco);border-color:var(--vermelho)}
+/* Linha do fim de cada bloco: + Novo indicador e os excluídos (só no modo de edição) */
+#aba-pel .so-edicao{display:none}
+#aba-pel.editing tr.so-edicao{display:table-row}
+#aba-pel.editing .she-row.so-edicao{display:flex}
+#aba-pel .so-edicao td,#aba-pel .she-row.so-edicao{background:var(--branco)!important}
+#aba-pel .she-row.so-edicao,#aba-pel tr.so-edicao td{gap:8px 14px;flex-wrap:wrap;align-items:center}
+#aba-pel tr.so-edicao td>*{margin-right:12px}
+#aba-pel .excluidos{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center}
+#aba-pel .chip-volta{height:28px;padding:0 10px;border:1px dashed var(--cinza-campo);border-radius:999px;background:var(--cinza-fundo);color:var(--cinza-subtitulo);font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+#aba-pel .chip-volta:hover{background:var(--amarelo-claro);border-color:var(--preto);color:var(--preto)}
+/* Segurança: coluna Meta em cada indicador */
+#aba-pel .she-row{grid-template-columns:minmax(0,1fr) 90px repeat(3,100px) 100px}
+#aba-pel .she-row input.meta-in{text-align:center}
+#aba-pel .she-row input.meta-in[readonly]{border-color:transparent;background:transparent;font-weight:700;cursor:default}
+#aba-pel .she-row input.meta-in[readonly]:focus{outline:none}
+#aba-pel.editing .she-row input.meta-in{background:var(--amarelo-claro)}
+@media (max-width:600px){
+#aba-pel .she-row{grid-template-columns:minmax(0,1fr) 50px repeat(3,52px) 70px;gap:5px}
+}
+/* Símbolo do sentido da meta (≥ ou ≤): só clicável em Editar indicadores */
+#aba-pel .dir{font-weight:700}
+#aba-pel .dir:disabled{cursor:default;background:transparent;border-color:transparent;opacity:1;color:var(--preto)}
+#aba-pel.editing .dir{border-color:var(--cinza-campo);background:var(--branco)}
+#aba-pel.editing .dir:hover{background:var(--amarelo-claro);border-color:var(--preto)}
+
+/* ---------- Visão geral: seta que mostra o resultado de cada mês (começa fechada) ---------- */
+#aba-pel .tabela-geral .col-exp{width:36px;min-width:36px;padding-right:0}
+#aba-pel .vg-exp{width:24px;height:24px;display:grid;place-items:center;padding:0;border:1px solid var(--cinza-borda);border-radius:var(--raio);background:var(--branco);color:var(--preto);cursor:pointer;transition:transform .2s}
+#aba-pel .vg-exp:hover{background:var(--amarelo-claro)}
+#aba-pel .tabela-geral tr.aberto .vg-exp{transform:rotate(90deg)}
+/* linhas dos meses (abrem com a seta) */
+#aba-pel .tabela-geral tbody tr.vg-mes-linha{cursor:default}
+#aba-pel .tabela-geral tbody tr.vg-mes-linha td{background:var(--amarelo-claro)!important;border-bottom:1px solid var(--cinza-borda);font-size:12px}
+#aba-pel .tabela-geral .vg-mes-nome{font-weight:700}
+/* listra: só nas linhas dos sites */
+#aba-pel .tabela-geral tbody tr:nth-child(even) td{background:transparent}
+#aba-pel .tabela-geral tbody tr.listra td{background:var(--cinza-zebra)}
+#aba-pel .tabela-geral tbody tr[data-site]:hover td{background:var(--amarelo-claro)}
+
+/* ---------- Destaque do nome da ferramenta e do site (padrão DHL: amarelo, vermelho, letra forte) ---------- */
+#aba-pel > .painel-topo .titulo{font-size:36px;font-weight:800;letter-spacing:-.02em;position:relative;padding-bottom:10px}
+#aba-pel > .painel-topo .titulo::after{content:"";position:absolute;left:0;bottom:0;width:64px;height:5px;background:var(--vermelho);border-radius:2px}
+#aba-pel .barra-site{background:var(--amarelo);border:0;border-bottom:4px solid var(--vermelho);border-radius:var(--raio-cartao);padding:16px 22px}
+#aba-pel .barra-site .info{gap:8px 36px;align-items:flex-end}
+#aba-pel .barra-site .rot{color:var(--preto);opacity:.7}
+#aba-pel .barra-site .val{font-size:20px}
+#aba-pel #site-fixo{font-size:28px;font-weight:800;letter-spacing:-.01em;line-height:1.15}
+#aba-pel .barra-site select{height:46px;font-size:20px;font-weight:800;border-color:var(--preto)}
+#aba-pel .barra-site .salvo{color:var(--preto);opacity:.75}
+#aba-pel .barra-site .nota{color:var(--preto)}
+@media (max-width:600px){
+#aba-pel > .painel-topo .titulo{font-size:28px}
+#aba-pel #site-fixo{font-size:22px}
+#aba-pel .barra-site select{font-size:17px}
+}
+/* Selo "Soma dos pesos" no fim da calculadora */
+#aba-pel .soma-pesos{display:flex;justify-content:flex-end;margin-top:-6px}
+/* "?" ao lado do status Fora: o que falta para entrar na meta */
+#aba-pel .q-falta{width:20px;height:20px;margin-left:5px;padding:0;border:1px solid var(--vermelho);border-radius:50%;background:var(--branco);color:var(--vermelho);font-size:12px;font-weight:800;line-height:1;cursor:help;vertical-align:middle}
+#aba-pel .q-falta:hover{background:var(--vermelho);color:var(--branco)}
+#aba-pel .q-texto{display:block;max-width:190px;margin:6px auto 0;padding:6px 8px;border-radius:var(--raio);background:var(--vermelho-claro);color:var(--vermelho-escuro);font-size:12px;font-weight:600;line-height:1.3;white-space:normal;text-align:left}
+#aba-pel .q-texto[hidden]{display:none}

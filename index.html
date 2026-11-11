@@ -948,29 +948,14 @@
           <summary class="bloco-topo"><span class="seta" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><h2 class="subtitulo">1 · Segurança (SHE)</h2><span class="bloco-resumo" id="she-note"></span></summary>
           <div class="bloco-corpo">
           <div id="she-panel-inner">
-            <div class="she-grid">
-              <div class="she-row head"><span>Indicador</span><span class="c" id="sh-m1">Mês 1</span><span class="c" id="sh-m2">Mês 2</span><span class="c" id="sh-m3">Mês 3</span><span class="c">Status</span></div>
-              <div class="she-row">
-                <div class="k-cell" id="cell-she_psif"></div>
-                <input id="psif-0" inputmode="numeric" placeholder="—"><input id="psif-1" inputmode="numeric" placeholder="—"><input id="psif-2" inputmode="numeric" placeholder="—">
-                <span class="c" id="psif-st"></span>
-              </div>
-              <div class="she-row">
-                <div class="k-cell" id="cell-she_tri"></div>
-                <input id="tri-0" inputmode="decimal" placeholder="—"><input id="tri-1" inputmode="decimal" placeholder="—"><input id="tri-2" inputmode="decimal" placeholder="—">
-                <span class="c" id="tri-st"></span>
-              </div>
-            </div>
-            <div class="she-opts">
-              <label for="tri-meta">Meta TRI do site <input id="tri-meta" class="lock-in" inputmode="decimal" placeholder="—" readonly title="Clique em Editar indicadores para mudar a meta"></label>
-            </div>
+            <!-- Linhas montadas por js/pel.js: Indicador, Meta, 3 meses e Status (o Administrador inclui, exclui e ordena) -->
+            <div class="she-grid" id="she-grid"></div>
           </div>
           </div>
         </details>
 
         <div class="barra-edicao">
           <label class="na-sel" for="na-mode">N/A nos meses <select id="na-mode" disabled><option value="ignore">Ignora o indicador</option><option value="zero">Conta 0%</option><option value="full">Conta 100%</option></select></label>
-          <span class="nota" id="w-warn" hidden></span>
           <span class="nota" id="table-note" data-x="1">Regra: média do trimestre igual ou maior que a meta soma 100% do peso. Abaixo da meta, soma 0%. Digite N/A no mês para marcar o indicador como não aplicável.</span>
           <button class="btn-ghost" id="btn-reset-txt" type="button" hidden>Restaurar padrão</button>
           <button class="btn-ghost" id="btn-expand" type="button">Expandir todos</button>
@@ -1012,6 +997,8 @@
             </div>
           </div>
         </details>
+        <!-- Soma dos pesos de Eficiência + Processos: no fim da calculadora -->
+        <div class="soma-pesos"><span class="nota" id="w-warn" hidden></span></div>
           </section>
           <section class="pel-sub" id="pel-visao" hidden>
         <div class="painel-cartao-topo"><h2 class="subtitulo">Visão geral dos sites</h2><span class="nota" id="visao-periodo"></span></div>
@@ -1020,7 +1007,7 @@
           <div class="painel-cartao-topo"><h2 class="subtitulo">Sites</h2><span class="nota">Clique num site para abrir a calculadora dele</span></div>
           <div class="scroll">
             <table class="tabela-geral">
-              <thead><tr><th class="col-reg">Regional</th><th class="c">Site</th><th class="c">Trimestre</th><th class="c">Segurança</th><th class="c">Eficiência</th><th class="c">Processos</th><th class="c">Nota final</th><th>Classificação</th><th class="pequeno">Atualizado em</th><th class="pequeno">Atualizado por</th></tr></thead>
+              <thead><tr><th class="col-exp" aria-label="Detalhe do TRI"></th><th class="col-reg">Regional</th><th class="c">Site</th><th class="c">Trimestre</th><th class="c">Segurança</th><th class="c">Eficiência</th><th class="c">Processos</th><th class="c">Nota final</th><th>Classificação</th><th class="pequeno">Atualizado em</th><th class="pequeno">Atualizado por</th></tr></thead>
               <tbody id="visao-tbody"></tbody>
             </table>
           </div>
