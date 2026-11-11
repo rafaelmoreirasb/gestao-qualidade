@@ -469,6 +469,10 @@ function prepararApp(){
   $("pel-menu").hidden=p==="analista";
   $("btn-edit").hidden=!podeEditarCfg();
   document.querySelector("#aba-pel .na-sel").hidden=p==="analista"; // Analista não vê "N/A nos meses"
+  // Analista também não vê o texto da regra, o botão "Expandir todos" nem a nota da Classificação
+  $("table-note").hidden=p==="analista";
+  $("btn-expand").hidden=p==="analista";
+  const notaMedia=document.querySelector("#pel-calc .painel-cartao-topo .nota");if(notaMedia)notaMedia.hidden=p==="analista";
   const escolhe=p==="gestao"||p==="admin";
   $("site-escolha").hidden=!escolhe;$("site-fixo").hidden=escolhe;
   $("site-escolha").innerHTML=`<option value="">Escolha um site</option>`+sites.map(s=>`<option value="${esc(s.codigo)}">${esc(s.codigo)}${s.nome?" · "+esc(s.nome):""}</option>`).join("");
