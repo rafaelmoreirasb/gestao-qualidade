@@ -496,11 +496,11 @@ async function carregarVisao(){
   $("visao-tbody").innerHTML=linhas.length?linhas.map(({s,l,c},idx)=>{
     const tem=c&&c.comDados;
     const she=!c?`<span class="pill wait">—</span>`:c.sheFail?`<span class="pill no">Não cumprido</span>`:c.sheOk?`<span class="pill ok">Cumprido</span>`:`<span class="pill wait">Pendente</span>`;
-    return `<tr data-site="${esc(s.codigo)}" class="${idx%2?"listra":""}"><td class="col-exp"><button type="button" class="vg-exp" aria-expanded="false" aria-label="Ver o resultado de cada mês" title="Ver o resultado de cada mês">${CHEV}</button></td><td class="col-reg">${esc(s.regional||"—")}</td><td class="c"><b>${esc(s.codigo)}</b>${s.nome?" · "+esc(s.nome):""}</td><td class="c">${esc(CONFIG.periodo)}</td>
+    return `<tr data-site="${esc(s.codigo)}" class="${idx%2?"listra":""}"><td class="col-exp">${mesesLancados(l).length?`<button type="button" class="vg-exp" aria-expanded="false" aria-label="Ver o resultado de cada mês" title="Ver o resultado de cada mês">${CHEV}</button>`:""}</td><td class="col-reg">${esc(s.regional||"—")}</td><td class="c"><b>${esc(s.codigo)}</b>${s.nome?" · "+esc(s.nome):""}</td><td class="c">${esc(CONFIG.periodo)}</td>
       <td class="c">${she}</td><td class="c num">${tem?nf(c.tot.efi)+"%":"—"}</td><td class="c num">${tem?nf(c.tot.proc)+"%":"—"}</td>
       <td class="c num"><b>${tem?nf(c.score)+"%":"—"}</b></td><td>${tem?`<img class="med" src="${MEDALS[c.t.name]}" alt="">${c.t.name}`:`<span class="nota">Sem lançamentos</span>`}</td>
       <td class="pequeno">${l?dataHora(l.atualizado_em):"—"}</td><td class="pequeno">${l&&l.atualizado_por?esc(nomes[l.atualizado_por]||"—"):"—"}</td></tr>
-      ${linhasMeses(s,l)}`;
+      ${linhasMeses(s,l,nomes)}`;
   }).join(""):`<tr><td colspan="11" class="vazio">Nenhum site cadastrado ainda. Os sites aparecem quando as pessoas criam a conta.</td></tr>`;
 }
 
@@ -512,16 +512,26 @@ function dadosDoMes(d,i){
   Object.keys(d.she||{}).forEach(id=>{out.she[id]=um(d.she[id]);});
   return out;
 }
-/* Três linhas que abrem embaixo de cada site (começam fechadas): resultado de cada mês */
-function linhasMeses(s,l){
-  return [0,1,2].map(i=>{
+/* Mês lançado = tem pelo menos um valor (ou N/A) em qualquer indicador */
+function mesLancado(d,i){
+  const tem=a=>{const v=(a||[])[i];return v!==null&&v!==undefined&&v!=="";};
+  return Object.values(d.vals||{}).some(tem)||tem(d.psif)||tem(d.tri)||Object.values(d.she||{}).some(tem);
+}
+function mesesLancados(l){return l?[0,1,2].filter(i=>mesLancado(l.dados||{},i)):[];}
+/* Linhas que abrem embaixo de cada site (começam fechadas): resultado de cada mês já lançado,
+   com a última atualização daquele mês e quem fez */
+function linhasMeses(s,l,nomes){
+  const upd=(l&&l.dados&&l.dados.upd)||{};
+  return mesesLancados(l).map(i=>{
+    const u=upd[i]||{};
     const c=l?calcular(dadosDoMes(Object.assign(blankState(),l.dados||{}),i)):null;
     const tem=c&&c.comDados;
     const temShe=c&&sheAtivos().some(k=>c.she[k.id]&&c.she[k.id].n);
     const she=!temShe?`<span class="pill wait">—</span>`:c.sheFail?`<span class="pill no">Não cumprido</span>`:c.sheOk?`<span class="pill ok">Cumprido</span>`:`<span class="pill wait">Pendente</span>`;
     return `<tr class="vg-mes-linha" data-pai="${esc(s.codigo)}" hidden><td class="col-exp"></td><td class="col-reg"></td><td class="c vg-mes-nome">${esc(CONFIG.meses[i])}</td><td class="c pequeno">mês ${i+1}</td>
       <td class="c">${she}</td><td class="c num">${tem?nf(c.tot.efi)+"%":"—"}</td><td class="c num">${tem?nf(c.tot.proc)+"%":"—"}</td>
-      <td class="c num"><b>${tem?nf(c.score)+"%":"—"}</b></td><td>${tem?`<img class="med" src="${MEDALS[c.t.name]}" alt="">${c.t.name}`:`<span class="nota">Sem lançamento</span>`}</td><td></td><td></td></tr>`;
+      <td class="c num"><b>${tem?nf(c.score)+"%":"—"}</b></td><td>${tem?`<img class="med" src="${MEDALS[c.t.name]}" alt="">${c.t.name}`:`<span class="nota">Só Segurança lançada</span>`}</td>
+      <td class="pequeno">${u.em?dataHora(u.em):"—"}</td><td class="pequeno">${u.por?esc(nomes[u.por]||"—"):"—"}</td></tr>`;
   }).join("");
 }
 
@@ -600,6 +610,9 @@ function ligarCalculadora(){
     else if((m=id.match(/^(psif|tri)-(\d)$/))){(state[m[1]]=state[m[1]]||[])[+m[2]]=parseNum(e.target.value);}
     else if((m=id.match(/^she-(.+)-(\d)$/))){state.she=state.she||{};(state.she[m[1]]=state.she[m[1]]||[])[+m[2]]=parseNum(e.target.value);}
     else return;
+    // Última atualização de cada mês (aparece nas linhas dos meses da Visão geral)
+    const mes=+id.slice(-1);
+    state.upd=state.upd||{};state.upd[mes]={em:new Date().toISOString(),por:usuario.id};
     gravarLancamento();render();
   });
   main.addEventListener("change",e=>{
