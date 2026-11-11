@@ -479,10 +479,10 @@ function prepararApp(){
 let visaoLanc=[];
 async function carregarVisao(){
   $("visao-periodo").textContent="Trimestre: "+CONFIG.periodo;
-  $("visao-tbody").innerHTML=`<tr><td colspan="10" class="vazio">Carregando…</td></tr>`;
+  $("visao-tbody").innerHTML=`<tr><td colspan="11" class="vazio">Carregando…</td></tr>`;
   await carregarSites().catch(()=>{});
   const {data,error}=await sb.from("pel_lancamentos").select("site,dados,atualizado_em,atualizado_por").eq("periodo",CONFIG.periodo);
-  if(error){$("visao-tbody").innerHTML=`<tr><td colspan="10" class="vazio">Não foi possível carregar os sites. Recarregue a página.</td></tr>`;return;}
+  if(error){$("visao-tbody").innerHTML=`<tr><td colspan="11" class="vazio">Não foi possível carregar os sites. Recarregue a página.</td></tr>`;return;}
   visaoLanc=data||[];
   // Nome de quem salvou por último (Gestão e Administrador podem ler os perfis)
   const nomes={};
@@ -496,11 +496,22 @@ async function carregarVisao(){
   $("visao-tbody").innerHTML=linhas.length?linhas.map(({s,l,c})=>{
     const tem=c&&c.comDados;
     const she=!c?`<span class="pill wait">—</span>`:c.sheFail?`<span class="pill no">Não cumprido</span>`:c.sheOk?`<span class="pill ok">Cumprido</span>`:`<span class="pill wait">Pendente</span>`;
-    return `<tr data-site="${esc(s.codigo)}"><td class="col-reg">${esc(s.regional||"—")}</td><td class="c"><b>${esc(s.codigo)}</b>${s.nome?" · "+esc(s.nome):""}</td><td class="c">${esc(CONFIG.periodo)}</td>
+    return `<tr data-site="${esc(s.codigo)}"><td class="col-exp"><button type="button" class="vg-exp" aria-expanded="false" aria-label="Ver o TRI de cada mês" title="Ver o TRI de cada mês">${CHEV}</button></td><td class="col-reg">${esc(s.regional||"—")}</td><td class="c"><b>${esc(s.codigo)}</b>${s.nome?" · "+esc(s.nome):""}</td><td class="c">${esc(CONFIG.periodo)}</td>
       <td class="c">${she}</td><td class="c num">${tem?nf(c.tot.efi)+"%":"—"}</td><td class="c num">${tem?nf(c.tot.proc)+"%":"—"}</td>
       <td class="c num"><b>${tem?nf(c.score)+"%":"—"}</b></td><td>${tem?`<img class="med" src="${MEDALS[c.t.name]}" alt="">${c.t.name}`:`<span class="nota">Sem lançamentos</span>`}</td>
-      <td class="pequeno">${l?dataHora(l.atualizado_em):"—"}</td><td class="pequeno">${l&&l.atualizado_por?esc(nomes[l.atualizado_por]||"—"):"—"}</td></tr>`;
-  }).join(""):`<tr><td colspan="10" class="vazio">Nenhum site cadastrado ainda. Os sites aparecem quando as pessoas criam a conta.</td></tr>`;
+      <td class="pequeno">${l?dataHora(l.atualizado_em):"—"}</td><td class="pequeno">${l&&l.atualizado_por?esc(nomes[l.atualizado_por]||"—"):"—"}</td></tr>
+      <tr class="vg-det" hidden><td colspan="11">${detalheTri(l,c)}</td></tr>`;
+  }).join(""):`<tr><td colspan="11" class="vazio">Nenhum site cadastrado ainda. Os sites aparecem quando as pessoas criam a conta.</td></tr>`;
+}
+
+/* Linha que abre embaixo de cada site: o TRI de cada mês, a meta e a média */
+function detalheTri(l,c){
+  const tri=sheAtivos().find(k=>k.id==="she_tri");
+  if(!tri)return `<span class="nota">O TRI foi excluído dos indicadores da Segurança.</span>`;
+  const v=l?sheVals(l.dados||{},"she_tri"):[], meta=metaOf(tri), r=c&&c.she?c.she.she_tri:null;
+  const mes=i=>{const x=v[i];return `<span class="vg-mes"><span class="vg-rot">${esc(CONFIG.meses[i])}</span> <b class="num">${x===null||x===undefined||x===""?"—":fmt(x,"")}</b></span>`;};
+  const st=!r||!r.n?`<span class="pill wait">Sem dados</span>`:r.meta==null?`<span class="pill wait">Sem meta</span>`:`<span class="pill ${r.fail?"no":"ok"}">${r.fail?"Acima da meta":"Dentro da meta"}</span>`;
+  return `<div class="vg-tri"><b>${esc(nameOf(tri))}</b>${[0,1,2].map(mes).join("")}<span class="vg-mes"><span class="vg-rot">Média</span> <b class="num">${r&&r.avg!=null?fmt(r.avg,""):"—"}</b></span><span class="vg-mes"><span class="vg-rot">Meta</span> <b class="num">${meta==null?"—":"≤ "+fmtIn(meta)}</b></span>${st}</div>`;
 }
 
 /* ---------- Usuários ---------- */
@@ -649,7 +660,14 @@ function fecharBlocos(){
    ========================================================== */
 function ligarAdmin(){
   $("pel-menu").addEventListener("click",e=>{const b=e.target.closest("button[data-sub]");if(b)mostrarSub(b.dataset.sub);});
-  $("visao-tbody").addEventListener("click",e=>{const tr=e.target.closest("tr[data-site]");if(!tr)return;mostrarSub("calc");abrirSite(tr.dataset.site);});
+  $("visao-tbody").addEventListener("click",e=>{
+    const exp=e.target.closest(".vg-exp");
+    if(exp){ // seta: abre/fecha o TRI de cada mês, sem abrir a calculadora
+      const det=exp.closest("tr").nextElementSibling, abrir=det.hidden;
+      det.hidden=!abrir;exp.setAttribute("aria-expanded",abrir);exp.closest("tr").classList.toggle("aberto",abrir);return;
+    }
+    const tr=e.target.closest("tr[data-site]");if(!tr)return;mostrarSub("calc");abrirSite(tr.dataset.site);
+  });
   $("filtro-papel").addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b)return;filtroPapel=b.dataset.f;document.querySelectorAll("#filtro-papel .chip").forEach(c=>c.setAttribute("aria-pressed",c===b));desenharUsuarios();});
   $("usuarios-tbody").addEventListener("change",e=>{
     const tr=e.target.closest("tr[data-id]");if(!tr)return;
