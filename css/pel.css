@@ -289,3 +289,13 @@
 #aba-pel .tabela-geral .col-reg{width:1%}
 #aba-pel .tabela-geral .pequeno{font-size:11px;color:var(--cinza-texto)}
 #aba-pel .tabela-geral th.pequeno{font-size:11px;color:var(--cinza-subtitulo)}
+
+/* ---------- Alteração PEL 2 (11/11/2026): ordem dos indicadores ---------- */
+/* Botões ▲▼ ao lado do nome, só no modo "Editar indicadores" */
+#aba-pel .mover{display:none;flex-direction:column;gap:2px;flex:none}
+#aba-pel.editing .mover{display:inline-flex}
+#aba-pel .mv{width:24px;height:16px;padding:0;border:1px solid var(--cinza-campo);border-radius:3px;background:var(--branco);color:var(--preto);font-size:9px;line-height:1;cursor:pointer}
+#aba-pel .mv:hover:not(:disabled){background:var(--amarelo-claro);border-color:var(--preto)}
+#aba-pel .mv:disabled{opacity:.3;cursor:default}
+/* No modo de edição, o nome do grupo BPP continua visível ao lado das setas */
+#aba-pel.editing tr.parent .k-name.view{display:inline;cursor:default}

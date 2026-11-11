@@ -99,7 +99,8 @@ function normConfig(d){
   d=d&&typeof d==="object"?d:{};
   return {names:d.names||{},defs:d.defs||{},forms:d.forms||{},weights:d.weights||{},metas:d.metas||{},
     triMeta:d.triMeta??null,naMode:d.naMode||"ignore",periodo:d.periodo||PERIODO_PADRAO,
-    meses:Array.isArray(d.meses)&&d.meses.length===3?d.meses:MESES_PADRAO.slice()};
+    meses:Array.isArray(d.meses)&&d.meses.length===3?d.meses:MESES_PADRAO.slice(),
+    ordem:d.ordem&&typeof d.ordem==="object"?d.ordem:{}};
 }
 
 function nameOf(k){return CONFIG.names[k.id]||k.name}
@@ -156,8 +157,12 @@ function calcular(d){
    Calculadora: montagem da tabela
    ========================================================== */
 const CHEV='<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-function celulaIndicador(k){
-  return `<div class="k-head"><button type="button" class="k-toggle" aria-expanded="false" aria-label="Ver descrição e fórmula">${CHEV}</button><span class="k-name view" id="vname-${k.id}">${esc(nameOf(k))}</span><input class="ed ed-name" id="name-${k.id}" aria-label="Nome do indicador" value="${esc(nameOf(k))}"></div>
+/* Botões ▲▼ (só aparecem em "Editar indicadores"): mudam a ordem dentro do bloco */
+function botoesOrdem(g,u){
+  return `<span class="mover"><button type="button" class="mv" data-g="${g}" data-u="${u}" data-d="-1" title="Subir" aria-label="Subir">▲</button><button type="button" class="mv" data-g="${g}" data-u="${u}" data-d="1" title="Descer" aria-label="Descer">▼</button></span>`;
+}
+function celulaIndicador(k,g){
+  return `<div class="k-head">${g?botoesOrdem(g,k.id):""}<button type="button" class="k-toggle" aria-expanded="false" aria-label="Ver descrição e fórmula">${CHEV}</button><span class="k-name view" id="vname-${k.id}">${esc(nameOf(k))}</span><input class="ed ed-name" id="name-${k.id}" aria-label="Nome do indicador" value="${esc(nameOf(k))}"></div>
   <div class="k-info"><div class="k-lbl">Descrição <button type="button" class="b-btn" data-t="def-${k.id}" title="Negrito (Ctrl+B): selecione o texto e clique">N</button></div><div class="k-def view" id="vdef-${k.id}">${rich(defOf(k))}</div><textarea class="ed ed-def" id="def-${k.id}" rows="3" aria-label="Descrição do indicador">${esc(defOf(k))}</textarea>
   <div class="k-lbl">Fórmula <button type="button" class="b-btn" data-t="form-${k.id}" title="Negrito (Ctrl+B): selecione o texto e clique">N</button></div><div class="k-form view" id="vform-${k.id}">${rich(formOf(k))}</div><textarea class="ed ed-form" id="form-${k.id}" rows="2" aria-label="Fórmula do indicador">${esc(formOf(k))}</textarea></div>`;
 }
@@ -167,14 +172,14 @@ function buildTable(){
     for(const k of KPIS.filter(x=>x.p===g)){
       const isSub=k.grp==="bpp";
       if(isSub&&lastTag!=="BPP"){
-        html+=`<tr class="parent" id="row-bpp"><td class="k-cell"><div class="k-head"><button type="button" class="k-toggle" aria-expanded="false" aria-label="Ver descrição e fórmula">${CHEV}</button><span class="k-name view">BPP · Perdas Operativas SVC</span></div>
+        html+=`<tr class="parent" id="row-bpp" data-u="bpp"><td class="k-cell"><div class="k-head">${botoesOrdem(g,"bpp")}<button type="button" class="k-toggle" aria-expanded="false" aria-label="Ver descrição e fórmula">${CHEV}</button><span class="k-name view">BPP · Perdas Operativas SVC</span></div>
           <div class="k-info"><div class="k-lbl">Descrição</div><div class="k-def">KPI de perda monetária do Programa de Proteção ao Comprador, calculado a partir das perdas por Perda, Atraso e Dano na estação e por Embalagem danificada, dividido pelo volume transportado. Cada subitem tem a sua meta e vale 2%, somando 8%.</div>
           <div class="k-lbl">Fórmula</div><div class="k-form">Perdas BPP (Lost, Delayed e Damaged at station + Damaged) / GMV do cluster</div></div></td>
           <td class="c"><span class="pts num" id="w-bpp"></span></td><td class="c"><span class="nota">4 subitens</span></td><td></td><td></td><td></td><td></td><td class="c" id="st-bpp"></td></tr>`;
       }
       lastTag=k.tag;
-      html+=`<tr class="${isSub?"sub":""}">
-        <td class="k-cell">${celulaIndicador(k)}</td>
+      html+=`<tr class="${isSub?"sub":""}" data-u="${isSub?"bpp":k.id}">
+        <td class="k-cell">${celulaIndicador(k,isSub?"":g)}</td>
         <td class="c in"><input class="w-in" id="w-${k.id}" inputmode="decimal" readonly aria-label="Peso ${esc(k.name)}"></td>
         <td class="in c"><div class="meta-cell"><input id="meta-${k.id}" class="meta-in" inputmode="decimal" placeholder="—" readonly aria-label="Meta ${esc(k.name)}"></div></td>
         ${[0,1,2].map(i=>`<td class="in c"><input id="v-${k.id}-${i}" class="v-in" inputmode="text" placeholder="—" aria-label="${esc(k.name)} mês ${i+1}"></td>`).join("")}
@@ -184,11 +189,45 @@ function buildTable(){
     }
     $("tbody-"+g).innerHTML=html;
   }
-  for(const k of SHE_ITEMS) $("cell-"+k.id).innerHTML=celulaIndicador(k);
+  for(const k of SHE_ITEMS){ $("cell-"+k.id).innerHTML=celulaIndicador(k,"she"); $("cell-"+k.id).closest(".she-row").dataset.u=k.id; }
   $("tiers").innerHTML=TIERS.map(t=>`<div class="tier" data-name="${t.name}"><img src="${MEDALS[t.name]}" alt=""><div><div class="t-n">${t.name}</div><div class="t-r">${t.range}</div></div></div>`).join("");
   const segs=[[0,70,"#c0392b"],[70,80,"#a8683f"],[80,88,"#a9acaf"],[88,93,"#d1a020"],[93,100,"#6f808b"]];
   $("ruler-track").innerHTML=segs.map(s=>`<span style="width:${s[1]-s[0]}%;background:${s[2]}"></span>`).join("");
   $("ruler-ticks").innerHTML=[0,70,80,88,93,100].map(v=>`<span class="num" style="left:${v}%">${v}</span>`).join("");
+}
+
+/* ---------- Ordem dos indicadores (Segurança, Eficiência e Processos) ----------
+   Cada bloco tem a sua lista. O BPP é uma unidade só ("bpp"): os 4 subitens andam juntos. */
+function ordemPadrao(g){
+  if(g==="she")return SHE_ITEMS.map(k=>k.id);
+  const out=[];
+  KPIS.filter(k=>k.p===g).forEach(k=>{const u=k.grp==="bpp"?"bpp":k.id;if(!out.includes(u))out.push(u);});
+  return out;
+}
+function ordemDe(g){
+  const padrao=ordemPadrao(g), salva=Array.isArray(CONFIG.ordem[g])?CONFIG.ordem[g]:[];
+  const lista=salva.filter(u=>padrao.includes(u));
+  padrao.forEach(u=>{if(!lista.includes(u))lista.push(u);});
+  return lista;
+}
+function aplicarOrdem(){
+  for(const g of ["she","efi","proc"]){
+    const caixa=g==="she"?document.querySelector("#aba-pel .she-grid"):$("tbody-"+g);
+    const ordem=ordemDe(g);
+    ordem.forEach(u=>caixa.querySelectorAll(`:scope > [data-u="${u}"]`).forEach(el=>caixa.appendChild(el)));
+    caixa.querySelectorAll(".mv").forEach(b=>{
+      const i=ordem.indexOf(b.dataset.u);
+      b.disabled=b.dataset.d==="-1"?i<=0:i>=ordem.length-1;
+    });
+  }
+}
+function moverIndicador(g,u,d){
+  if(!podeEditarCfg())return;
+  const ordem=ordemDe(g), i=ordem.indexOf(u), j=i+d;
+  if(i<0||j<0||j>=ordem.length)return;
+  [ordem[i],ordem[j]]=[ordem[j],ordem[i]];
+  CONFIG.ordem[g]=ordem;
+  aplicarOrdem();gravarConfig();
 }
 
 /* Preenche textos, metas e pesos a partir da configuração */
@@ -203,6 +242,7 @@ function fillConfig(){
   for(const k of KPIS){ $("meta-"+k.id).value=fmtPct(metaOf(k)); $("w-"+k.id).value=fmtPct(wOf(k)); }
   $("tri-meta").value=fmtIn(CONFIG.triMeta);
   $("na-mode").value=CONFIG.naMode;
+  aplicarOrdem();
 }
 /* Preenche os meses a partir do lançamento do site */
 function fillValores(){
@@ -471,6 +511,7 @@ function ligarCalculadora(){
   main.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="b"&&e.target.matches("textarea.ed")){e.preventDefault();boldWrap(e.target);}});
   function setOpen(tr,on){tr.classList.toggle("aberto",on);const b=tr.querySelector(".k-toggle");if(b)b.setAttribute("aria-expanded",on);}
   main.addEventListener("click",e=>{
+    const mv=e.target.closest(".mv");if(mv){moverIndicador(mv.dataset.g,mv.dataset.u,+mv.dataset.d);return;}
     const b=e.target.closest(".b-btn");if(b){const ta=$(b.dataset.t);if(ta.tagName==="TEXTAREA")boldWrap(ta);return;}
     const t=e.target.closest(".k-toggle, .k-name.view");
     if(t){const tr=t.closest("tr, .she-row");if(tr)setOpen(tr,!tr.classList.contains("aberto"));}
@@ -492,7 +533,7 @@ function ligarCalculadora(){
     rows.forEach(r=>setOpen(r,open));e.target.textContent=open?"Recolher todos":"Expandir todos";
   });
   $("btn-reset-txt").addEventListener("click",e=>armar(e.target,"Clique de novo para restaurar",()=>{
-    CONFIG.names={};CONFIG.defs={};CONFIG.forms={};CONFIG.weights={};
+    CONFIG.names={};CONFIG.defs={};CONFIG.forms={};CONFIG.weights={};CONFIG.ordem={};
     fillConfig();render();gravarConfigAgora($("salvo"));
   }));
 }
