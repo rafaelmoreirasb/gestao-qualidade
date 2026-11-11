@@ -361,3 +361,8 @@
 }
 /* Selo "Soma dos pesos" no fim da calculadora */
 #aba-pel .soma-pesos{display:flex;justify-content:flex-end;margin-top:-6px}
+/* "?" ao lado do status Fora: o que falta para entrar na meta */
+#aba-pel .q-falta{width:20px;height:20px;margin-left:5px;padding:0;border:1px solid var(--vermelho);border-radius:50%;background:var(--branco);color:var(--vermelho);font-size:12px;font-weight:800;line-height:1;cursor:help;vertical-align:middle}
+#aba-pel .q-falta:hover{background:var(--vermelho);color:var(--branco)}
+#aba-pel .q-texto{display:block;max-width:190px;margin:6px auto 0;padding:6px 8px;border-radius:var(--raio);background:var(--vermelho-claro);color:var(--vermelho-escuro);font-size:12px;font-weight:600;line-height:1.3;white-space:normal;text-align:left}
+#aba-pel .q-texto[hidden]{display:none}

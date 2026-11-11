@@ -358,7 +358,7 @@ function render(){
     if(r.na) st=`<span class="pill na-pill" title="Indicador marcado como N/A: ${naRule()}">N/A</span>`;
     else if(r.avg===null||r.meta===null) st=`<span class="pill wait">${r.avg===null?"Sem dados":"Sem meta"}</span>`;
     else if(r.met) st=`<span class="pill ok">Na meta</span>`;
-    else st=`<span class="pill no">Fora</span>`;
+    else st=`<span class="pill no">Fora</span>${ajuda(oQueFalta(r))}`;
     $("st-"+k.id).innerHTML=st;
   }
   $("sub-efi").textContent=`${nf(c.tot.efi)}% de ${nf(maxOf("efi")-c.naW.efi)}%`;
@@ -370,7 +370,12 @@ function render(){
   for(const k of sheAtivos()){
     const r=c.she[k.id];
     const txt=k.kind==="psif"?(r.soma?r.soma+" PSIF":"Zero"):fmt(r.avg,"");
-    $("st-"+k.id).innerHTML=!r.n?`<span class="pill wait">Sem dados</span>`:r.meta==null?`<span class="pill wait">Sem meta</span>`:`<span class="pill ${r.fail?"no":"ok"}">${txt}</span>`;
+    let falta="";
+    if(r.fail&&k.kind!=="psif"){ // TRI e novos: média dos meses que faltam para a média do trimestre voltar à meta
+      const rem=3-r.n, req=rem>0?(r.meta*3-r.soma)/rem:null;
+      falta=rem<=0?"O trimestre já fechou acima da meta.":req<0?"Não dá mais para voltar à meta neste trimestre.":`Para voltar à meta: ≤ ${fmt(req,"")} ${rem>1?"em média nos próximos "+rem+" meses":"no próximo mês"}.`;
+    } else if(r.fail) falta="Com PSIF no trimestre, o site fica em Não classifica.";
+    $("st-"+k.id).innerHTML=!r.n?`<span class="pill wait">Sem dados</span>`:r.meta==null?`<span class="pill wait">Sem meta</span>`:`<span class="pill ${r.fail?"no":"ok"}">${txt}</span>${r.fail?ajuda(falta):""}`;
   }
   const wWarn=$("w-warn");wWarn.hidden=false;
   wWarn.innerHTML=Math.abs(c.totalW-100)<1e-6?`<span class="pill ok">Soma dos pesos: 100%</span>`:`<span class="pill no">Soma dos pesos: ${nf(c.totalW)}%</span> Ajuste para fechar 100%.`;
@@ -384,21 +389,19 @@ function render(){
   $("ruler-marker").style.left=Math.max(0,Math.min(100,score))+"%";
   document.querySelectorAll(".tier").forEach(el=>el.classList.toggle("on",el.dataset.name===t.name));
 
-  const idx=TIERS.indexOf(t); let html="";
-  if(zeroed) html=`<b>SHE não cumprido: o site cai automaticamente em Não classifica.</b> Os outros indicadores somam ${nf(score)}%, o que daria ${tierOf(score).name} se o SHE estivesse em dia.`;
-  else if(idx===TIERS.length-1) html=`<b>Faixa máxima.</b> Sobram ${nf(score-93)}% acima do corte de Platina (93%).`;
-  else{
-    const nt=TIERS[idx+1], gap=nt.min-score;
-    const cand=kpisAtivos().filter(k=>!c.res[k.id].ok&&c.res[k.id].need&&c.res[k.id].need.t!=="impossível"&&c.res[k.id].avg!==null).sort((a,b)=>wOf(b)-wOf(a));
-    const recuperavel=cand.reduce((a,k)=>a+wOf(k),0);
-    html=`<b>Faltam ${nf(gap)}% para ${nt.name} (${nt.min}%).</b> `;
-    if(cand.length){
-      html+=recuperavel>=gap?`Dá para chegar recuperando:`:`Os indicadores ainda recuperáveis somam ${nf(recuperavel)}%, o que não basta para ${nt.name}:`;
-      html+=`<ul>`+cand.slice(0,5).map(k=>`<li>${k.tag==="BPP"?"BPP · ":""}${esc(nameOf(k))} (+${nf(wOf(k))}%): ${c.res[k.id].need.t} ${c.res[k.id].rem>1?"nos próximos "+c.res[k.id].rem+" meses":"no próximo mês"}</li>`).join("")+`</ul>`;
-    } else if(c.comDados) html+=`Não há indicadores recuperáveis neste trimestre com os meses que faltam.`;
-    else html+=`Lance os resultados do mês para ver o que falta.`;
-  }
-  $("next").innerHTML=html;
+  $("next").hidden=true; // a caixa "Faltam X% para…" saiu; o "?" ao lado de cada status Fora mostra o que falta
+}
+
+/* "?" ao lado do status Fora: quanto o indicador precisa fechar para entrar na meta */
+function oQueFalta(r){
+  if(!r.rem)return "O trimestre já tem os 3 meses lançados: não dá mais para entrar na meta.";
+  if(!r.need)return "";
+  if(r.need.t==="impossível")return "Não dá mais para entrar na meta neste trimestre, mesmo com o melhor resultado.";
+  if(r.need.t==="garantido")return "Qualquer resultado no próximo mês já coloca na meta.";
+  return `Para entrar na meta: ${r.need.t} ${r.rem>1?"em média nos próximos "+r.rem+" meses":"no próximo mês"}.`;
+}
+function ajuda(txt){
+  return txt?`<button type="button" class="q-falta" title="${esc(txt)}" aria-label="O que falta para entrar na meta">?</button><span class="q-texto" hidden>${esc(txt)}</span>`:"";
 }
 
 /* ==========================================================
@@ -642,6 +645,7 @@ function ligarCalculadora(){
   function setOpen(tr,on){tr.classList.toggle("aberto",on);const b=tr.querySelector(".k-toggle");if(b)b.setAttribute("aria-expanded",on);}
   main.addEventListener("click",e=>{
     const mv=e.target.closest(".mv");if(mv){moverIndicador(mv.dataset.g,mv.dataset.u,+mv.dataset.d);return;}
+    const q=e.target.closest(".q-falta");if(q){const t=q.nextElementSibling;if(t)t.hidden=!t.hidden;return;}
     const dir=e.target.closest(".dir");if(dir){trocarSentido(dir.dataset.k);return;}
     const rm=e.target.closest(".rm");if(rm){armar(rm,"Excluir?",()=>excluirIndicador(rm.dataset.u));return;}
     const add=e.target.closest(".add-ind");if(add){novoIndicador(add.dataset.g);return;}
