@@ -323,3 +323,8 @@
 @media (max-width:600px){
 #aba-pel .she-row{grid-template-columns:minmax(0,1fr) 50px repeat(3,52px) 70px;gap:5px}
 }
+/* Símbolo do sentido da meta (≥ ou ≤): só clicável em Editar indicadores */
+#aba-pel .dir{font-weight:700}
+#aba-pel .dir:disabled{cursor:default;background:transparent;border-color:transparent;opacity:1;color:var(--preto)}
+#aba-pel.editing .dir{border-color:var(--cinza-campo);background:var(--branco)}
+#aba-pel.editing .dir:hover{background:var(--amarelo-claro);border-color:var(--preto)}

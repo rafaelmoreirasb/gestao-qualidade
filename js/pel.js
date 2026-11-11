@@ -102,7 +102,8 @@ function normConfig(d){
     meses:Array.isArray(d.meses)&&d.meses.length===3?d.meses:MESES_PADRAO.slice(),
     ordem:d.ordem&&typeof d.ordem==="object"?d.ordem:{},
     extras:Array.isArray(d.extras)?d.extras:[],        // indicadores criados pelo Administrador
-    removidos:Array.isArray(d.removidos)?d.removidos:[]}; // indicadores excluídos (os valores ficam guardados)
+    removidos:Array.isArray(d.removidos)?d.removidos:[], // indicadores excluídos (os valores ficam guardados)
+    dirs:d.dirs&&typeof d.dirs==="object"?d.dirs:{}};   // sentido da meta: "min" (≤, menor é melhor) ou "max" (≥)
   // A meta do TRI ficava em "Meta TRI do site" (triMeta); agora fica na linha do TRI.
   // triMeta continua sendo gravado junto, para a versão anterior do app ainda funcionar se for preciso voltar.
   if(c.triMeta!=null&&c.metas.she_tri===undefined)c.metas.she_tri=c.triMeta;
@@ -126,6 +127,11 @@ function defOf(k){return CONFIG.defs[k.id]!==undefined?CONFIG.defs[k.id]:k.def}
 function formOf(k){return CONFIG.forms[k.id]!==undefined?CONFIG.forms[k.id]:k.form}
 function wOf(k){const w=CONFIG.weights[k.id];return (w!==null&&w!==undefined)?w:k.w}
 function maxOf(g){return kpisAtivos().filter(k=>k.p===g).reduce((a,k)=>a+wOf(k),0)}
+/* Sentido da meta: o BPP (perda) é "quanto menor, melhor" (≤); os outros, "quanto maior, melhor" (≥).
+   O Administrador pode trocar qualquer um clicando no símbolo, em Editar indicadores. */
+function dirPadrao(k){return k.grp==="bpp"?"min":"max";}
+function dirOf(k){return CONFIG.dirs[k.id]==="min"||CONFIG.dirs[k.id]==="max"?CONFIG.dirs[k.id]:dirPadrao(k);}
+function simboloDir(k){return dirOf(k)==="min"?"≤":"≥";}
 function metaOf(k){const m=CONFIG.metas[k.id];return (m!==null&&m!==undefined)?m:(k.fixedMeta!==undefined?k.fixedMeta:null)}
 function naRule(){return {ignore:"ignorado no cálculo (o peso sai da conta)",zero:"conta como 0% do peso",full:"conta como 100% do peso"}[CONFIG.naMode]||""}
 
@@ -139,13 +145,15 @@ function evalKpi(k,d){
   const filled=vals.filter(v=>v!==null&&v!==undefined&&v!=="");
   const n=filled.length, sum=filled.reduce((a,b)=>a+b,0);
   const avg=n?sum/n:null;
+  const menor=dirOf(k)==="min";
   let met=null;
-  if(avg!==null&&meta!==null) met=avg>=meta-1e-9;
+  if(avg!==null&&meta!==null) met=menor?avg<=meta+1e-9:avg>=meta-1e-9;
   const ok=met===true;
   let need=null; const rem=3-n;
   if(rem>0&&n>0&&meta!==null){
-    const req=(meta*3-sum)/rem;
-    need=req<=0?{t:"garantido"}:req>100?{t:"impossível"}:{t:"≥ "+fmt(req,"%"),req};
+    const req=(meta*3-sum)/rem; // média que os meses que faltam precisam ter
+    if(menor) need=req<0?{t:"impossível"}:{t:"≤ "+fmt(req,"%"),req};
+    else need=req<=0?{t:"garantido"}:req>100?{t:"impossível"}:{t:"≥ "+fmt(req,"%"),req};
   }
   return {meta,avg,n,met,ok,need,pts:ok?wOf(k):0,rem};
 }
@@ -214,7 +222,7 @@ function buildTable(){
         html+=`<tr class="${isSub?"sub":""}" data-u="${u}">
         <td class="k-cell">${celulaIndicador(k,isSub?"":g)}</td>
         <td class="c in"><input class="w-in" id="w-${k.id}" inputmode="decimal" readonly aria-label="Peso ${esc(nameOf(k))}"></td>
-        <td class="in c"><div class="meta-cell"><input id="meta-${k.id}" class="meta-in" inputmode="decimal" placeholder="—" readonly aria-label="Meta ${esc(nameOf(k))}"></div></td>
+        <td class="in c"><div class="meta-cell"><button type="button" class="dir" id="dir-${k.id}" data-k="${k.id}" disabled title="≥ = quanto maior, melhor · ≤ = quanto menor, melhor (troque em Editar indicadores)">${simboloDir(k)}</button><input id="meta-${k.id}" class="meta-in" inputmode="decimal" placeholder="—" readonly aria-label="Meta ${esc(nameOf(k))}"></div></td>
         ${[0,1,2].map(i=>`<td class="in c"><input id="v-${k.id}-${i}" class="v-in" inputmode="text" placeholder="—" aria-label="${esc(nameOf(k))} mês ${i+1}"></td>`).join("")}
         <td class="r"><span class="avg" id="avg-${k.id}">—</span><div class="avg-n" id="avgn-${k.id}"></div></td>
         <td class="c" id="st-${k.id}"></td>
@@ -283,6 +291,14 @@ function moverIndicador(g,u,d){
   CONFIG.ordem[g]=ordem;
   reconstruir();gravarConfig();
 }
+function trocarSentido(id){
+  if(!podeEditarCfg()||!$("aba-pel").classList.contains("editing"))return;
+  const k=todosKpis().find(x=>x.id===id);if(!k)return;
+  const novo=dirOf(k)==="min"?"max":"min";
+  if(novo===dirPadrao(k))delete CONFIG.dirs[id]; else CONFIG.dirs[id]=novo;
+  $("dir-"+id).textContent=simboloDir(k);
+  gravarConfig();render();
+}
 function novoIndicador(g){
   if(!podeEditarCfg())return;
   const id="x"+Date.now().toString(36);
@@ -310,7 +326,7 @@ function fillConfig(){
     $("vdef-"+k.id).innerHTML=rich(defOf(k));$("def-"+k.id).value=defOf(k);
     $("vform-"+k.id).innerHTML=rich(formOf(k));$("form-"+k.id).value=formOf(k);
   }
-  for(const k of kpisAtivos()){ $("meta-"+k.id).value=fmtPct(metaOf(k)); $("w-"+k.id).value=fmtPct(wOf(k)); }
+  for(const k of kpisAtivos()){ $("meta-"+k.id).value=fmtPct(metaOf(k)); $("w-"+k.id).value=fmtPct(wOf(k)); $("dir-"+k.id).textContent=simboloDir(k); }
   for(const k of sheAtivos()){ $("meta-"+k.id).value=fmtIn(metaOf(k)); }
   $("na-mode").value=CONFIG.naMode;
 }
@@ -585,6 +601,7 @@ function ligarCalculadora(){
   function setOpen(tr,on){tr.classList.toggle("aberto",on);const b=tr.querySelector(".k-toggle");if(b)b.setAttribute("aria-expanded",on);}
   main.addEventListener("click",e=>{
     const mv=e.target.closest(".mv");if(mv){moverIndicador(mv.dataset.g,mv.dataset.u,+mv.dataset.d);return;}
+    const dir=e.target.closest(".dir");if(dir){trocarSentido(dir.dataset.k);return;}
     const rm=e.target.closest(".rm");if(rm){armar(rm,"Excluir?",()=>excluirIndicador(rm.dataset.u));return;}
     const add=e.target.closest(".add-ind");if(add){novoIndicador(add.dataset.g);return;}
     const volta=e.target.closest(".chip-volta");if(volta){voltarIndicador(volta.dataset.u);return;}
@@ -614,11 +631,12 @@ function ligarCalculadora(){
 /* Liga ou desliga o modo "Editar indicadores" (só Administrador) */
 function modoEdicao(on){
   document.querySelectorAll("#aba-pel .meta-in, #aba-pel .w-in, #aba-pel .lock-in").forEach(el=>{el.readOnly=!on;});
+  document.querySelectorAll("#aba-pel .dir").forEach(el=>{el.disabled=!on;});
   $("na-mode").disabled=!on;
   $("aba-pel").classList.toggle("editing",on);
   $("btn-edit").textContent=on?"Concluir edição":"Editar indicadores";
   $("btn-reset-txt").hidden=!on;
-  $("table-note").textContent=on?"Os campos amarelos podem ser editados e valem para todos os sites. ▲▼ mudam a ordem, ✕ exclui (clique duas vezes) e + Novo indicador, no fim de cada bloco, acrescenta. Para destacar em negrito, selecione o texto e clique em N (ou Ctrl+B).":"Regra: média do trimestre igual ou maior que a meta soma 100% do peso. Abaixo da meta, soma 0%. Digite N/A no mês para marcar o indicador como não aplicável.";
+  $("table-note").textContent=on?"Os campos amarelos podem ser editados e valem para todos os sites. Clique em ≥/≤ para trocar o sentido da meta. ▲▼ mudam a ordem, ✕ exclui (clique duas vezes) e + Novo indicador, no fim de cada bloco, acrescenta. Para destacar em negrito, selecione o texto e clique em N (ou Ctrl+B).":"Regra: média do trimestre dentro da meta soma 100% do peso; fora, soma 0%. ≥ = quanto maior, melhor (média igual ou maior que a meta). ≤ = quanto menor, melhor (média igual ou menor que a meta, ex.: BPP). Digite N/A no mês para marcar o indicador como não aplicável.";
 }
 /* Segurança, Eficiência e Processos começam sempre fechados */
 function fecharBlocos(){
