@@ -329,20 +329,16 @@
 #aba-pel.editing .dir{border-color:var(--cinza-campo);background:var(--branco)}
 #aba-pel.editing .dir:hover{background:var(--amarelo-claro);border-color:var(--preto)}
 
-/* ---------- Visão geral: seta que mostra o TRI de cada mês (começa fechada) ---------- */
+/* ---------- Visão geral: seta que mostra o resultado de cada mês (começa fechada) ---------- */
 #aba-pel .tabela-geral .col-exp{width:36px;min-width:36px;padding-right:0}
 #aba-pel .vg-exp{width:24px;height:24px;display:grid;place-items:center;padding:0;border:1px solid var(--cinza-borda);border-radius:var(--raio);background:var(--branco);color:var(--preto);cursor:pointer;transition:transform .2s}
 #aba-pel .vg-exp:hover{background:var(--amarelo-claro)}
 #aba-pel .tabela-geral tr.aberto .vg-exp{transform:rotate(90deg)}
-#aba-pel .tabela-geral tbody tr.vg-det{cursor:default}
-#aba-pel .tabela-geral tbody tr.vg-det:hover td{background:inherit}
-#aba-pel .tabela-geral tbody tr.vg-det td{background:var(--amarelo-claro)!important;border-bottom:1px solid var(--cinza-borda)}
-#aba-pel .vg-tri{display:flex;flex-wrap:wrap;gap:6px 22px;align-items:center;font-size:13px}
-#aba-pel .vg-mes{white-space:nowrap}
-#aba-pel .vg-rot{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--cinza-texto)}
-/* listra das linhas: conta só as linhas dos sites (a linha do TRI fica escondida entre elas) */
-#aba-pel .tabela-geral tbody tr:nth-child(even):not(.vg-det) td{background:transparent}
-#aba-pel .tabela-geral tbody tr:nth-child(4n+3) td{background:var(--cinza-zebra)}
+/* linhas dos meses (abrem com a seta) */
+#aba-pel .tabela-geral tbody tr.vg-mes-linha{cursor:default}
+#aba-pel .tabela-geral tbody tr.vg-mes-linha td{background:var(--amarelo-claro)!important;border-bottom:1px solid var(--cinza-borda);font-size:12px}
+#aba-pel .tabela-geral .vg-mes-nome{font-weight:700}
+/* listra: só nas linhas dos sites */
+#aba-pel .tabela-geral tbody tr:nth-child(even) td{background:transparent}
+#aba-pel .tabela-geral tbody tr.listra td{background:var(--cinza-zebra)}
 #aba-pel .tabela-geral tbody tr[data-site]:hover td{background:var(--amarelo-claro)}
-#aba-pel .tabela-geral tbody tr.vg-det td{white-space:normal}
-#aba-pel .tabela-geral tbody tr.vg-det td{padding-left:52px}

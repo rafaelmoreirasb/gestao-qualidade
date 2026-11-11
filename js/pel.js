@@ -493,25 +493,36 @@ async function carregarVisao(){
   linhas.forEach(x=>{if(x.c&&x.c.comDados)cont[x.c.t.name]++;});
   $("visao-contagem").innerHTML=TIERS.map(t=>`<div class="cont"><img src="${MEDALS[t.name]}" alt=""><div><div class="n">${cont[t.name]}</div><div class="r">${t.name}<br>${t.range}</div></div></div>`).join("");
   linhas.sort((a,b)=>(b.c&&b.c.comDados?b.c.score:-1)-(a.c&&a.c.comDados?a.c.score:-1));
-  $("visao-tbody").innerHTML=linhas.length?linhas.map(({s,l,c})=>{
+  $("visao-tbody").innerHTML=linhas.length?linhas.map(({s,l,c},idx)=>{
     const tem=c&&c.comDados;
     const she=!c?`<span class="pill wait">—</span>`:c.sheFail?`<span class="pill no">Não cumprido</span>`:c.sheOk?`<span class="pill ok">Cumprido</span>`:`<span class="pill wait">Pendente</span>`;
-    return `<tr data-site="${esc(s.codigo)}"><td class="col-exp"><button type="button" class="vg-exp" aria-expanded="false" aria-label="Ver o TRI de cada mês" title="Ver o TRI de cada mês">${CHEV}</button></td><td class="col-reg">${esc(s.regional||"—")}</td><td class="c"><b>${esc(s.codigo)}</b>${s.nome?" · "+esc(s.nome):""}</td><td class="c">${esc(CONFIG.periodo)}</td>
+    return `<tr data-site="${esc(s.codigo)}" class="${idx%2?"listra":""}"><td class="col-exp"><button type="button" class="vg-exp" aria-expanded="false" aria-label="Ver o resultado de cada mês" title="Ver o resultado de cada mês">${CHEV}</button></td><td class="col-reg">${esc(s.regional||"—")}</td><td class="c"><b>${esc(s.codigo)}</b>${s.nome?" · "+esc(s.nome):""}</td><td class="c">${esc(CONFIG.periodo)}</td>
       <td class="c">${she}</td><td class="c num">${tem?nf(c.tot.efi)+"%":"—"}</td><td class="c num">${tem?nf(c.tot.proc)+"%":"—"}</td>
       <td class="c num"><b>${tem?nf(c.score)+"%":"—"}</b></td><td>${tem?`<img class="med" src="${MEDALS[c.t.name]}" alt="">${c.t.name}`:`<span class="nota">Sem lançamentos</span>`}</td>
       <td class="pequeno">${l?dataHora(l.atualizado_em):"—"}</td><td class="pequeno">${l&&l.atualizado_por?esc(nomes[l.atualizado_por]||"—"):"—"}</td></tr>
-      <tr class="vg-det" hidden><td colspan="11">${detalheTri(l,c)}</td></tr>`;
+      ${linhasMeses(s,l)}`;
   }).join(""):`<tr><td colspan="11" class="vazio">Nenhum site cadastrado ainda. Os sites aparecem quando as pessoas criam a conta.</td></tr>`;
 }
 
-/* Linha que abre embaixo de cada site: o TRI de cada mês, a meta e a média */
-function detalheTri(l,c){
-  const tri=sheAtivos().find(k=>k.id==="she_tri");
-  if(!tri)return `<span class="nota">O TRI foi excluído dos indicadores da Segurança.</span>`;
-  const v=l?sheVals(l.dados||{},"she_tri"):[], meta=metaOf(tri), r=c&&c.she?c.she.she_tri:null;
-  const mes=i=>{const x=v[i];return `<span class="vg-mes"><span class="vg-rot">${esc(CONFIG.meses[i])}</span> <b class="num">${x===null||x===undefined||x===""?"—":fmt(x,"")}</b></span>`;};
-  const st=!r||!r.n?`<span class="pill wait">Sem dados</span>`:r.meta==null?`<span class="pill wait">Sem meta</span>`:`<span class="pill ${r.fail?"no":"ok"}">${r.fail?"Acima da meta":"Dentro da meta"}</span>`;
-  return `<div class="vg-tri"><b>${esc(nameOf(tri))}</b>${[0,1,2].map(mes).join("")}<span class="vg-mes"><span class="vg-rot">Média</span> <b class="num">${r&&r.avg!=null?fmt(r.avg,""):"—"}</b></span><span class="vg-mes"><span class="vg-rot">Meta</span> <b class="num">${meta==null?"—":"≤ "+fmtIn(meta)}</b></span>${st}</div>`;
+/* Lançamento de um mês só (posição 0, 1 ou 2): mesma conta do trimestre, usando só aquele mês */
+function dadosDoMes(d,i){
+  const um=a=>{const v=(a||[])[i];return v===undefined?[]:[v];};
+  const out={vals:{},psif:um(d.psif),tri:um(d.tri),she:{}};
+  Object.keys(d.vals||{}).forEach(id=>{out.vals[id]=um(d.vals[id]);});
+  Object.keys(d.she||{}).forEach(id=>{out.she[id]=um(d.she[id]);});
+  return out;
+}
+/* Três linhas que abrem embaixo de cada site (começam fechadas): resultado de cada mês */
+function linhasMeses(s,l){
+  return [0,1,2].map(i=>{
+    const c=l?calcular(dadosDoMes(Object.assign(blankState(),l.dados||{}),i)):null;
+    const tem=c&&c.comDados;
+    const temShe=c&&sheAtivos().some(k=>c.she[k.id]&&c.she[k.id].n);
+    const she=!temShe?`<span class="pill wait">—</span>`:c.sheFail?`<span class="pill no">Não cumprido</span>`:c.sheOk?`<span class="pill ok">Cumprido</span>`:`<span class="pill wait">Pendente</span>`;
+    return `<tr class="vg-mes-linha" data-pai="${esc(s.codigo)}" hidden><td class="col-exp"></td><td class="col-reg"></td><td class="c vg-mes-nome">${esc(CONFIG.meses[i])}</td><td class="c pequeno">mês ${i+1}</td>
+      <td class="c">${she}</td><td class="c num">${tem?nf(c.tot.efi)+"%":"—"}</td><td class="c num">${tem?nf(c.tot.proc)+"%":"—"}</td>
+      <td class="c num"><b>${tem?nf(c.score)+"%":"—"}</b></td><td>${tem?`<img class="med" src="${MEDALS[c.t.name]}" alt="">${c.t.name}`:`<span class="nota">Sem lançamento</span>`}</td><td></td><td></td></tr>`;
+  }).join("");
 }
 
 /* ---------- Usuários ---------- */
@@ -662,9 +673,10 @@ function ligarAdmin(){
   $("pel-menu").addEventListener("click",e=>{const b=e.target.closest("button[data-sub]");if(b)mostrarSub(b.dataset.sub);});
   $("visao-tbody").addEventListener("click",e=>{
     const exp=e.target.closest(".vg-exp");
-    if(exp){ // seta: abre/fecha o TRI de cada mês, sem abrir a calculadora
-      const det=exp.closest("tr").nextElementSibling, abrir=det.hidden;
-      det.hidden=!abrir;exp.setAttribute("aria-expanded",abrir);exp.closest("tr").classList.toggle("aberto",abrir);return;
+    if(exp){ // seta: abre/fecha as linhas dos 3 meses, sem abrir a calculadora
+      const tr=exp.closest("tr"), abrir=!tr.classList.contains("aberto");
+      document.querySelectorAll(`#visao-tbody tr.vg-mes-linha[data-pai="${CSS.escape(tr.dataset.site)}"]`).forEach(m=>{m.hidden=!abrir;});
+      exp.setAttribute("aria-expanded",abrir);tr.classList.toggle("aberto",abrir);return;
     }
     const tr=e.target.closest("tr[data-site]");if(!tr)return;mostrarSub("calc");abrirSite(tr.dataset.site);
   });
