@@ -127,9 +127,10 @@ function defOf(k){return CONFIG.defs[k.id]!==undefined?CONFIG.defs[k.id]:k.def}
 function formOf(k){return CONFIG.forms[k.id]!==undefined?CONFIG.forms[k.id]:k.form}
 function wOf(k){const w=CONFIG.weights[k.id];return (w!==null&&w!==undefined)?w:k.w}
 function maxOf(g){return kpisAtivos().filter(k=>k.p===g).reduce((a,k)=>a+wOf(k),0)}
-/* Sentido da meta: o BPP (perda) é "quanto menor, melhor" (≤); os outros, "quanto maior, melhor" (≥).
+/* Sentido da meta: BPP (perda) e Delay (atraso: Delay GM, Delay H&B e qualquer indicador com "Delay"
+   no nome) são "quanto menor, melhor" (≤); os outros, "quanto maior, melhor" (≥).
    O Administrador pode trocar qualquer um clicando no símbolo, em Editar indicadores. */
-function dirPadrao(k){return k.grp==="bpp"?"min":"max";}
+function dirPadrao(k){return k.grp==="bpp"||k.id==="dgm"||/delay/i.test(nameOf(k))?"min":"max";}
 function dirOf(k){return CONFIG.dirs[k.id]==="min"||CONFIG.dirs[k.id]==="max"?CONFIG.dirs[k.id]:dirPadrao(k);}
 function simboloDir(k){return dirOf(k)==="min"?"≤":"≥";}
 function metaOf(k){const m=CONFIG.metas[k.id];return (m!==null&&m!==undefined)?m:(k.fixedMeta!==undefined?k.fixedMeta:null)}
@@ -563,7 +564,7 @@ function ligarCalculadora(){
     if((m=id.match(/^(name|def|form)-(.+)$/))){
       const k=acharIndicador(m[2]);if(!k||!podeEditarCfg())return;
       const v=e.target.value;
-      if(m[1]==="name"){ if(v.trim()===""||v===k.name)delete CONFIG.names[k.id]; else CONFIG.names[k.id]=v; $("vname-"+k.id).textContent=nameOf(k); }
+      if(m[1]==="name"){ if(v.trim()===""||v===k.name)delete CONFIG.names[k.id]; else CONFIG.names[k.id]=v; $("vname-"+k.id).textContent=nameOf(k); $("dir-"+k.id).textContent=simboloDir(k); }
       else if(m[1]==="def"){ if(v===k.def)delete CONFIG.defs[k.id]; else CONFIG.defs[k.id]=v; $("vdef-"+k.id).innerHTML=rich(defOf(k)); }
       else { if(v===k.form)delete CONFIG.forms[k.id]; else CONFIG.forms[k.id]=v; $("vform-"+k.id).innerHTML=rich(formOf(k)); }
       gravarConfig();render();return;
@@ -636,7 +637,7 @@ function modoEdicao(on){
   $("aba-pel").classList.toggle("editing",on);
   $("btn-edit").textContent=on?"Concluir edição":"Editar indicadores";
   $("btn-reset-txt").hidden=!on;
-  $("table-note").textContent=on?"Os campos amarelos podem ser editados e valem para todos os sites. Clique em ≥/≤ para trocar o sentido da meta. ▲▼ mudam a ordem, ✕ exclui (clique duas vezes) e + Novo indicador, no fim de cada bloco, acrescenta. Para destacar em negrito, selecione o texto e clique em N (ou Ctrl+B).":"Regra: média do trimestre dentro da meta soma 100% do peso; fora, soma 0%. ≥ = quanto maior, melhor (média igual ou maior que a meta). ≤ = quanto menor, melhor (média igual ou menor que a meta, ex.: BPP). Digite N/A no mês para marcar o indicador como não aplicável.";
+  $("table-note").textContent=on?"Os campos amarelos podem ser editados e valem para todos os sites. Clique em ≥/≤ para trocar o sentido da meta. ▲▼ mudam a ordem, ✕ exclui (clique duas vezes) e + Novo indicador, no fim de cada bloco, acrescenta. Para destacar em negrito, selecione o texto e clique em N (ou Ctrl+B).":"Regra: média do trimestre dentro da meta soma 100% do peso; fora, soma 0%. ≥ = quanto maior, melhor (média igual ou maior que a meta). ≤ = quanto menor, melhor (média igual ou menor que a meta, ex.: BPP e Delay). Digite N/A no mês para marcar o indicador como não aplicável.";
 }
 /* Segurança, Eficiência e Processos começam sempre fechados */
 function fecharBlocos(){
