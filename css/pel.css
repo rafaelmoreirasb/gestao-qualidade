@@ -359,3 +359,5 @@
 #aba-pel #site-fixo{font-size:22px}
 #aba-pel .barra-site select{font-size:17px}
 }
+/* Selo "Soma dos pesos" no fim da calculadora */
+#aba-pel .soma-pesos{display:flex;justify-content:flex-end;margin-top:-6px}

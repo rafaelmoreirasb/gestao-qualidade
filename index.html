@@ -956,7 +956,6 @@
 
         <div class="barra-edicao">
           <label class="na-sel" for="na-mode">N/A nos meses <select id="na-mode" disabled><option value="ignore">Ignora o indicador</option><option value="zero">Conta 0%</option><option value="full">Conta 100%</option></select></label>
-          <span class="nota" id="w-warn" hidden></span>
           <span class="nota" id="table-note" data-x="1">Regra: média do trimestre igual ou maior que a meta soma 100% do peso. Abaixo da meta, soma 0%. Digite N/A no mês para marcar o indicador como não aplicável.</span>
           <button class="btn-ghost" id="btn-reset-txt" type="button" hidden>Restaurar padrão</button>
           <button class="btn-ghost" id="btn-expand" type="button">Expandir todos</button>
@@ -998,6 +997,8 @@
             </div>
           </div>
         </details>
+        <!-- Soma dos pesos de Eficiência + Processos: no fim da calculadora -->
+        <div class="soma-pesos"><span class="nota" id="w-warn" hidden></span></div>
           </section>
           <section class="pel-sub" id="pel-visao" hidden>
         <div class="painel-cartao-topo"><h2 class="subtitulo">Visão geral dos sites</h2><span class="nota" id="visao-periodo"></span></div>

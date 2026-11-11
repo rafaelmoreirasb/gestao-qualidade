@@ -472,6 +472,7 @@ function prepararApp(){
   // Analista também não vê o texto da regra, o botão "Expandir todos" nem a nota da Classificação
   $("table-note").hidden=p==="analista";
   $("btn-expand").hidden=p==="analista";
+  const barra=document.querySelector("#pel-calc .barra-edicao");if(barra)barra.hidden=p==="analista"; // para o Analista ela fica vazia
   const notaMedia=document.querySelector("#pel-calc .painel-cartao-topo .nota");if(notaMedia)notaMedia.hidden=p==="analista";
   const escolhe=p==="gestao"||p==="admin";
   $("site-escolha").hidden=!escolhe;$("site-fixo").hidden=escolhe;
