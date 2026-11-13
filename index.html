@@ -182,7 +182,7 @@
             </div>
             <div class="mapa-legenda-item">
               <div class="legenda-quadro legenda-sem"></div>
-              <span>Sem registro</span>
+              <span>Sem desvio nem treino</span>
             </div>
           </div>
           <div class="mapa-resumo" id="painel-dia" aria-live="polite"></div>
@@ -213,6 +213,14 @@
               <div class="ficha-rotulo">Desvios</div>
             </div>
             <div class="ficha-numero">
+              <div class="ficha-valor ficha-verde" id="painel-ficha-con">0</div>
+              <div class="ficha-rotulo">Conformes</div>
+            </div>
+            <div class="ficha-numero">
+              <div class="ficha-valor" id="painel-ficha-taxa">—</div>
+              <div class="ficha-rotulo">Conformidade</div>
+            </div>
+            <div class="ficha-numero">
               <div class="ficha-valor" id="painel-ficha-tre">0</div>
               <div class="ficha-rotulo">Treinamentos</div>
             </div>
@@ -229,7 +237,7 @@
             <div class="mapa-legenda-item"><div class="legenda-quadro legenda-treino"></div><span>Treinamento</span></div>
             <div class="mapa-legenda-item"><div class="legenda-quadro legenda-dividido"></div><span>Desvio e treinamento</span></div>
             <div class="mapa-legenda-item"><div class="legenda-quadro legenda-agendado"></div><span>Treinamento agendado</span></div>
-            <div class="mapa-legenda-item"><div class="legenda-quadro legenda-sem"></div><span>Sem registro</span></div>
+            <div class="mapa-legenda-item"><div class="legenda-quadro legenda-sem"></div><span>Sem desvio nem treino</span></div>
             <div class="mapa-legenda-item"><div class="legenda-quadro legenda-tracejado"></div><span>Dias futuros / antes do início</span></div>
           </div>
           <div class="mapa-resumo" id="painel-pessoa-dia" aria-live="polite"></div>
@@ -242,6 +250,12 @@
 
         <div class="gemba-linha">
           <section class="cartao gemba-form" aria-label="Novo registro">
+
+            <!-- O que foi observado: Desvio (erro) ou Conforme (fazendo certo) -->
+            <div class="gemba-resultado-escolha" role="group" aria-label="Resultado da observação">
+              <button type="button" class="gemba-res gemba-res-desvio marcado" id="gemba-res-desvio" data-resultado="Desvio" aria-pressed="true">❌ Desvio</button>
+              <button type="button" class="gemba-res gemba-res-conforme" id="gemba-res-conforme" data-resultado="Conforme" aria-pressed="false">✅ Conforme</button>
+            </div>
 
             <!-- Passo 1: colaboradores (opcional; lista que começa fechada) -->
             <div class="gemba-passo">
@@ -270,7 +284,7 @@
             <div class="gemba-passo">
               <div class="gemba-passo-topo">
                 <div class="gemba-numero" aria-hidden="true">2</div>
-                <div class="gemba-passo-titulo">Processo onde o erro foi encontrado</div>
+                <div class="gemba-passo-titulo" id="gemba-proc-titulo">Processo onde o erro foi encontrado</div>
               </div>
               <div class="gemba-processos" id="gemba-processos" role="group" aria-label="Processo"></div>
               <div class="gemba-novo">
@@ -281,7 +295,7 @@
               <div id="gemba-msg-proc" class="mensagem" role="status" hidden></div>
             </div>
 
-            <!-- Passo 3: motivo do erro -->
+            <!-- Passo 3: motivo do erro (só no Desvio) -->
             <div class="gemba-passo apagado" id="gemba-passo3">
               <div class="gemba-passo-topo">
                 <div class="gemba-numero" aria-hidden="true">3</div>
@@ -300,8 +314,8 @@
               </div>
             </div>
 
-            <!-- Passo 4: ação tomada -->
-            <div class="gemba-passo">
+            <!-- Passo 4: ação tomada (só no Desvio) -->
+            <div class="gemba-passo" id="gemba-passo4">
               <div class="gemba-passo-topo">
                 <div class="gemba-numero" aria-hidden="true">4</div>
                 <div class="gemba-passo-titulo">Ação tomada</div>
@@ -352,7 +366,7 @@
             </button>
           </div>
           <div class="gemba-todos-corpo" id="gemba-todos-corpo">
-            <input type="search" id="gemba-todos-busca" class="busca gemba-todos-busca" aria-label="Buscar no Gemba" placeholder="Buscar data, nome, matrícula, processo, motivo ou ação" autocomplete="off">
+            <input type="search" id="gemba-todos-busca" class="busca gemba-todos-busca" aria-label="Buscar no Gemba" placeholder="Buscar data, nome, matrícula, processo, motivo, ação, desvio ou conforme" autocomplete="off">
             <div id="gemba-msg-todos" class="mensagem" role="status" hidden></div>
             <div class="planilha-rolagem gemba-todos-rolagem">
               <div class="planilha planilha-gemba">
@@ -360,6 +374,7 @@
                   <div>Data</div>
                   <div>Hora</div>
                   <div>Pessoas</div>
+                  <div>Resultado</div>
                   <div>Processo</div>
                   <div>Motivo</div>
                   <div>Ação</div>
@@ -371,7 +386,7 @@
                 <div id="gemba-todos-vazio" class="planilha-vazio" hidden></div>
               </div>
             </div>
-            <div class="nota">Uma linha por registro salvo, o mais recente em cima. A coluna Pessoas mostra até 2 nomes (passe o mouse para ver todos); a busca encontra também os nomes escondidos. Em Fotos, clique para ver as miniaturas. Registro sem ninguém marcado aparece como "Sem colaborador". A lixeira serve só para corrigir lançamento feito errado (apaga o registro inteiro e as fotos).</div>
+            <div class="nota">Uma linha por registro salvo, o mais recente em cima. A coluna Resultado mostra ❌ Desvio ou ✅ Conforme (digite "conforme" ou "desvio" na busca, junto com um nome, para ver os de uma pessoa). A coluna Pessoas mostra até 2 nomes (passe o mouse para ver todos); a busca encontra também os nomes escondidos. Em Fotos, clique para ver as miniaturas. Registro sem ninguém marcado aparece como "Sem colaborador". A lixeira serve só para corrigir lançamento feito errado (apaga o registro inteiro e as fotos).</div>
           </div>
         </section>
       </section>

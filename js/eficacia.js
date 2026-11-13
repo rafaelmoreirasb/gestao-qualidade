@@ -110,7 +110,7 @@
     try {
       const [regs, cols, ptr] = await Promise.all([
         lerTudo(() => sb.from('registros_gemba')
-          .select('id, data, colaborador_id, processo, motivo')
+          .select('id, data, resultado, colaborador_id, processo, motivo')
           .order('data', { ascending: true })
           .order('id', { ascending: true })),
         lerTudo(() => sb.from('colaboradores')
@@ -158,7 +158,8 @@
     cols.forEach((c) => { porId[c.id] = c; });
     const grupos = {};   // colaborador|processo|motivo → [dias em ordem]
     // Registro "Sem colaborador" fica de fora: não há pessoa para acompanhar
-    const lista = regs.filter((r) => r.colaborador_id != null).map((r) => {
+    // "Conforme" não é desvio: fica de fora (não é treino nem reincidência)
+    const lista = regs.filter((r) => r.colaborador_id != null && r.resultado !== 'Conforme').map((r) => {
       const dia = diaDe(r.data);
       const chave = r.colaborador_id + '|' + r.processo + '|' + r.motivo;
       (grupos[chave] = grupos[chave] || []).push(dia);

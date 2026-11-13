@@ -3532,3 +3532,85 @@ body.crono-travado { overflow: hidden; }
 }
 
 .gemba-lista-item .gemba-resultado-nome { flex: 1; min-width: 0; }
+
+/* ---------- Gemba: Desvio ou Conforme (alteração 13/11/2026) ---------- */
+
+.gemba-resultado-escolha {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.gemba-res {
+  height: 56px;
+  border: 2px solid var(--cinza-campo);
+  border-radius: var(--raio-cartao);
+  background: var(--branco);
+  color: var(--preto);
+  font-size: 17px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.gemba-res-desvio:hover { background: var(--vermelho-claro); }
+.gemba-res-conforme:hover { background: var(--verde-claro); }
+
+.gemba-res-desvio.marcado {
+  border-color: var(--vermelho);
+  background: var(--vermelho);
+  color: var(--branco);
+}
+
+.gemba-res-conforme.marcado {
+  border-color: var(--verde);
+  background: var(--verde);
+  color: var(--branco);
+}
+
+.gemba-res:disabled { opacity: 0.6; cursor: wait; }
+
+/* No modo Conforme, os números dos passos e o botão Salvar ficam verdes */
+.gemba-modo-conforme .gemba-numero {
+  background: var(--verde-claro);
+  color: var(--verde);
+}
+
+.botao-principal.botao-conforme { background: var(--verde); }
+.botao-principal.botao-conforme:hover:not(:disabled) { background: #14521F; }
+
+/* Selo na coluna Resultado de "Todos os Gemba" */
+.gemba-selo {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.gemba-selo-desvio {
+  background: var(--vermelho-claro);
+  color: var(--vermelho-escuro);
+}
+
+.gemba-selo-conforme {
+  background: var(--verde-claro);
+  color: var(--verde);
+}
+
+/* Tabela ganha a coluna Resultado */
+.planilha-gemba { min-width: 1210px; }
+
+.planilha-gemba .planilha-cabecalho,
+.planilha-gemba .planilha-linha {
+  grid-template-columns: 96px 60px minmax(200px, 1.6fr) 110px 120px minmax(170px, 1.5fr) minmax(150px, 1.2fr) minmax(150px, 1.2fr) 72px 56px;
+}
+
+.gemba-todos-miniaturas { padding-left: 164px; }
+
+/* Painel: número verde na ficha (Conformes) */
+.ficha-verde { color: var(--verde); }
+
+@media (max-width: 600px) {
+  .gemba-res { height: 52px; font-size: 16px; }
+  .gemba-todos-miniaturas { padding-left: 8px; }
+}
