@@ -182,7 +182,7 @@
             </div>
             <div class="mapa-legenda-item">
               <div class="legenda-quadro legenda-sem"></div>
-              <span>Sem registro</span>
+              <span>Sem desvio nem treino</span>
             </div>
           </div>
           <div class="mapa-resumo" id="painel-dia" aria-live="polite"></div>
@@ -213,6 +213,14 @@
               <div class="ficha-rotulo">Desvios</div>
             </div>
             <div class="ficha-numero">
+              <div class="ficha-valor ficha-verde" id="painel-ficha-con">0</div>
+              <div class="ficha-rotulo">Conformes</div>
+            </div>
+            <div class="ficha-numero">
+              <div class="ficha-valor" id="painel-ficha-taxa">—</div>
+              <div class="ficha-rotulo">Conformidade</div>
+            </div>
+            <div class="ficha-numero">
               <div class="ficha-valor" id="painel-ficha-tre">0</div>
               <div class="ficha-rotulo">Treinamentos</div>
             </div>
@@ -229,7 +237,7 @@
             <div class="mapa-legenda-item"><div class="legenda-quadro legenda-treino"></div><span>Treinamento</span></div>
             <div class="mapa-legenda-item"><div class="legenda-quadro legenda-dividido"></div><span>Desvio e treinamento</span></div>
             <div class="mapa-legenda-item"><div class="legenda-quadro legenda-agendado"></div><span>Treinamento agendado</span></div>
-            <div class="mapa-legenda-item"><div class="legenda-quadro legenda-sem"></div><span>Sem registro</span></div>
+            <div class="mapa-legenda-item"><div class="legenda-quadro legenda-sem"></div><span>Sem desvio nem treino</span></div>
             <div class="mapa-legenda-item"><div class="legenda-quadro legenda-tracejado"></div><span>Dias futuros / antes do início</span></div>
           </div>
           <div class="mapa-resumo" id="painel-pessoa-dia" aria-live="polite"></div>
@@ -242,6 +250,21 @@
 
         <div class="gemba-linha">
           <section class="cartao gemba-form" aria-label="Novo registro">
+
+            <!-- O que foi observado: Desvio (erro) ou Conforme (fazendo certo) -->
+            <div class="gemba-resultado-escolha" role="group" aria-label="Resultado da observação">
+              <button type="button" class="gemba-res gemba-res-desvio marcado" id="gemba-res-desvio" data-resultado="Desvio" aria-pressed="true">❌ Desvio</button>
+              <button type="button" class="gemba-res gemba-res-conforme" id="gemba-res-conforme" data-resultado="Conforme" aria-pressed="false">✅ Conforme</button>
+            </div>
+
+            <!-- Dia do Gemba (padrão: hoje; dá para escolher um dia passado) -->
+            <div class="gemba-quando">
+              <label class="gemba-quando-campo">📅 Dia do Gemba
+                <input type="date" id="gemba-dia" required>
+              </label>
+              <button type="button" class="botao botao-contorno gemba-voltar-hoje" id="gemba-voltar-hoje" hidden>Voltar para hoje</button>
+            </div>
+            <div class="gemba-aviso-dia" id="gemba-aviso-dia" role="status" hidden></div>
 
             <!-- Passo 1: colaboradores (opcional; lista que começa fechada) -->
             <div class="gemba-passo">
@@ -270,7 +293,7 @@
             <div class="gemba-passo">
               <div class="gemba-passo-topo">
                 <div class="gemba-numero" aria-hidden="true">2</div>
-                <div class="gemba-passo-titulo">Processo onde o erro foi encontrado</div>
+                <div class="gemba-passo-titulo" id="gemba-proc-titulo">Processo onde o erro foi encontrado</div>
               </div>
               <div class="gemba-processos" id="gemba-processos" role="group" aria-label="Processo"></div>
               <div class="gemba-novo">
@@ -281,7 +304,7 @@
               <div id="gemba-msg-proc" class="mensagem" role="status" hidden></div>
             </div>
 
-            <!-- Passo 3: motivo do erro -->
+            <!-- Passo 3: motivo do erro (só no Desvio) -->
             <div class="gemba-passo apagado" id="gemba-passo3">
               <div class="gemba-passo-topo">
                 <div class="gemba-numero" aria-hidden="true">3</div>
@@ -300,8 +323,8 @@
               </div>
             </div>
 
-            <!-- Passo 4: ação tomada -->
-            <div class="gemba-passo">
+            <!-- Passo 4: ação tomada (só no Desvio) -->
+            <div class="gemba-passo" id="gemba-passo4">
               <div class="gemba-passo-topo">
                 <div class="gemba-numero" aria-hidden="true">4</div>
                 <div class="gemba-passo-titulo">Ação tomada</div>
@@ -352,7 +375,7 @@
             </button>
           </div>
           <div class="gemba-todos-corpo" id="gemba-todos-corpo">
-            <input type="search" id="gemba-todos-busca" class="busca gemba-todos-busca" aria-label="Buscar no Gemba" placeholder="Buscar data, nome, matrícula, processo, motivo ou ação" autocomplete="off">
+            <input type="search" id="gemba-todos-busca" class="busca gemba-todos-busca" aria-label="Buscar no Gemba" placeholder="Buscar data, nome, matrícula, processo, motivo, ação, desvio ou conforme" autocomplete="off">
             <div id="gemba-msg-todos" class="mensagem" role="status" hidden></div>
             <div class="planilha-rolagem gemba-todos-rolagem">
               <div class="planilha planilha-gemba">
@@ -360,6 +383,7 @@
                   <div>Data</div>
                   <div>Hora</div>
                   <div>Pessoas</div>
+                  <div>Resultado</div>
                   <div>Processo</div>
                   <div>Motivo</div>
                   <div>Ação</div>
@@ -371,9 +395,72 @@
                 <div id="gemba-todos-vazio" class="planilha-vazio" hidden></div>
               </div>
             </div>
-            <div class="nota">Uma linha por registro salvo, o mais recente em cima. A coluna Pessoas mostra até 2 nomes (passe o mouse para ver todos); a busca encontra também os nomes escondidos. Em Fotos, clique para ver as miniaturas. Registro sem ninguém marcado aparece como "Sem colaborador". A lixeira serve só para corrigir lançamento feito errado (apaga o registro inteiro e as fotos).</div>
+            <div class="nota">Uma linha por registro salvo, o mais recente em cima. A coluna Resultado mostra ❌ Desvio ou ✅ Conforme (digite "conforme" ou "desvio" na busca, junto com um nome, para ver os de uma pessoa). A coluna Pessoas mostra até 2 nomes (passe o mouse para ver todos); a busca encontra também os nomes escondidos. Em Fotos, clique para ver as miniaturas. Registro sem ninguém marcado aparece como "Sem colaborador". O lápis ✎ abre a edição do registro inteiro (dia, resultado, pessoas, processo, motivo, ação, observação e fotos); registro corrigido mostra ✎ ao lado da data. A lixeira serve só para corrigir lançamento feito errado (apaga o registro inteiro e as fotos).</div>
           </div>
         </section>
+
+        <!-- Janela "Editar registro" (lápis em Todos os Gemba) -->
+        <div class="crono-fundo" id="gemba-editar" hidden>
+          <section class="crono-janela gemba-editar-janela" role="dialog" aria-modal="true" aria-labelledby="ge-titulo">
+            <div class="crono-janela-topo">
+              <div>
+                <h2 class="crono-janela-tema" id="ge-titulo">Editar registro do Gemba</h2>
+                <div class="crono-janela-quando" id="ge-info"></div>
+              </div>
+              <button type="button" class="crono-seta" id="ge-x" aria-label="Fechar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>
+              </button>
+            </div>
+
+            <div class="gemba-resultado-escolha" role="group" aria-label="Resultado da observação">
+              <button type="button" class="gemba-res gemba-res-desvio" id="ge-res-desvio" aria-pressed="false">❌ Desvio</button>
+              <button type="button" class="gemba-res gemba-res-conforme" id="ge-res-conforme" aria-pressed="false">✅ Conforme</button>
+            </div>
+
+            <div class="gemba-quando">
+              <label class="gemba-quando-campo">📅 Dia do Gemba
+                <input type="date" id="ge-dia" required>
+              </label>
+            </div>
+
+            <div class="ge-bloco">
+              <div class="ge-rotulo">Pessoas <span class="gemba-obs-opcional" id="ge-pessoas-cont"></span></div>
+              <input type="search" id="ge-busca" class="gemba-campo" placeholder="Buscar nome ou matrícula" aria-label="Buscar colaborador" autocomplete="off">
+              <div class="gemba-lista" id="ge-lista" role="group" aria-label="Pessoas do registro"></div>
+              <div class="gemba-dica">Desmarque quem não devia estar no registro; marque quem faltou. Sem ninguém marcado, o registro fica "Sem colaborador".</div>
+            </div>
+
+            <label class="ge-campo">Processo
+              <select id="ge-proc"></select>
+            </label>
+            <label class="ge-campo" id="ge-motivo-campo">Motivo do erro
+              <select id="ge-motivo"></select>
+            </label>
+            <label class="ge-campo" id="ge-acao-campo">Ação tomada
+              <select id="ge-acao"></select>
+            </label>
+
+            <label class="gemba-obs">
+              <span>Observação <span class="gemba-obs-opcional">Opcional</span></span>
+              <textarea id="ge-obs" rows="3"></textarea>
+            </label>
+
+            <div class="gemba-fotos">
+              <div class="gemba-fotos-titulo">Fotos <span class="gemba-obs-opcional" id="ge-fotos-cont"></span></div>
+              <div class="gemba-miniaturas" id="ge-fotos"></div>
+              <label class="botao botao-contorno gemba-foto-botao" id="ge-foto-rotulo">
+                <span id="ge-foto-texto">📷 Adicionar fotos</span>
+                <input type="file" id="ge-foto-arquivo" accept="image/*" multiple>
+              </label>
+            </div>
+
+            <div id="ge-msg" class="mensagem" role="status" hidden></div>
+            <div class="ge-botoes">
+              <button type="button" class="botao botao-contorno" id="ge-cancelar">Cancelar</button>
+              <button type="button" class="botao botao-principal" id="ge-salvar">Salvar alterações</button>
+            </div>
+          </section>
+        </div>
       </section>
 
       <!-- ===== Torre de Aduana ===== -->

@@ -3532,3 +3532,230 @@ body.crono-travado { overflow: hidden; }
 }
 
 .gemba-lista-item .gemba-resultado-nome { flex: 1; min-width: 0; }
+
+/* ---------- Gemba: Desvio ou Conforme (alteração 13/11/2026) ---------- */
+
+.gemba-resultado-escolha {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.gemba-res {
+  height: 56px;
+  border: 2px solid var(--cinza-campo);
+  border-radius: var(--raio-cartao);
+  background: var(--branco);
+  color: var(--preto);
+  font-size: 17px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.gemba-res-desvio:hover { background: var(--vermelho-claro); }
+.gemba-res-conforme:hover { background: var(--verde-claro); }
+
+.gemba-res-desvio.marcado {
+  border-color: var(--vermelho);
+  background: var(--vermelho);
+  color: var(--branco);
+}
+
+.gemba-res-conforme.marcado {
+  border-color: var(--verde);
+  background: var(--verde);
+  color: var(--branco);
+}
+
+.gemba-res:disabled { opacity: 0.6; cursor: wait; }
+
+/* No modo Conforme, os números dos passos e o botão Salvar ficam verdes */
+.gemba-modo-conforme .gemba-numero {
+  background: var(--verde-claro);
+  color: var(--verde);
+}
+
+.botao-principal.botao-conforme { background: var(--verde); }
+.botao-principal.botao-conforme:hover:not(:disabled) { background: #14521F; }
+
+/* Selo na coluna Resultado de "Todos os Gemba" */
+.gemba-selo {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.gemba-selo-desvio {
+  background: var(--vermelho-claro);
+  color: var(--vermelho-escuro);
+}
+
+.gemba-selo-conforme {
+  background: var(--verde-claro);
+  color: var(--verde);
+}
+
+/* Tabela ganha a coluna Resultado */
+.planilha-gemba { min-width: 1210px; }
+
+.planilha-gemba .planilha-cabecalho,
+.planilha-gemba .planilha-linha {
+  grid-template-columns: 96px 60px minmax(200px, 1.6fr) 110px 120px minmax(170px, 1.5fr) minmax(150px, 1.2fr) minmax(150px, 1.2fr) 72px 56px;
+}
+
+.gemba-todos-miniaturas { padding-left: 164px; }
+
+/* Painel: número verde na ficha (Conformes) */
+.ficha-verde { color: var(--verde); }
+
+@media (max-width: 600px) {
+  .gemba-res { height: 52px; font-size: 16px; }
+  .gemba-todos-miniaturas { padding-left: 8px; }
+}
+
+/* ---------- Gemba: dia e hora do Gemba (alteração 13/11/2026) ---------- */
+
+.gemba-quando {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.gemba-quando-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.gemba-quando-campo input {
+  height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--cinza-campo);
+  border-radius: var(--raio);
+  background: var(--branco);
+  color: var(--preto);
+  font-family: inherit;
+  font-size: 16px;
+}
+
+.gemba-quando-campo input:focus {
+  outline: 2px solid var(--vermelho);
+  outline-offset: 0;
+  border-color: var(--vermelho);
+}
+
+.gemba-quando-hora input { width: 120px; }
+
+.gemba-voltar-hoje { height: 44px; }
+
+/* Aviso quando o dia escolhido não é hoje */
+.gemba-aviso-dia {
+  padding: 10px 14px;
+  border-left: 4px solid var(--vermelho);
+  border-radius: var(--raio);
+  background: var(--amarelo);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .gemba-quando-campo:first-child { flex: 1 1 160px; }
+  .gemba-quando-campo:first-child input { width: 100%; }
+}
+
+/* ---------- Gemba: editar registro (alteração 13/11/2026) ---------- */
+
+/* Coluna final com o lápis e a lixeira */
+.planilha-gemba { min-width: 1120px; }
+
+.planilha-gemba .planilha-cabecalho,
+.planilha-gemba .planilha-linha {
+  grid-template-columns: 104px 56px minmax(170px, 1.6fr) 104px 110px minmax(150px, 1.5fr) minmax(130px, 1.2fr) minmax(130px, 1.2fr) 68px 96px;
+}
+
+.gemba-todos-botoes { gap: 6px; }
+
+.gemba-lapis {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--preto);
+}
+
+.gemba-lapis:hover { background: var(--amarelo-claro); }
+
+/* Marca de "editado" ao lado da data */
+.gemba-editado {
+  margin-left: 2px;
+  color: var(--cinza-texto);
+  font-family: var(--fonte);
+  font-weight: 700;
+  cursor: help;
+}
+
+/* Janela de edição */
+.gemba-editar-janela { max-width: 640px; }
+
+.ge-bloco {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ge-rotulo {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.ge-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.ge-campo select {
+  height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--cinza-campo);
+  border-radius: var(--raio);
+  background: var(--branco);
+  color: var(--preto);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.ge-campo select:focus {
+  outline: 2px solid var(--vermelho);
+  outline-offset: 0;
+  border-color: var(--vermelho);
+}
+
+.gemba-editar-janela .gemba-lista { max-height: 240px; }
+
+.gemba-miniatura-sem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 26px;
+}
+
+.ge-botoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.ge-botoes .botao-principal { padding: 0 22px; }
+
+@media (max-width: 600px) {
+  .ge-botoes { flex-direction: column-reverse; }
+  .ge-botoes .botao { width: 100%; }
+}

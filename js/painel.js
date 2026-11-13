@@ -1,7 +1,10 @@
 /* ==========================================================
    js/painel.js
    Aba Painel (Visão Geral): filtro por processo do Gemba,
-   4 indicadores, mapa de calor do ano e mapa por colaborador.
+   5 indicadores (o 5º é a Taxa de conformidade do Gemba),
+   mapa de calor do ano e mapa por colaborador.
+   Gemba: registros "Conforme" não pintam o mapa; entram em Registros,
+   na Taxa de conformidade, no resumo do dia e na ficha da pessoa.
    Só LÊ o banco (registros_gemba, colaboradores, listas,
    treinamentos e treinamento_participantes).
    O filtro de processo vale só para os desvios: os treinamentos
@@ -91,7 +94,7 @@
     const m = String((e && e.message) || '').toLowerCase();
     const code = e && e.code;
     if (code === '42703' || code === '42P01' || code === 'PGRST205' || code === 'PGRST200' || m.includes('could not find') || m.includes('does not exist')) {
-      return 'Faltam tabelas ou colunas no banco. Confira se os arquivos sql/001, sql/002, sql/003, sql/004 e sql/009 foram rodados no Supabase.';
+      return 'Faltam tabelas ou colunas no banco. Confira se os arquivos sql/001, sql/002, sql/003, sql/004, sql/009 e sql/014 foram rodados no Supabase.';
     }
     if (code === '42501' || m.includes('permission denied') || m.includes('row-level security')) {
       return 'O banco recusou por falta de permissão.';
@@ -122,7 +125,7 @@
     try {
       const [regs, cols, listas, tres] = await Promise.all([
         lerTudo(() => sb.from('registros_gemba')
-          .select('id, data, grupo, fotos, colaborador_id, processo, motivo, acao')
+          .select('id, data, grupo, fotos, resultado, colaborador_id, processo, motivo, acao')
           .gte('data', INICIO.toISOString())
           .order('data', { ascending: true })
           .order('id', { ascending: true })),
@@ -187,12 +190,29 @@
   }
 
   // Desvios do ano escolhido, já com o filtro de processo
+  const ehConforme = (r) => r.resultado === 'Conforme';
+
+  // Desvios do ano escolhido, com o filtro de processo
   function registrosFiltrados() {
+    return gembaDoAno().filter((r) => !ehConforme(r));
+  }
+
+  // Conformes do ano escolhido, com o filtro de processo
+  function conformesFiltrados() {
+    return gembaDoAno().filter(ehConforme);
+  }
+
+  function gembaDoAno() {
     const ano = anoAtual();
     return registros.filter((r) => {
       if (est.setor && r.processo !== est.setor) return false;
       return new Date(r.data).getFullYear() === ano;
     });
+  }
+
+  function taxaTexto(conf, dev) {
+    const total = conf + dev;
+    return total ? Math.round((conf / total) * 100) + '%' : '—';
   }
 
   // Treinamentos do ano escolhido (o filtro de processo não vale para eles)
@@ -288,15 +308,21 @@
     const agendados = doAno.length - realizados;
     const subTreino = [desde, agendados ? plural(agendados, 'agendado', 'agendados') : ''].filter(Boolean).join(' · ');
 
+    const conformes = conformesFiltrados().length;
     const caixa = $('painel-kpis');
     caixa.textContent = '';
-    const registrosAno = lista.length + realizados;
+    const registrosAno = lista.length + conformes + realizados;
     caixa.appendChild(kpi('Registros em ' + ano, String(registrosAno), desde, '#D40511'));
     caixa.appendChild(kpi('Desvios em ' + ano, String(lista.length), desde, '#D40511'));
     caixa.appendChild(kpi('Treinamentos em ' + ano, String(realizados), subTreino, '#1A1A1A'));
     caixa.appendChild(topo
       ? kpi('Processo com mais desvios', topo, plural(porProc[topo], 'desvio', 'desvios'), '#1A1A1A', true)
       : kpi('Processo com mais desvios', '—', 'nenhum desvio ainda', '#1A1A1A', true));
+    // 5º: Taxa de conformidade = conformes ÷ (conformes + desvios)
+    const obs = conformes + lista.length;
+    caixa.appendChild(kpi('Taxa de conformidade', taxaTexto(conformes, lista.length),
+      obs ? plural(conformes, 'conforme', 'conformes') + ' de ' + plural(obs, 'observação', 'observações') : 'nenhuma observação ainda',
+      '#1B6B2A'));
   }
 
   /* --------- Mapa de calor (usado no geral e no colaborador) --------- */
@@ -413,6 +439,7 @@
   function desenharMapaGeral(lista) {
     const ano = anoAtual();
     const porDia = agruparPorDia(lista);
+    const confPorDia = agruparPorDia(conformesFiltrados());
     const treinosPorDia = agruparPorDia(treinosDoAno());
     const nomes = colabPorId();
 
@@ -441,14 +468,15 @@
       const itens = porDia[k] || [];
       const lv = nivel(itens.length);
       const estilo = estiloDiaAtivo(lv < 0 ? null : PALETA_DEV[lv], tre);
-      let dica = dataLonga(dia) + '\n' + plural(itens.length, 'desvio', 'desvios') + ' · ' + plural(tre.length, 'treinamento', 'treinamentos');
+      const nConf = (confPorDia[k] || []).length;
+      let dica = dataLonga(dia) + '\n' + plural(itens.length, 'desvio', 'desvios') + (nConf ? ' · ' + plural(nConf, 'conforme', 'conformes') : '') + ' · ' + plural(tre.length, 'treinamento', 'treinamentos');
       const linhas = itens.map((r) => '• ' + ((nomes[r.colaborador_id] || {}).nome || 'Sem colaborador') + ' — ' + r.processo)
         .concat(tre.map((t) => '• ' + textoTreino(t)));
       if (linhas.length) dica += '\n\n' + linhas.join('\n');
       return Object.assign(estilo, { dica });
-    }, est.dia, (k) => { est.dia = k; desenharResumoGeral(porDia, treinosPorDia, nomes); });
+    }, est.dia, (k) => { est.dia = k; desenharResumoGeral(porDia, treinosPorDia, nomes, confPorDia); });
 
-    desenharResumoGeral(porDia, treinosPorDia, nomes);
+    desenharResumoGeral(porDia, treinosPorDia, nomes, confPorDia);
   }
 
   function dataDaChave(k) {
@@ -528,7 +556,7 @@
     li.appendChild(fila);
   }
 
-  function desenharResumoGeral(porDia, treinosPorDia, nomes) {
+  function desenharResumoGeral(porDia, treinosPorDia, nomes, confPorDia) {
     const caixa = $('painel-dia');
     caixa.textContent = '';
     if (!est.dia) {
@@ -550,21 +578,22 @@
       return;
     }
     const itens = porDia[est.dia] || [];
-    linhaResumo(caixa, plural(itens.length, 'desvio', 'desvios') + ' · ' + plural(tre.length, 'treinamento', 'treinamentos') + (est.setor ? ' · ' + est.setor : ''), 'mapa-resumo-contagem');
-    if (!itens.length && !tre.length) {
-      linhaResumo(caixa, 'Nenhum desvio nem treinamento registrado neste dia.', 'mapa-resumo-vazio');
+    const confs = (confPorDia || {})[est.dia] || [];
+    linhaResumo(caixa, plural(itens.length, 'desvio', 'desvios') + ' · ' + plural(confs.length, 'conforme', 'conformes') + ' · ' + plural(tre.length, 'treinamento', 'treinamentos') + (est.setor ? ' · ' + est.setor : ''), 'mapa-resumo-contagem');
+    if (!itens.length && !confs.length && !tre.length) {
+      linhaResumo(caixa, 'Nenhum desvio, conforme ou treinamento registrado neste dia.', 'mapa-resumo-vazio');
       return;
     }
-    // Pessoas registradas juntas (mesmo grupo) aparecem numa linha só
+    // Pessoas registradas juntas (mesmo grupo) aparecem numa linha só (desvios e conformes, por hora)
     const grupos = [];
     const porGrupo = {};
-    itens.forEach((r) => {
+    itens.concat(confs).sort((a, b) => (a.data < b.data ? -1 : a.data > b.data ? 1 : a.id - b.id)).forEach((r) => {
       const g = r.grupo || ('linha-' + r.id);
       if (!porGrupo[g]) { porGrupo[g] = { r, nomes: [] }; grupos.push(porGrupo[g]); }
       porGrupo[g].nomes.push((nomes[r.colaborador_id] || {}).nome || 'Sem colaborador');
     });
     const textos = grupos.map((g) => ({
-      texto: horaDe(g.r.data) + ' · ' + g.nomes.join(', ') + ' — ' + g.r.processo + ': ' + g.r.motivo,
+      texto: horaDe(g.r.data) + ' · ' + g.nomes.join(', ') + ' — ' + g.r.processo + ': ' + (ehConforme(g.r) ? '✅ Conforme' : g.r.motivo),
       fotos: g.r.fotos || []
     })).concat(tre.map(textoTreino));
     listaResumo(caixa, textos);
@@ -581,6 +610,7 @@
   }
 
   function desenharPessoa(lista) {
+    const confsAno = conformesFiltrados();
     const s = $('painel-pessoa');
     const ordenados = colaboradores.filter((c) => c.status === 'Ativo')
       .concat(colaboradores.filter((c) => c.status !== 'Ativo'));
@@ -605,7 +635,9 @@
 
     const p = ordenados.find((c) => c.id === est.pessoa) || null;
     const meus = p ? lista.filter((r) => r.colaborador_id === p.id) : [];
+    const meusConf = p ? confsAno.filter((r) => r.colaborador_id === p.id) : [];
     const porDia = agruparPorDia(meus);
+    const confPessoaPorDia = agruparPorDia(meusConf);
     // Treinamentos de que a pessoa participou
     const meusTreinos = p ? treinosDoAno().filter((t) => t.pessoas.includes(p.id)) : [];
     const treinosPessoaPorDia = agruparPorDia(meusTreinos);
@@ -617,6 +649,8 @@
       ? 'Matrícula ' + p.matricula + ' · ' + (p.setor || 'Sem setor') + (p.status === 'Ativo' ? '' : ' · Desligado')
       : '';
     $('painel-ficha-dev').textContent = String(meus.length);
+    $('painel-ficha-con').textContent = String(meusConf.length);
+    $('painel-ficha-taxa').textContent = taxaTexto(meusConf.length, meus.length);
     $('painel-ficha-tre').textContent = String(meusTreinos.filter(treinoRealizado).length);
     const cont = {};
     meus.forEach((r) => { const k = r.processo + ' — ' + r.motivo; cont[k] = (cont[k] || 0) + 1; });
@@ -633,17 +667,21 @@
       if (sit === 'futuro' && tre.length) return Object.assign(estiloAgendado(), { dica: dataCurta(dia) + ' · treinamento agendado\n' + tre.map((t) => '• ' + t.hora + ' — ' + t.tema).join('\n') });
       if (sit !== 'ativo') return Object.assign(estiloTracejado(), { dica: dicaForaDaContagem(dia, sit) });
       const itens = porDia[k] || [];
-      if (!itens.length && !tre.length) return Object.assign(corDoDia(null, 0), { dica: dataCurta(dia) + ' · sem registro' });
+      const confs = confPessoaPorDia[k] || [];
+      if (!itens.length && !tre.length) {
+        return Object.assign(corDoDia(null, 0), { dica: dataCurta(dia) + (confs.length ? ' · ' + plural(confs.length, 'conforme', 'conformes') : ' · sem registro') });
+      }
       const corDesvio = itens.length ? (itens.length > 1 ? '#A0040D' : '#D40511') : null;
       const linhas = itens.map((r) => '• Desvio — ' + r.processo + ': ' + r.motivo)
+        .concat(confs.map((r) => '• Conforme — ' + r.processo))
         .concat(tre.map((t) => '• Treinamento — ' + t.hora + ' ' + t.tema + (t.realizado ? '' : ' (ainda não marcado como realizado)')));
       return Object.assign(estiloDiaAtivo(corDesvio, tre), { dica: dataLonga(dia) + '\n' + linhas.join('\n') });
-    }, est.diaPessoa, (k) => { est.diaPessoa = k; desenharResumoPessoa(porDia, treinosPessoaPorDia); });
+    }, est.diaPessoa, (k) => { est.diaPessoa = k; desenharResumoPessoa(porDia, treinosPessoaPorDia, confPessoaPorDia); });
 
-    desenharResumoPessoa(porDia, treinosPessoaPorDia);
+    desenharResumoPessoa(porDia, treinosPessoaPorDia, confPessoaPorDia);
   }
 
-  function desenharResumoPessoa(porDia, treinosPessoaPorDia) {
+  function desenharResumoPessoa(porDia, treinosPessoaPorDia, confPessoaPorDia) {
     const caixa = $('painel-pessoa-dia');
     caixa.textContent = '';
     if (!est.diaPessoa) {
@@ -663,12 +701,16 @@
       listaResumo(caixa, tre.map((t) => t.hora + ' · Treinamento agendado — ' + t.tema));
       return;
     }
-    const itens = porDia[est.diaPessoa] || [];
+    const itens = (porDia[est.diaPessoa] || []).concat((confPessoaPorDia || {})[est.diaPessoa] || [])
+      .sort((a, b) => (a.data < b.data ? -1 : a.data > b.data ? 1 : a.id - b.id));
     if (!itens.length && !tre.length) {
       linhaResumo(caixa, 'Sem registro neste dia.', 'mapa-resumo-vazio');
       return;
     }
-    const textos = itens.map((r) => ({ texto: horaDe(r.data) + ' · ' + r.processo + ': ' + r.motivo + ' · Ação: ' + r.acao, fotos: r.fotos || [] }))
+    const textos = itens.map((r) => ({
+      texto: horaDe(r.data) + ' · ' + r.processo + ': ' + (ehConforme(r) ? '✅ Conforme' : r.motivo + ' · Ação: ' + r.acao),
+      fotos: r.fotos || []
+    }))
       .concat(tre.map((t) => t.hora + ' · Treinamento — ' + t.tema + (t.realizado ? '' : ' (ainda não marcado como realizado)')));
     listaResumo(caixa, textos);
   }

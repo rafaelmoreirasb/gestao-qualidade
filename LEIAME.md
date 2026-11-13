@@ -16,22 +16,27 @@ O Painel só **lê** o banco (registros do Gemba, colaboradores, listas e treina
 
 - **Início da contagem: 13/10/2026.** Registros anteriores continuam no banco, mas não entram no Painel. A data fica numa linha só, no topo de `js/painel.js` (constante `INICIO`).
 - **Filtro de setor:** "Todos os setores" ou um **processo** do Gemba. O filtro vale **só para os desvios**; os treinamentos aparecem sempre (eles não têm processo).
-- **4 indicadores do ano:** Registros (desvios + treinamentos realizados), Desvios, **Treinamentos** (quantidade de treinamentos com status **Realizado**, não de participantes; embaixo, quantos estão agendados) e **Processo com mais desvios**.
-  - Não há indicador nem modo de Conformidade: o Gemba só registra desvio.
+- **5 indicadores do ano:** Registros (desvios + conformes + treinamentos realizados), Desvios, **Treinamentos** (quantidade de treinamentos com status **Realizado**, não de participantes; embaixo, quantos estão agendados) **Processo com mais desvios** e **Taxa de conformidade** (conformes ÷ (conformes + desvios), com "X conformes de Y observações"; respeita o filtro de processo).
 - **Mapa de calor do ano: um mapa só**, com desvios e treinamentos juntos. Cores de cada dia:
   - **vermelho** = dia com desvio; quanto mais escuro, mais desvios;
   - **amarelo** = dia com treinamento **Realizado**;
   - **dividido na diagonal** (metade vermelha, metade amarela) = desvio e treinamento realizado no mesmo dia;
   - **contorno amarelo** = treinamento ainda **Agendado** (dia futuro, ou dia passado que ainda não foi marcado como realizado);
-  - **cinza** = sem registro; **tracejado** = dia futuro ou antes do início da contagem.
-- **Resumo do dia:** passar o mouse num dia (ou tocar, no celular) mostra a data, a contagem e a lista de desvios (hora, colaborador, processo, motivo) e de treinamentos (hora, tema, nº de participantes; avisa se ainda não foi marcado como realizado).
+  - **cinza** = sem desvio nem treino (um dia só com conformes também fica cinza: o conforme não pinta o mapa); **tracejado** = dia futuro ou antes do início da contagem.
+- **Resumo do dia:** passar o mouse num dia (ou tocar, no celular) mostra a data, a contagem ("N desvios · M conformes · K treinamentos") e a lista de desvios (hora, colaborador, processo, motivo), de conformes (com ✅) e de treinamentos (hora, tema, nº de participantes; avisa se ainda não foi marcado como realizado).
   - Pessoas registradas juntas no Gemba aparecem **numa linha só**, com todos os nomes. Se o registro tem fotos, aparece o botão **📷 Ver fotos (N)**: mostra as miniaturas e, ao clicar numa, abre a foto grande. O resumo do mapa por colaborador também tem o botão.
 - No computador, o mapa abre rolado até a semana de hoje. Quando houver mais de um ano, aparece um seletor de ano.
-- **Mapa por colaborador:** escolher a pessoa (Ativos primeiro; desligados aparecem com "(desligado)"). Ficha com iniciais, nome, matrícula, setor, total de desvios, **treinamentos realizados de que participou** e o desvio que mais se repete. Abaixo, o mapa só dela, com as mesmas cores e o resumo do dia.
+- **Mapa por colaborador:** escolher a pessoa (Ativos primeiro; desligados aparecem com "(desligado)"). Ficha com iniciais, nome, matrícula, setor, total de desvios, **conformes**, **conformidade %** da pessoa, **treinamentos realizados de que participou** e o desvio que mais se repete. Abaixo, o mapa só dela, com as mesmas cores e o resumo do dia.
 
 ### Aba Gemba (funcionando)
 
-Registro rápido de desvio em 4 passos, feito para usar também no celular.
+Registro rápido em passos, feito para usar também no celular.
+
+- **No topo: ❌ Desvio ou ✅ Conforme.**
+  - **Desvio** (erro encontrado): os 4 passos abaixo.
+  - **Conforme** (pessoa ou processo observado fazendo certo): só **Colaboradores** (opcional) e **Processo observado**; Motivo e Ação somem. Botão verde **Salvar conforme**. Cada pessoa marcada vira **1 conforme** no nome dela; sem ninguém marcado vale como "observei o processo e estava certo".
+  - Depois de salvar, a escolha (Desvio/Conforme) e o processo **continuam marcados**, para registrar o próximo em 1 ou 2 toques.
+- **📅 Dia do Gemba:** calendário com **hoje** como padrão; dá para escolher um **dia passado** (desde 13/10/2026, nunca futuro) para lançar anotações de outros dias. O dia escolhido **continua marcado** depois de salvar; quando não é hoje, aparece a faixa amarela "📅 Registrando para … (não é hoje)" e o botão **Voltar para hoje**. Ao sair e entrar, volta para hoje. A hora gravada é a hora em que se salva.
 
 1. **Colaboradores (opcional):** campo **recolhido** que mostra "Nenhum escolhido", os nomes ou "3 escolhidos: Fulano, Ciclano +1". Ao clicar, abre a **lista de todos os Ativos com caixas de seleção**, busca por nome ou matrícula e botão **Limpar**; a lista mostra uns 6 nomes e rola por dentro. Até **30 pessoas** por registro; o processo, o motivo, a ação, a observação e as fotos valem para todas. **Sem ninguém marcado**, o registro é salvo como **"Sem colaborador"**. A lista fecha sozinha depois de salvar.
 2. **Processo:** botões com os itens da LISTA_PROCESSOS, mais o campo **+ Adicionar**.
@@ -47,7 +52,9 @@ Registro rápido de desvio em 4 passos, feito para usar também no celular.
 - O antigo quadro "Registros de hoje" saiu da tela (22/10/2026): o registro salvo aparece na hora no topo de **Todos os Gemba**; para ver só os de hoje, busque a data (ex.: `22/10`).
 - **Registro sem colaborador:** 1 desvio sem pessoa ligada. Aparece como "Sem colaborador" na tabela e no Painel, **conta** nos indicadores e no mapa de calor do Painel, não entra na ficha de ninguém e **fica de fora da Eficácia** (não há pessoa para acompanhar).
 - **Todos os Gemba** (no fim da aba): cartão que **começa aberto**; clicar no título ou na seta fecha e abre. Aberto, mostra a busca e a tabela com **todo o histórico**, o mais recente em cima, cerca de **5 linhas** visíveis e o resto **rolando dentro da tabela**.
-  - **Uma linha por registro salvo:** Data, Hora, Pessoas, Processo, Motivo, Ação, Observação, Fotos e lixeira. O título mostra o total ("N desvios em M registros").
+  - **Uma linha por registro salvo:** Data, Hora, Pessoas, **Resultado** (selo ✅ Conforme verde ou ❌ Desvio vermelho), Processo, Motivo, Ação (no Conforme: "—"), Observação, Fotos, **lápis ✎** e lixeira. O título mostra o total ("N desvios · M conformes em K registros"). Ordem: pela **data do Gemba**, mais recente em cima.
+  - **Busca por palavras:** "conforme" ou "desvio" junto com um nome (ex.: "conforme ana") mostra só os conformes daquela pessoa.
+  - **Lápis ✎ (editar):** abre uma janela com o registro inteiro já preenchido: Desvio/Conforme, Dia (a hora original é mantida), **Pessoas** (caixas de seleção; quem já estava aparece marcado, mesmo se não for mais Ativo), Processo, Motivo, Ação, Observação e **Fotos** (tirar as que existem, acrescentar até 6). **Salvar alterações** grava tudo de uma vez (função `gemba_editar_registro`, tudo ou nada): quem foi desmarcado sai do registro, quem foi marcado entra. Sem ninguém marcado, vira "Sem colaborador". Cancelar, X ou Esc fecham sem mudar nada. Registro editado mostra **✎ ao lado da data** (passando o mouse: "Editado em …").
   - **Pessoas:** no máximo **2 nomes** e um selo "+N" com os demais; passando o mouse aparecem todos.
   - **Busca** (sem diferenciar acentos) por data, hora, nome, matrícula, processo, motivo, ação ou observação. Acha também os nomes escondidos no "+N", e o nome encontrado passa a aparecer primeiro.
   - **Fotos:** "📷 N" abre as miniaturas embaixo da linha; clicar numa abre a foto grande.
@@ -86,7 +93,7 @@ Base acumulada dos erros do Poka-Yoke e ranking de quem precisa de treinamento. 
 Mostra se as pessoas param de repetir o erro depois de um treino. A aba só **lê** o banco (registros do Gemba, colaboradores, treinos e erros do Poka-Yoke); não grava nada. Ao abrir a aba, os dados são lidos de novo. Usa todo o histórico (não usa a data de início do Painel).
 
 - **O que conta como treino:**
-  - **Gemba:** cada **desvio registrado** (a ação tomada no Gemba é a intervenção). O acompanhamento começa no dia do registro.
+  - **Gemba:** cada **desvio registrado** (a ação tomada no Gemba é a intervenção). Registros **Conforme** e "Sem colaborador" ficam de fora. O acompanhamento começa no dia do registro.
   - **Poka-Yoke:** cada marcação **"treinado hoje"**. O erro treinado são os tipos que estavam pendentes naquele dia (ex.: "Gaiola Errada (3), Forçou Saída (1)"). A pessoa aparece pelo login ext_.
   - **Torre de Aduana:** pausada; o botão mostra o aviso "ainda sem dados".
   - Os treinamentos do Cronograma **não** entram na Eficácia (eles não dizem qual erro foi treinado).
@@ -214,7 +221,7 @@ A aba **PEL** (`#pel`) calcula a nota trimestral do PEL de cada site. Com ela, o
 | --- | --- | --- |
 | colaboradores | `sql/001_colaboradores.sql` (Fase 1) e `sql/013_colaboradores_cpf.sql` | id, matricula (única), nome, setor (vazio por enquanto), status (Ativo/Desligado), criado_em, **cpf** (só os 11 números; não é único, a pessoa pode voltar com outra matrícula) |
 | listas | `sql/002_gemba.sql` (Fase 2) | id, lista, item, ordem, ativo, criado_em. Não pode apagar (item removido fica com ativo = falso) |
-| registros_gemba | `sql/002_gemba.sql` (Fase 2), `sql/009_gemba_grupo_fotos.sql` e `sql/010_gemba_colaborador_opcional.sql` | id, data, colaborador_id (**opcional** desde o 010: vazio = "Sem colaborador"), processo, motivo, acao, observacao, criado_em, **grupo** (pessoas salvas juntas têm o mesmo; registros antigos têm um próprio) e **fotos** (lista de caminhos na pasta "gemba"). Uma linha por pessoa |
+| registros_gemba | `sql/002_gemba.sql` (Fase 2), `sql/009`, `sql/010`, `sql/014_gemba_conforme.sql` e `sql/015_gemba_editar.sql` | id, data, colaborador_id (**opcional** desde o 010: vazio = "Sem colaborador"), **resultado** (Desvio ou Conforme; antigos = Desvio), processo, motivo e acao (obrigatórios só no Desvio; vazios no Conforme), **editado_em** (última edição pelo lápis), observacao, criado_em, **grupo** (pessoas salvas juntas têm o mesmo; registros antigos têm um próprio) e **fotos** (lista de caminhos na pasta "gemba"). Uma linha por pessoa |
 | treinamentos | `sql/003_cronograma.sql` e `sql/004_cronograma_status_carga.sql` (Fase 4) | id, data, hora, tema, **carga_minutos** (carga horária em minutos), **status** (Agendado/Realizado), **foto_caminho** e **lista_caminho** (onde estão os anexos; colunas do `sql/007_cronograma_anexos.sql`), criado_em. Pode ler, criar, alterar **só** carga, status e anexos, e excluir (só lançamento errado) |
 | treinamento_participantes | `sql/003_cronograma.sql` (Fase 4) | id, treinamento_id (sai junto se o treino for excluído), colaborador_id (protege o colaborador de exclusão), criado_em. A mesma pessoa não entra duas vezes no mesmo treino |
 | planos_acao | `sql/005_planos_acao.sql` (Fase 5) | id, o_que, por_que, onde, quem, quando (prazo), como, quanto, origem (Gemba/Torre de Aduana/Poka-Yoke), status (Não iniciada/Em andamento/Concluída), criado_em. O quê, Quem e Quando obrigatórios. Pode ler, criar, alterar e excluir (só lançamento errado) |
@@ -247,7 +254,7 @@ js/listas.js          leitura e acréscimo de itens nas LISTA_... (arquivo comum
 js/menu.js            troca de abas (Analista e Gestão só abrem a aba PEL)
 js/planilha.js        leitura de .xlsx e .csv no navegador, sem biblioteca
 js/painel.js          aba Painel (indicadores, mapa de calor único e mapa por colaborador)
-js/gemba.js           aba Gemba (colaboradores opcionais em lista, várias pessoas por registro, fotos e tabela Todos os Gemba)
+js/gemba.js           aba Gemba (Desvio/Conforme, dia do Gemba, colaboradores opcionais em lista, várias pessoas por registro, fotos, tabela Todos os Gemba e edição pelo lápis)
 js/cronograma.js      aba Cronograma (calendário, PDF, tela cheia, vários dias, busca, participantes, carga, status e anexos)
 js/planoacao.js       aba Plano de ação (5W2H, alterar, status na linha, prazo, filtros e indicadores)
 js/pokayoke.js        aba Poka-Yoke (importação acumulada, ranking, treinado hoje)
@@ -265,6 +272,8 @@ sql/010_gemba_colaborador_opcional.sql   colaborador deixa de ser obrigatório e
 sql/011_pel_login.sql              aba PEL e papéis: tabelas pel_perfis, pel_sites, pel_config e pel_lancamentos, regras por papel e tranca das outras abas (só Administrador)
 sql/012_pel_site_no_cadastro.sql   site, cidade e regional vêm do cadastro; só o Administrador edita indicadores (desfazer: rodar o 011 de novo)
 sql/013_colaboradores_cpf.sql      coluna cpf em colaboradores (11 números) e índice para a busca
+sql/014_gemba_conforme.sql         coluna resultado (Desvio/Conforme) em registros_gemba; motivo e ação obrigatórios só no Desvio
+sql/015_gemba_editar.sql           permissão de alterar registros_gemba, coluna editado_em e função gemba_editar_registro (edição tudo ou nada)
 js/pel.js             aba Calculadora PEL (calculadora, Visão geral, Usuários, Sites e trimestre)
 css/pel.css           estilo da aba PEL (tudo dentro de #aba-pel) e das telas de cadastro
 img/pel/              medalhas do PET (Não classifica, Bronze, Prata, Ouro, Platina)

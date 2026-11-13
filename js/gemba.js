@@ -11,6 +11,15 @@
      "gemba" do Storage; todas as linhas do grupo têm a mesma lista.
    - "Todos os Gemba": tabela com todo o histórico (uma linha por
      registro salvo), busca, rolagem por dentro e seta para abrir/fechar.
+   - Dia do Gemba: padrão hoje; dá para escolher um dia passado
+     (desde 13/10/2026, nunca futuro). O dia escolhido fica marcado
+     depois de salvar, com aviso quando não é hoje. A hora gravada é a
+     hora em que você salva.
+   - Lápis ✎ em "Todos os Gemba": edita o registro inteiro (grupo) numa
+     janela; grava de uma vez pela função gemba_editar_registro (sql/015).
+   - Resultado da observação: ❌ Desvio (com motivo e ação) ou
+     ✅ Conforme (só processo; motivo e ação ficam vazios). Cada pessoa
+     marcada vira uma linha, nos dois casos.
    Usa as listas do sistema (js/listas.js).
    ========================================================== */
 
@@ -18,7 +27,7 @@
   const $ = (id) => document.getElementById(id);
   const TABELA = 'registros_gemba';
   const PASTA = 'gemba';                 // pasta privada do Storage
-  const CAMPOS_REG = 'id, data, grupo, fotos, processo, motivo, acao, observacao, colaborador_id, colaboradores(nome, matricula)';
+  const CAMPOS_REG = 'id, data, editado_em, grupo, fotos, resultado, processo, motivo, acao, observacao, colaborador_id, colaboradores(nome, matricula)';
   const MAX_PESSOAS = 30;
   const MAX_FOTOS = 6;
   const FOTO_LADO_MAX = 1600;            // a foto é reduzida para no máximo 1600 px no lado maior
@@ -36,7 +45,9 @@
   const fotosAbertas = {};    // grupos com as miniaturas abertas na tabela
 
   // O que está escolhido no formulário
-  const sel = { colabs: [], proc: null, motivo: null, acao: null };
+  const sel = { resultado: 'Desvio', colabs: [], proc: null, motivo: null, acao: null };
+  const ehConforme = () => sel.resultado === 'Conforme';
+  const conformeDaLinha = (r) => r && r.resultado === 'Conforme';
   let fotosSel = [];          // { arquivo, previa (link local) }
 
   /* ---------------- Ajudantes ---------------- */
@@ -52,6 +63,12 @@
   const plural = (n, um, varios) => n + ' ' + (n === 1 ? um : varios);
   const dataBr = (iso) => { const d = new Date(iso); return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear(); };
   const MAX_NOMES_TABELA = 2;   // nomes visíveis na coluna Pessoas
+  const DIA_MINIMO = '2026-10-13';   // início da contagem do Painel
+  const SEMANA = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  const isoDia = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const hojeIso = () => isoDia(new Date());
+  const agoraHora = () => { const d = new Date(); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+  const diaBr = (iso) => iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4);
 
   function novoCodigo() {
     if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
@@ -79,6 +96,13 @@
   function traduzirErro(e) {
     const m = String((e && e.message) || '').toLowerCase();
     const code = e && e.code;
+    if (m.includes('editado_em') || m.includes('gemba_editar_registro') || code === 'PGRST202') {
+      return 'Falta atualizar o banco. Rode o arquivo sql/015_gemba_editar.sql no Supabase (SQL Editor).';
+    }
+    if (m.includes('resultado') || (code === '23502' && (m.includes('motivo') || m.includes('acao')))) {
+      return 'Falta atualizar o banco. Rode o arquivo sql/014_gemba_conforme.sql no Supabase (SQL Editor).';
+    }
+    if (code === '23514') return 'O banco recusou: no Desvio, motivo e ação são obrigatórios.';
     if (code === '42703' || (m.includes('column') && (m.includes('grupo') || m.includes('fotos')))) {
       return 'Falta atualizar o banco. Rode o arquivo sql/009_gemba_grupo_fotos.sql no Supabase (SQL Editor).';
     }
@@ -185,7 +209,32 @@
     return d;
   }
 
+  // Dia do Gemba
+  function desenharQuando() {
+    const hoje = hojeIso();
+    const dia = $('gemba-dia');
+    dia.min = DIA_MINIMO;
+    dia.max = hoje;
+    if (!dia.value) dia.value = hoje;
+    const outroDia = dia.value && dia.value !== hoje;
+    const aviso = $('gemba-aviso-dia');
+    aviso.hidden = !outroDia;
+    if (outroDia) {
+      const [a, m, d] = dia.value.split('-').map(Number);
+      aviso.textContent = '📅 Registrando para ' + SEMANA[new Date(a, m - 1, d).getDay()] + ', ' + diaBr(dia.value) + ' (não é hoje)';
+    }
+    $('gemba-voltar-hoje').hidden = !outroDia;
+  }
+
+  function voltarParaHoje() {
+    $('gemba-dia').value = hojeIso();
+    mostrarMsg('gemba-msg', '');
+    desenharQuando();
+  }
+
   function desenharTudo() {
+    desenharQuando();
+    desenharResultado();
     desenharColab();
     desenharProcessos();
     desenharMotivos();
@@ -284,6 +333,27 @@
     sel.colabs = [];
     mostrarMsg('gemba-msg-colab', '');
     desenharColab();
+    desenharBotaoSalvar();
+  }
+
+  // Desvio ou Conforme: no Conforme, os passos de motivo e ação somem
+  function desenharResultado() {
+    const conf = ehConforme();
+    [['gemba-res-desvio', !conf], ['gemba-res-conforme', conf]].forEach(([id, on]) => {
+      $(id).classList.toggle('marcado', on);
+      $(id).setAttribute('aria-pressed', String(on));
+    });
+    $('gemba-passo3').hidden = conf;
+    $('gemba-passo4').hidden = conf;
+    $('gemba-proc-titulo').textContent = conf ? 'Processo observado' : 'Processo onde o erro foi encontrado';
+    $('aba-gemba').classList.toggle('gemba-modo-conforme', conf);
+  }
+
+  function escolherResultado(r) {
+    if (salvando || sel.resultado === r) return;
+    sel.resultado = r;
+    mostrarMsg('gemba-msg', '');
+    desenharResultado();
     desenharBotaoSalvar();
   }
 
@@ -394,7 +464,10 @@
   function desenharBotaoSalvar() {
     if (salvando) return;
     const n = sel.colabs.length;
-    $('gemba-salvar').textContent = n > 1 ? 'Salvar registro (' + n + ' pessoas)' : 'Salvar registro';
+    const conf = ehConforme();
+    const base = conf ? 'Salvar conforme' : 'Salvar registro';
+    $('gemba-salvar').textContent = n > 1 ? base + ' (' + n + ' pessoas)' : base;
+    $('gemba-salvar').classList.toggle('botao-conforme', conf);
   }
 
   // Junta as linhas de um mesmo salvamento (grupo)
@@ -439,18 +512,24 @@
   function textoBusca(g) {
     const r = g.linhas[0];
     const pessoas = g.linhas.map((x) => nomeDaLinha(x) + ' ' + ((x.colaboradores && x.colaboradores.matricula) || '')).join(' ');
-    return chave([dataBr(r.data), horaDe(r.data), pessoas, r.processo, r.motivo, r.acao, r.observacao || ''].join(' '));
+    return chave([dataBr(r.data), horaDe(r.data), pessoas, conformeDaLinha(r) ? 'conforme' : 'desvio',
+      r.processo, r.motivo || '', r.acao || '', r.observacao || ''].join(' '));
   }
 
   function desenharTodos() {
     const grupos = agruparLinhas(todos);
+    const nConf = todos.filter(conformeDaLinha).length;
+    const nDev = todos.length - nConf;
     $('gemba-todos-total').textContent = todos.length
-      ? '· ' + plural(todos.length, 'desvio', 'desvios') + ' em ' + plural(grupos.length, 'registro', 'registros')
+      ? '· ' + plural(nDev, 'desvio', 'desvios') + ' · ' + plural(nConf, 'conforme', 'conformes') +
+        ' em ' + plural(grupos.length, 'registro', 'registros')
       : '';
     if (!todosAberto) return;
 
+    // Busca por palavras: "conforme ana" acha os conformes em que a Ana aparece
     const q = chave($('gemba-todos-busca').value);
-    const achados = q ? grupos.filter((g) => textoBusca(g).includes(q)) : grupos;
+    const palavras = q.split(' ').filter(Boolean);
+    const achados = palavras.length ? grupos.filter((g) => { const t = textoBusca(g); return palavras.every((p) => t.includes(p)); }) : grupos;
     const caixa = $('gemba-todos-linhas');
     caixa.textContent = '';
     const vazio = $('gemba-todos-vazio');
@@ -461,7 +540,9 @@
     }
     vazio.hidden = true;
     const frag = document.createDocumentFragment();
-    achados.forEach((g, i) => frag.appendChild(linhaTodos(g, q, i)));
+    // Na coluna Pessoas, o nome procurado aparece primeiro (ignora as palavras "conforme"/"desvio")
+    const qNome = palavras.filter((p) => p !== 'conforme' && p !== 'desvio').join(' ');
+    achados.forEach((g, i) => frag.appendChild(linhaTodos(g, qNome, i)));
     caixa.appendChild(frag);
   }
 
@@ -490,12 +571,22 @@
     cPessoas.appendChild(el('span', 'gemba-todos-nomes', visiveis));
     if (resto > 0) cPessoas.appendChild(el('span', 'gemba-todos-mais', '+' + resto));
 
-    linha.appendChild(celula(dataBr(r.data), 'numero'));
+    const cData = celula(dataBr(r.data), 'numero');
+    if (r.editado_em) {
+      const marca = el('span', 'gemba-editado', ' ✎');
+      marca.title = 'Editado em ' + dataBr(r.editado_em) + ' às ' + horaDe(r.editado_em);
+      cData.appendChild(marca);
+    }
+    linha.appendChild(cData);
     linha.appendChild(celula(horaDe(r.data), 'numero'));
     linha.appendChild(cPessoas);
+    const conf = conformeDaLinha(r);
+    const cRes = el('div');
+    cRes.appendChild(el('span', 'gemba-selo ' + (conf ? 'gemba-selo-conforme' : 'gemba-selo-desvio'), conf ? '✅ Conforme' : '❌ Desvio'));
+    linha.appendChild(cRes);
     linha.appendChild(celula(r.processo, 'gemba-todos-texto', r.processo));
-    linha.appendChild(celula(r.motivo, 'gemba-todos-texto', r.motivo));
-    linha.appendChild(celula(r.acao, 'gemba-todos-texto', r.acao));
+    linha.appendChild(celula(r.motivo || '—', 'gemba-todos-texto' + (r.motivo ? '' : ' gemba-todos-sem'), r.motivo || ''));
+    linha.appendChild(celula(r.acao || '—', 'gemba-todos-texto' + (r.acao ? '' : ' gemba-todos-sem'), r.acao || ''));
     linha.appendChild(celula(r.observacao || '—', 'gemba-todos-texto' + (r.observacao ? '' : ' gemba-todos-sem'), r.observacao || ''));
 
     // Fotos
@@ -521,8 +612,14 @@
     }
     linha.appendChild(cFotos);
 
-    // Lixeira
-    const cLix = el('div', 'centro');
+    // Lápis (editar) e lixeira
+    const cLix = el('div', 'centro gemba-todos-botoes');
+    const lapis = el('button', 'botao-lixeira gemba-lapis', '✎');
+    lapis.type = 'button';
+    lapis.title = 'Editar este registro';
+    lapis.setAttribute('aria-label', 'Editar registro de ' + g.linhas.map(nomeDaLinha).join(', ') + ' em ' + dataBr(r.data));
+    lapis.addEventListener('click', () => abrirEdicao(g));
+    cLix.appendChild(lapis);
     const lix = el('button', 'botao-lixeira');
     lix.type = 'button';
     lix.title = 'Excluir (só para lançamento feito errado)';
@@ -556,6 +653,261 @@
       bloco.appendChild(fila);
     }
     return bloco;
+  }
+
+
+  /* ---------------- Editar um registro (lápis) ---------------- */
+
+  const ed = { g: null, resultado: 'Desvio', ids: [], extras: [], fotosFicam: [], fotosSaem: [], fotosNovas: [], salvando: false };
+
+  function edMsg(texto, ok) { mostrarMsg('ge-msg', texto, ok); }
+
+  function abrirEdicao(g) {
+    if (salvando) return;
+    const r = g.linhas[0];
+    ed.g = g;
+    ed.resultado = conformeDaLinha(r) ? 'Conforme' : 'Desvio';
+    ed.ids = g.linhas.map((x) => x.colaborador_id).filter((id) => id != null);
+    // Quem está no registro mas não é Ativo (ex.: desligado) também aparece na lista
+    ed.extras = g.linhas.filter((x) => x.colaborador_id != null && !ativos.some((a) => a.id === x.colaborador_id))
+      .map((x) => ({ id: x.colaborador_id, nome: ((x.colaboradores && x.colaboradores.nome) || 'Colaborador') + ' (não ativo)', matricula: (x.colaboradores && x.colaboradores.matricula) || '' }));
+    ed.fotosFicam = (r.fotos || []).slice();
+    ed.fotosSaem = [];
+    ed.fotosNovas.forEach((f) => URL.revokeObjectURL(f.previa));
+    ed.fotosNovas = [];
+    $('ge-info').textContent = 'Registro de ' + dataBr(r.data) + ' às ' + horaDe(r.data) + ' · ' + plural(g.linhas.length, 'linha', 'linhas');
+    $('ge-dia').min = DIA_MINIMO;
+    $('ge-dia').max = hojeIso();
+    $('ge-dia').value = isoDia(new Date(r.data));
+    $('ge-busca').value = '';
+    $('ge-obs').value = r.observacao || '';
+    preencherSelect('ge-proc', processos(), r.processo, 'Escolha o processo…');
+    preencherSelect('ge-motivo', motivosDe(r.processo), r.motivo, 'Escolha o motivo…');
+    preencherSelect('ge-acao', acoes(), r.acao, 'Escolha a ação…');
+    edMsg('');
+    desenharEdicao();
+    $('gemba-editar').hidden = false;
+    prepararLinks(ed.fotosFicam).then(desenharFotosEdicao);
+    $('ge-dia').focus();
+  }
+
+  function fecharEdicao() {
+    if (ed.salvando) return;
+    $('gemba-editar').hidden = true;
+    ed.fotosNovas.forEach((f) => URL.revokeObjectURL(f.previa));
+    ed.fotosNovas = [];
+    ed.g = null;
+  }
+
+  // Lista suspensa com os itens da lista do sistema; o valor atual entra mesmo se saiu da lista
+  function preencherSelect(id, itens, atual, textoVazio) {
+    const s = $(id);
+    s.textContent = '';
+    const o0 = el('option', null, textoVazio);
+    o0.value = '';
+    s.appendChild(o0);
+    const todosItens = itens.slice();
+    if (atual && !todosItens.includes(atual)) todosItens.unshift(atual);
+    todosItens.forEach((it) => { const o = el('option', null, it); o.value = it; s.appendChild(o); });
+    s.value = atual || '';
+  }
+
+  function desenharEdicao() {
+    const conf = ed.resultado === 'Conforme';
+    [['ge-res-desvio', !conf], ['ge-res-conforme', conf]].forEach(([id, on]) => {
+      $(id).classList.toggle('marcado', on);
+      $(id).setAttribute('aria-pressed', String(on));
+    });
+    $('ge-motivo-campo').hidden = conf;
+    $('ge-acao-campo').hidden = conf;
+    $('ge-salvar').classList.toggle('botao-conforme', conf);
+    desenharListaEdicao();
+    desenharFotosEdicao();
+  }
+
+  function desenharListaEdicao() {
+    const n = ed.ids.length;
+    $('ge-pessoas-cont').textContent = n ? '· ' + plural(n, 'marcada', 'marcadas') : '· nenhuma (Sem colaborador)';
+    const caixa = $('ge-lista');
+    caixa.textContent = '';
+    const q = chave($('ge-busca').value);
+    const qNum = String($('ge-busca').value || '').replace(/\D/g, '');
+    const base = ed.extras.concat(ativos);
+    const achados = base.filter((c) => !q || chave(c.nome).includes(q) || String(c.matricula).toLowerCase().includes(q) ||
+      (qNum.length >= 3 && String(c.cpf || '').includes(qNum)));
+    // Marcados primeiro
+    achados.sort((a, b) => (ed.ids.includes(b.id) ? 1 : 0) - (ed.ids.includes(a.id) ? 1 : 0));
+    if (!achados.length) {
+      caixa.appendChild(el('div', 'gemba-resultado-vazio', 'Nenhum colaborador encontrado.'));
+      return;
+    }
+    const frag = document.createDocumentFragment();
+    achados.forEach((c) => {
+      const marcado = ed.ids.includes(c.id);
+      const rotulo = el('label', 'gemba-lista-item' + (marcado ? ' marcado' : ''));
+      const cx = document.createElement('input');
+      cx.type = 'checkbox';
+      cx.checked = marcado;
+      cx.disabled = ed.salvando;
+      cx.addEventListener('change', () => {
+        edMsg('');
+        if (cx.checked) {
+          if (ed.ids.length >= MAX_PESSOAS) { cx.checked = false; edMsg('O limite é de ' + MAX_PESSOAS + ' pessoas por registro.', false); return; }
+          if (!ed.ids.includes(c.id)) ed.ids.push(c.id);
+        } else {
+          ed.ids = ed.ids.filter((id) => id !== c.id);
+        }
+        rotulo.classList.toggle('marcado', cx.checked);
+        const n2 = ed.ids.length;
+        $('ge-pessoas-cont').textContent = n2 ? '· ' + plural(n2, 'marcada', 'marcadas') : '· nenhuma (Sem colaborador)';
+      });
+      rotulo.appendChild(cx);
+      rotulo.appendChild(el('span', 'gemba-resultado-nome', c.nome));
+      rotulo.appendChild(el('span', 'gemba-resultado-info', c.matricula + (c.setor !== undefined ? ' · ' + setorTxt(c) : '')));
+      frag.appendChild(rotulo);
+    });
+    caixa.appendChild(frag);
+  }
+
+  function desenharFotosEdicao() {
+    const caixa = $('ge-fotos');
+    caixa.textContent = '';
+    const total = ed.fotosFicam.length + ed.fotosNovas.length;
+    caixa.hidden = !total;
+    const miniatura = (src, rotulo, aoTirar) => {
+      const m = el('div', 'gemba-miniatura');
+      if (src) {
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = rotulo;
+        m.appendChild(img);
+      } else {
+        m.appendChild(el('span', 'gemba-miniatura-sem', '📷'));
+      }
+      const x = el('button', 'gemba-miniatura-tirar', '×');
+      x.type = 'button';
+      x.title = 'Tirar esta foto';
+      x.setAttribute('aria-label', 'Tirar ' + rotulo);
+      x.disabled = ed.salvando;
+      x.addEventListener('click', aoTirar);
+      m.appendChild(x);
+      caixa.appendChild(m);
+    };
+    ed.fotosFicam.forEach((c, i) => miniatura(linksFotos[c], 'foto ' + (i + 1), () => {
+      ed.fotosFicam = ed.fotosFicam.filter((x) => x !== c);
+      ed.fotosSaem.push(c);
+      desenharFotosEdicao();
+    }));
+    ed.fotosNovas.forEach((f, i) => miniatura(f.previa, 'foto nova ' + (i + 1), () => {
+      URL.revokeObjectURL(f.previa);
+      ed.fotosNovas = ed.fotosNovas.filter((x) => x !== f);
+      desenharFotosEdicao();
+    }));
+    const cheio = total >= MAX_FOTOS;
+    $('ge-foto-rotulo').classList.toggle('ocupado', ed.salvando || cheio);
+    $('ge-foto-arquivo').disabled = ed.salvando || cheio;
+    $('ge-foto-texto').textContent = cheio ? 'Limite de ' + MAX_FOTOS + ' fotos' : '📷 Adicionar fotos';
+    $('ge-fotos-cont').textContent = total ? total + ' de ' + MAX_FOTOS : 'Opcional · até ' + MAX_FOTOS;
+  }
+
+  function escolherFotosEdicao(input) {
+    const arquivos = Array.from(input.files || []);
+    input.value = '';
+    if (!arquivos.length || ed.salvando) return;
+    edMsg('');
+    let fora = 0;
+    arquivos.forEach((a) => {
+      const nome = String(a.name || '').toLowerCase();
+      const ehImagem = /^image\//.test(a.type) || /\.(jpe?g|png|heic|heif|webp)$/.test(nome);
+      if (!ehImagem) return;
+      if (ed.fotosFicam.length + ed.fotosNovas.length >= MAX_FOTOS) { fora++; return; }
+      ed.fotosNovas.push({ arquivo: a, previa: URL.createObjectURL(a) });
+    });
+    if (fora) edMsg('Atenção: ' + plural(fora, 'foto ficou', 'fotos ficaram') + ' de fora, porque o limite é de ' + MAX_FOTOS + ' por registro.', false);
+    desenharFotosEdicao();
+  }
+
+  function travarEdicao(travar) {
+    ['ge-dia', 'ge-busca', 'ge-proc', 'ge-motivo', 'ge-acao', 'ge-obs', 'ge-cancelar', 'ge-salvar', 'ge-res-desvio', 'ge-res-conforme', 'ge-x']
+      .forEach((id) => { $(id).disabled = travar; });
+    document.querySelectorAll('#ge-lista input, #ge-fotos .gemba-miniatura-tirar').forEach((b) => { b.disabled = travar; });
+  }
+
+  async function salvarEdicao() {
+    if (!ed.g || ed.salvando) return;
+    const g = ed.g;
+    const r = g.linhas[0];
+    const conf = ed.resultado === 'Conforme';
+    const dia = $('ge-dia').value;
+    const proc = $('ge-proc').value;
+    const motivo = $('ge-motivo').value;
+    const acao = $('ge-acao').value;
+    const falta = [];
+    if (!dia) falta.push('dia do Gemba');
+    if (!proc) falta.push('processo');
+    if (!conf && !motivo) falta.push('motivo');
+    if (!conf && !acao) falta.push('ação tomada');
+    if (falta.length) { edMsg('Falta escolher: ' + falta.join(', ') + '.', false); return; }
+    if (dia < DIA_MINIMO) { edMsg('O dia do Gemba precisa ser a partir de ' + diaBr(DIA_MINIMO) + '.', false); return; }
+    if (dia > hojeIso()) { edMsg('O dia do Gemba não pode estar no futuro.', false); return; }
+    // Mantém a hora original; muda só o dia
+    const antes = new Date(r.data);
+    const [a, m, d] = dia.split('-').map(Number);
+    let quando = new Date(a, m - 1, d, antes.getHours(), antes.getMinutes(), antes.getSeconds());
+    if (quando.getTime() > Date.now()) quando = new Date();
+
+    ed.salvando = true;
+    travarEdicao(true);
+    const botao = $('ge-salvar');
+    edMsg('');
+    const enviados = [];
+    try {
+      for (let i = 0; i < ed.fotosNovas.length; i++) {
+        botao.textContent = 'Enviando foto ' + (i + 1) + ' de ' + ed.fotosNovas.length + '…';
+        const f = await prepararFoto(ed.fotosNovas[i].arquivo);
+        if (!f) { const e = new Error('foto'); e.fotoInvalida = i + 1; throw e; }
+        const caminho = g.grupo + '/foto-e' + (i + 1) + '-' + Date.now() + '.' + f.extensao;
+        const up = await sb.storage.from(PASTA).upload(caminho, f.corpo, { contentType: f.tipoMime, upsert: false });
+        if (up.error) throw up.error;
+        enviados.push(caminho);
+      }
+      botao.textContent = 'Salvando…';
+      const { error } = await sb.rpc('gemba_editar_registro', {
+        p_grupo: g.grupo,
+        p_data: quando.toISOString(),
+        p_resultado: conf ? 'Conforme' : 'Desvio',
+        p_processo: proc,
+        p_motivo: conf ? null : motivo,
+        p_acao: conf ? null : acao,
+        p_observacao: String($('ge-obs').value || '').trim(),
+        p_fotos: ed.fotosFicam.concat(enviados),
+        p_colaboradores: ed.ids.slice()
+      });
+      if (error) throw error;
+      // Fotos tiradas do registro: apaga os arquivos
+      await removerArquivos(ed.fotosSaem);
+      // Lê de novo as linhas do registro e põe na tabela
+      const novo = await sb.from(TABELA).select(CAMPOS_REG).eq('grupo', g.grupo);
+      if (novo.error) throw novo.error;
+      todos = todos.filter((x) => x.grupo !== g.grupo).concat(novo.data || [])
+        .sort((x, y) => (x.data > y.data ? -1 : x.data < y.data ? 1 : x.id - y.id));
+      ed.salvando = false;
+      travarEdicao(false);
+      botao.textContent = 'Salvar alterações';
+      fecharEdicao();
+      desenharTodos();
+      mostrarMsg('gemba-msg-todos', 'Registro de ' + diaBr(dia) + ' atualizado.', true);
+    } catch (e) {
+      await removerArquivos(enviados);
+      ed.salvando = false;
+      travarEdicao(false);
+      botao.textContent = 'Salvar alterações';
+      const texto = e && e.fotoInvalida
+        ? 'Não consegui ler a foto nova ' + e.fotoInvalida + '. Tire essa foto (×) ou escolha outra em JPEG ou PNG.'
+        : traduzirErro(e);
+      edMsg('Não foi possível salvar. Nada foi alterado. ' + texto, false);
+      desenharFotosEdicao();
+    }
   }
 
   /* ---------------- "+ Adicionar" ---------------- */
@@ -741,19 +1093,30 @@
 
   function travarFormulario(travar) {
     ['gemba-busca', 'gemba-novo-proc', 'gemba-add-proc', 'gemba-motivo', 'gemba-novo-motivo', 'gemba-add-motivo',
-      'gemba-nova-acao', 'gemba-add-acao', 'gemba-obs', 'gemba-lista-limpar'].forEach((id) => { $(id).disabled = travar; });
-    document.querySelectorAll('#aba-gemba .gemba-opcao, #aba-gemba .gemba-acao, #aba-gemba .gemba-lista-item input, #aba-gemba .gemba-miniatura-tirar')
+      'gemba-nova-acao', 'gemba-add-acao', 'gemba-obs', 'gemba-lista-limpar', 'gemba-dia', 'gemba-voltar-hoje'].forEach((id) => { $(id).disabled = travar; });
+    document.querySelectorAll('#aba-gemba .gemba-res, #aba-gemba .gemba-opcao, #aba-gemba .gemba-acao, #aba-gemba .gemba-lista-item input, #aba-gemba .gemba-miniatura-tirar')
       .forEach((b) => { b.disabled = travar; });
   }
 
   async function salvar() {
     if (salvando) return;
     if (!carregadoPara) { mostrarMsg('gemba-msg', 'O Gemba ainda não carregou. Espere um instante e tente de novo.', false); return; }
+    const conf = ehConforme();
     const falta = [];
     if (!sel.proc) falta.push('processo');
-    if (!sel.motivo) falta.push('motivo');
-    if (!sel.acao) falta.push('ação tomada');
+    if (!conf && !sel.motivo) falta.push('motivo');
+    if (!conf && !sel.acao) falta.push('ação tomada');
+    const diaTxt = $('gemba-dia').value;
+    const horaTxt = agoraHora();   // a hora gravada é a hora em que você salva
+    if (!diaTxt) falta.push('dia do Gemba');
     if (falta.length) { mostrarMsg('gemba-msg', 'Falta escolher: ' + falta.join(', ') + '.', false); return; }
+    const [da, dm, dd] = diaTxt.split('-').map(Number);
+    const [hh, mi] = horaTxt.split(':').map(Number);
+    const quando = new Date(da, dm - 1, dd, hh, mi, 0);
+    if (isNaN(quando.getTime())) { mostrarMsg('gemba-msg', 'Dia inválido.', false); return; }
+    if (diaTxt < DIA_MINIMO) { mostrarMsg('gemba-msg', 'O dia do Gemba precisa ser a partir de ' + diaBr(DIA_MINIMO) + ' (início da contagem do Painel).', false); return; }
+    if (diaTxt > hojeIso()) { mostrarMsg('gemba-msg', 'O dia do Gemba não pode estar no futuro.', false); return; }
+    const diaHoje = diaTxt === hojeIso();
 
     salvando = true;
     const botao = $('gemba-salvar');
@@ -790,18 +1153,20 @@
         colaborador_id: id,
         grupo,
         fotos: enviados,
+        data: quando.toISOString(),
+        resultado: conf ? 'Conforme' : 'Desvio',
         processo: sel.proc,
-        motivo: sel.motivo,
-        acao: sel.acao,
+        motivo: conf ? null : sel.motivo,
+        acao: conf ? null : sel.acao,
         observacao
       }));
       const { data, error } = await sb.from(TABELA).insert(linhas).select(CAMPOS_REG);
       if (error) throw error;
 
-      // O registro novo entra no topo da tabela "Todos os Gemba"
-      todos = (data || []).slice().sort((a, b) => a.id - b.id).concat(todos);
+      // O registro novo entra na tabela "Todos os Gemba", na posição do dia do Gemba
+      todos = (data || []).concat(todos).sort((a, b) => (a.data > b.data ? -1 : a.data < b.data ? 1 : a.id - b.id));
 
-      // Limpa o formulário; o processo continua marcado
+      // Limpa o formulário; o processo e a escolha Desvio/Conforme continuam marcados
       fotosSel.forEach((f) => URL.revokeObjectURL(f.previa));
       fotosSel = [];
       sel.colabs = [];
@@ -815,7 +1180,8 @@
       desenharTudo();
       const quem = pessoas.length > 1 ? 'para ' + plural(pessoas.length, 'pessoa', 'pessoas')
         : (pessoas.length ? 'para ' + pessoas[0].nome : 'sem colaborador');
-      mostrarMsg('gemba-msg', 'Registro salvo ' + quem +
+      mostrarMsg('gemba-msg', (conf ? '✅ Conforme salvo ' : 'Registro salvo ') + quem +
+        (diaHoje ? '' : ' · dia ' + diaBr(diaTxt).slice(0, 5)) +
         (enviados.length ? ', com ' + plural(enviados.length, 'foto', 'fotos') : '') + '.', true);
     } catch (e) {
       // Nada fica pela metade: apaga as fotos que já tinham subido
@@ -841,7 +1207,8 @@
     const nomes = g.linhas.map(nomeDaLinha);
     const fotos = r.fotos || [];
     const ok = window.confirm(
-      'Excluir o registro de ' + dataBr(r.data) + ' às ' + horaDe(r.data) + ' (' + r.processo + ' · ' + r.motivo + ')?\n\n' +
+      'Excluir o registro de ' + dataBr(r.data) + ' às ' + horaDe(r.data) + ' (' + r.processo + ' · ' +
+        (conformeDaLinha(r) ? 'Conforme' : r.motivo) + ')?\n\n' +
       (nomes.length > 1 ? 'Pessoas (' + nomes.length + '): ' : 'Pessoa: ') + nomes.join(', ') + '\n' +
       (fotos.length ? plural(fotos.length, 'foto também será apagada', 'fotos também serão apagadas') + '.\n' : '') +
       '\nUse a exclusão SÓ para corrigir lançamento feito errado.');
@@ -876,7 +1243,9 @@
     if (!todosAberto) abrirFecharTodos();   // na próxima entrada, a tabela começa aberta
     abrirFecharLista(false);
     carregadoPara = null;
-    sel.colabs = []; sel.proc = null; sel.motivo = null; sel.acao = null;
+    $('gemba-dia').value = '';
+    if (!$('gemba-editar').hidden) { ed.salvando = false; fecharEdicao(); }
+    sel.resultado = 'Desvio'; sel.colabs = []; sel.proc = null; sel.motivo = null; sel.acao = null;
     fotosSel.forEach((f) => URL.revokeObjectURL(f.previa));
     fotosSel = [];
     ['gemba-busca', 'gemba-novo-proc', 'gemba-novo-motivo', 'gemba-nova-acao', 'gemba-obs'].forEach((id) => { $(id).value = ''; });
@@ -911,6 +1280,33 @@
   });
   $('gemba-foto-arquivo').addEventListener('change', (ev) => escolherFotos(ev.target));
   $('gemba-salvar').addEventListener('click', salvar);
+  $('gemba-dia').addEventListener('change', () => {
+    const v = $('gemba-dia').value;
+    if (v && v > hojeIso()) $('gemba-dia').value = hojeIso();
+    if (v && v < DIA_MINIMO) $('gemba-dia').value = DIA_MINIMO;
+    mostrarMsg('gemba-msg', '');
+    desenharQuando();
+  });
+  $('gemba-voltar-hoje').addEventListener('click', voltarParaHoje);
+  // Janela "Editar registro"
+  $('ge-x').addEventListener('click', fecharEdicao);
+  $('ge-cancelar').addEventListener('click', fecharEdicao);
+  $('ge-salvar').addEventListener('click', salvarEdicao);
+  $('ge-res-desvio').addEventListener('click', () => { if (!ed.salvando) { ed.resultado = 'Desvio'; edMsg(''); desenharEdicao(); } });
+  $('ge-res-conforme').addEventListener('click', () => { if (!ed.salvando) { ed.resultado = 'Conforme'; edMsg(''); desenharEdicao(); } });
+  $('ge-busca').addEventListener('input', desenharListaEdicao);
+  $('ge-busca').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') ev.preventDefault(); });
+  $('ge-proc').addEventListener('change', () => {
+    const atual = $('ge-motivo').value;
+    const lista = motivosDe($('ge-proc').value);
+    preencherSelect('ge-motivo', lista, lista.includes(atual) ? atual : '', 'Escolha o motivo…');
+  });
+  $('ge-foto-arquivo').addEventListener('change', (ev) => escolherFotosEdicao(ev.target));
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape' && !$('gemba-editar').hidden) fecharEdicao();
+  });
+  $('gemba-res-desvio').addEventListener('click', () => escolherResultado('Desvio'));
+  $('gemba-res-conforme').addEventListener('click', () => escolherResultado('Conforme'));
   $('gemba-todos-abrir').addEventListener('click', abrirFecharTodos);
   $('gemba-todos-busca').addEventListener('input', desenharTodos);
 
