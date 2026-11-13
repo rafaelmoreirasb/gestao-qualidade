@@ -3667,3 +3667,95 @@ body.crono-travado { overflow: hidden; }
   .gemba-quando-campo:first-child { flex: 1 1 160px; }
   .gemba-quando-campo:first-child input { width: 100%; }
 }
+
+/* ---------- Gemba: editar registro (alteração 13/11/2026) ---------- */
+
+/* Coluna final com o lápis e a lixeira */
+.planilha-gemba { min-width: 1120px; }
+
+.planilha-gemba .planilha-cabecalho,
+.planilha-gemba .planilha-linha {
+  grid-template-columns: 104px 56px minmax(170px, 1.6fr) 104px 110px minmax(150px, 1.5fr) minmax(130px, 1.2fr) minmax(130px, 1.2fr) 68px 96px;
+}
+
+.gemba-todos-botoes { gap: 6px; }
+
+.gemba-lapis {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--preto);
+}
+
+.gemba-lapis:hover { background: var(--amarelo-claro); }
+
+/* Marca de "editado" ao lado da data */
+.gemba-editado {
+  margin-left: 2px;
+  color: var(--cinza-texto);
+  font-family: var(--fonte);
+  font-weight: 700;
+  cursor: help;
+}
+
+/* Janela de edição */
+.gemba-editar-janela { max-width: 640px; }
+
+.ge-bloco {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ge-rotulo {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.ge-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.ge-campo select {
+  height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--cinza-campo);
+  border-radius: var(--raio);
+  background: var(--branco);
+  color: var(--preto);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.ge-campo select:focus {
+  outline: 2px solid var(--vermelho);
+  outline-offset: 0;
+  border-color: var(--vermelho);
+}
+
+.gemba-editar-janela .gemba-lista { max-height: 240px; }
+
+.gemba-miniatura-sem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 26px;
+}
+
+.ge-botoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.ge-botoes .botao-principal { padding: 0 22px; }
+
+@media (max-width: 600px) {
+  .ge-botoes { flex-direction: column-reverse; }
+  .ge-botoes .botao { width: 100%; }
+}

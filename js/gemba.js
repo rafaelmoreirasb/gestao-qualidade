@@ -15,6 +15,8 @@
      (desde 13/10/2026, nunca futuro). O dia escolhido fica marcado
      depois de salvar, com aviso quando não é hoje. A hora gravada é a
      hora em que você salva.
+   - Lápis ✎ em "Todos os Gemba": edita o registro inteiro (grupo) numa
+     janela; grava de uma vez pela função gemba_editar_registro (sql/015).
    - Resultado da observação: ❌ Desvio (com motivo e ação) ou
      ✅ Conforme (só processo; motivo e ação ficam vazios). Cada pessoa
      marcada vira uma linha, nos dois casos.
@@ -25,7 +27,7 @@
   const $ = (id) => document.getElementById(id);
   const TABELA = 'registros_gemba';
   const PASTA = 'gemba';                 // pasta privada do Storage
-  const CAMPOS_REG = 'id, data, grupo, fotos, resultado, processo, motivo, acao, observacao, colaborador_id, colaboradores(nome, matricula)';
+  const CAMPOS_REG = 'id, data, editado_em, grupo, fotos, resultado, processo, motivo, acao, observacao, colaborador_id, colaboradores(nome, matricula)';
   const MAX_PESSOAS = 30;
   const MAX_FOTOS = 6;
   const FOTO_LADO_MAX = 1600;            // a foto é reduzida para no máximo 1600 px no lado maior
@@ -94,6 +96,9 @@
   function traduzirErro(e) {
     const m = String((e && e.message) || '').toLowerCase();
     const code = e && e.code;
+    if (m.includes('editado_em') || m.includes('gemba_editar_registro') || code === 'PGRST202') {
+      return 'Falta atualizar o banco. Rode o arquivo sql/015_gemba_editar.sql no Supabase (SQL Editor).';
+    }
     if (m.includes('resultado') || (code === '23502' && (m.includes('motivo') || m.includes('acao')))) {
       return 'Falta atualizar o banco. Rode o arquivo sql/014_gemba_conforme.sql no Supabase (SQL Editor).';
     }
@@ -566,7 +571,13 @@
     cPessoas.appendChild(el('span', 'gemba-todos-nomes', visiveis));
     if (resto > 0) cPessoas.appendChild(el('span', 'gemba-todos-mais', '+' + resto));
 
-    linha.appendChild(celula(dataBr(r.data), 'numero'));
+    const cData = celula(dataBr(r.data), 'numero');
+    if (r.editado_em) {
+      const marca = el('span', 'gemba-editado', ' ✎');
+      marca.title = 'Editado em ' + dataBr(r.editado_em) + ' às ' + horaDe(r.editado_em);
+      cData.appendChild(marca);
+    }
+    linha.appendChild(cData);
     linha.appendChild(celula(horaDe(r.data), 'numero'));
     linha.appendChild(cPessoas);
     const conf = conformeDaLinha(r);
@@ -601,8 +612,14 @@
     }
     linha.appendChild(cFotos);
 
-    // Lixeira
-    const cLix = el('div', 'centro');
+    // Lápis (editar) e lixeira
+    const cLix = el('div', 'centro gemba-todos-botoes');
+    const lapis = el('button', 'botao-lixeira gemba-lapis', '✎');
+    lapis.type = 'button';
+    lapis.title = 'Editar este registro';
+    lapis.setAttribute('aria-label', 'Editar registro de ' + g.linhas.map(nomeDaLinha).join(', ') + ' em ' + dataBr(r.data));
+    lapis.addEventListener('click', () => abrirEdicao(g));
+    cLix.appendChild(lapis);
     const lix = el('button', 'botao-lixeira');
     lix.type = 'button';
     lix.title = 'Excluir (só para lançamento feito errado)';
@@ -636,6 +653,261 @@
       bloco.appendChild(fila);
     }
     return bloco;
+  }
+
+
+  /* ---------------- Editar um registro (lápis) ---------------- */
+
+  const ed = { g: null, resultado: 'Desvio', ids: [], extras: [], fotosFicam: [], fotosSaem: [], fotosNovas: [], salvando: false };
+
+  function edMsg(texto, ok) { mostrarMsg('ge-msg', texto, ok); }
+
+  function abrirEdicao(g) {
+    if (salvando) return;
+    const r = g.linhas[0];
+    ed.g = g;
+    ed.resultado = conformeDaLinha(r) ? 'Conforme' : 'Desvio';
+    ed.ids = g.linhas.map((x) => x.colaborador_id).filter((id) => id != null);
+    // Quem está no registro mas não é Ativo (ex.: desligado) também aparece na lista
+    ed.extras = g.linhas.filter((x) => x.colaborador_id != null && !ativos.some((a) => a.id === x.colaborador_id))
+      .map((x) => ({ id: x.colaborador_id, nome: ((x.colaboradores && x.colaboradores.nome) || 'Colaborador') + ' (não ativo)', matricula: (x.colaboradores && x.colaboradores.matricula) || '' }));
+    ed.fotosFicam = (r.fotos || []).slice();
+    ed.fotosSaem = [];
+    ed.fotosNovas.forEach((f) => URL.revokeObjectURL(f.previa));
+    ed.fotosNovas = [];
+    $('ge-info').textContent = 'Registro de ' + dataBr(r.data) + ' às ' + horaDe(r.data) + ' · ' + plural(g.linhas.length, 'linha', 'linhas');
+    $('ge-dia').min = DIA_MINIMO;
+    $('ge-dia').max = hojeIso();
+    $('ge-dia').value = isoDia(new Date(r.data));
+    $('ge-busca').value = '';
+    $('ge-obs').value = r.observacao || '';
+    preencherSelect('ge-proc', processos(), r.processo, 'Escolha o processo…');
+    preencherSelect('ge-motivo', motivosDe(r.processo), r.motivo, 'Escolha o motivo…');
+    preencherSelect('ge-acao', acoes(), r.acao, 'Escolha a ação…');
+    edMsg('');
+    desenharEdicao();
+    $('gemba-editar').hidden = false;
+    prepararLinks(ed.fotosFicam).then(desenharFotosEdicao);
+    $('ge-dia').focus();
+  }
+
+  function fecharEdicao() {
+    if (ed.salvando) return;
+    $('gemba-editar').hidden = true;
+    ed.fotosNovas.forEach((f) => URL.revokeObjectURL(f.previa));
+    ed.fotosNovas = [];
+    ed.g = null;
+  }
+
+  // Lista suspensa com os itens da lista do sistema; o valor atual entra mesmo se saiu da lista
+  function preencherSelect(id, itens, atual, textoVazio) {
+    const s = $(id);
+    s.textContent = '';
+    const o0 = el('option', null, textoVazio);
+    o0.value = '';
+    s.appendChild(o0);
+    const todosItens = itens.slice();
+    if (atual && !todosItens.includes(atual)) todosItens.unshift(atual);
+    todosItens.forEach((it) => { const o = el('option', null, it); o.value = it; s.appendChild(o); });
+    s.value = atual || '';
+  }
+
+  function desenharEdicao() {
+    const conf = ed.resultado === 'Conforme';
+    [['ge-res-desvio', !conf], ['ge-res-conforme', conf]].forEach(([id, on]) => {
+      $(id).classList.toggle('marcado', on);
+      $(id).setAttribute('aria-pressed', String(on));
+    });
+    $('ge-motivo-campo').hidden = conf;
+    $('ge-acao-campo').hidden = conf;
+    $('ge-salvar').classList.toggle('botao-conforme', conf);
+    desenharListaEdicao();
+    desenharFotosEdicao();
+  }
+
+  function desenharListaEdicao() {
+    const n = ed.ids.length;
+    $('ge-pessoas-cont').textContent = n ? '· ' + plural(n, 'marcada', 'marcadas') : '· nenhuma (Sem colaborador)';
+    const caixa = $('ge-lista');
+    caixa.textContent = '';
+    const q = chave($('ge-busca').value);
+    const qNum = String($('ge-busca').value || '').replace(/\D/g, '');
+    const base = ed.extras.concat(ativos);
+    const achados = base.filter((c) => !q || chave(c.nome).includes(q) || String(c.matricula).toLowerCase().includes(q) ||
+      (qNum.length >= 3 && String(c.cpf || '').includes(qNum)));
+    // Marcados primeiro
+    achados.sort((a, b) => (ed.ids.includes(b.id) ? 1 : 0) - (ed.ids.includes(a.id) ? 1 : 0));
+    if (!achados.length) {
+      caixa.appendChild(el('div', 'gemba-resultado-vazio', 'Nenhum colaborador encontrado.'));
+      return;
+    }
+    const frag = document.createDocumentFragment();
+    achados.forEach((c) => {
+      const marcado = ed.ids.includes(c.id);
+      const rotulo = el('label', 'gemba-lista-item' + (marcado ? ' marcado' : ''));
+      const cx = document.createElement('input');
+      cx.type = 'checkbox';
+      cx.checked = marcado;
+      cx.disabled = ed.salvando;
+      cx.addEventListener('change', () => {
+        edMsg('');
+        if (cx.checked) {
+          if (ed.ids.length >= MAX_PESSOAS) { cx.checked = false; edMsg('O limite é de ' + MAX_PESSOAS + ' pessoas por registro.', false); return; }
+          if (!ed.ids.includes(c.id)) ed.ids.push(c.id);
+        } else {
+          ed.ids = ed.ids.filter((id) => id !== c.id);
+        }
+        rotulo.classList.toggle('marcado', cx.checked);
+        const n2 = ed.ids.length;
+        $('ge-pessoas-cont').textContent = n2 ? '· ' + plural(n2, 'marcada', 'marcadas') : '· nenhuma (Sem colaborador)';
+      });
+      rotulo.appendChild(cx);
+      rotulo.appendChild(el('span', 'gemba-resultado-nome', c.nome));
+      rotulo.appendChild(el('span', 'gemba-resultado-info', c.matricula + (c.setor !== undefined ? ' · ' + setorTxt(c) : '')));
+      frag.appendChild(rotulo);
+    });
+    caixa.appendChild(frag);
+  }
+
+  function desenharFotosEdicao() {
+    const caixa = $('ge-fotos');
+    caixa.textContent = '';
+    const total = ed.fotosFicam.length + ed.fotosNovas.length;
+    caixa.hidden = !total;
+    const miniatura = (src, rotulo, aoTirar) => {
+      const m = el('div', 'gemba-miniatura');
+      if (src) {
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = rotulo;
+        m.appendChild(img);
+      } else {
+        m.appendChild(el('span', 'gemba-miniatura-sem', '📷'));
+      }
+      const x = el('button', 'gemba-miniatura-tirar', '×');
+      x.type = 'button';
+      x.title = 'Tirar esta foto';
+      x.setAttribute('aria-label', 'Tirar ' + rotulo);
+      x.disabled = ed.salvando;
+      x.addEventListener('click', aoTirar);
+      m.appendChild(x);
+      caixa.appendChild(m);
+    };
+    ed.fotosFicam.forEach((c, i) => miniatura(linksFotos[c], 'foto ' + (i + 1), () => {
+      ed.fotosFicam = ed.fotosFicam.filter((x) => x !== c);
+      ed.fotosSaem.push(c);
+      desenharFotosEdicao();
+    }));
+    ed.fotosNovas.forEach((f, i) => miniatura(f.previa, 'foto nova ' + (i + 1), () => {
+      URL.revokeObjectURL(f.previa);
+      ed.fotosNovas = ed.fotosNovas.filter((x) => x !== f);
+      desenharFotosEdicao();
+    }));
+    const cheio = total >= MAX_FOTOS;
+    $('ge-foto-rotulo').classList.toggle('ocupado', ed.salvando || cheio);
+    $('ge-foto-arquivo').disabled = ed.salvando || cheio;
+    $('ge-foto-texto').textContent = cheio ? 'Limite de ' + MAX_FOTOS + ' fotos' : '📷 Adicionar fotos';
+    $('ge-fotos-cont').textContent = total ? total + ' de ' + MAX_FOTOS : 'Opcional · até ' + MAX_FOTOS;
+  }
+
+  function escolherFotosEdicao(input) {
+    const arquivos = Array.from(input.files || []);
+    input.value = '';
+    if (!arquivos.length || ed.salvando) return;
+    edMsg('');
+    let fora = 0;
+    arquivos.forEach((a) => {
+      const nome = String(a.name || '').toLowerCase();
+      const ehImagem = /^image\//.test(a.type) || /\.(jpe?g|png|heic|heif|webp)$/.test(nome);
+      if (!ehImagem) return;
+      if (ed.fotosFicam.length + ed.fotosNovas.length >= MAX_FOTOS) { fora++; return; }
+      ed.fotosNovas.push({ arquivo: a, previa: URL.createObjectURL(a) });
+    });
+    if (fora) edMsg('Atenção: ' + plural(fora, 'foto ficou', 'fotos ficaram') + ' de fora, porque o limite é de ' + MAX_FOTOS + ' por registro.', false);
+    desenharFotosEdicao();
+  }
+
+  function travarEdicao(travar) {
+    ['ge-dia', 'ge-busca', 'ge-proc', 'ge-motivo', 'ge-acao', 'ge-obs', 'ge-cancelar', 'ge-salvar', 'ge-res-desvio', 'ge-res-conforme', 'ge-x']
+      .forEach((id) => { $(id).disabled = travar; });
+    document.querySelectorAll('#ge-lista input, #ge-fotos .gemba-miniatura-tirar').forEach((b) => { b.disabled = travar; });
+  }
+
+  async function salvarEdicao() {
+    if (!ed.g || ed.salvando) return;
+    const g = ed.g;
+    const r = g.linhas[0];
+    const conf = ed.resultado === 'Conforme';
+    const dia = $('ge-dia').value;
+    const proc = $('ge-proc').value;
+    const motivo = $('ge-motivo').value;
+    const acao = $('ge-acao').value;
+    const falta = [];
+    if (!dia) falta.push('dia do Gemba');
+    if (!proc) falta.push('processo');
+    if (!conf && !motivo) falta.push('motivo');
+    if (!conf && !acao) falta.push('ação tomada');
+    if (falta.length) { edMsg('Falta escolher: ' + falta.join(', ') + '.', false); return; }
+    if (dia < DIA_MINIMO) { edMsg('O dia do Gemba precisa ser a partir de ' + diaBr(DIA_MINIMO) + '.', false); return; }
+    if (dia > hojeIso()) { edMsg('O dia do Gemba não pode estar no futuro.', false); return; }
+    // Mantém a hora original; muda só o dia
+    const antes = new Date(r.data);
+    const [a, m, d] = dia.split('-').map(Number);
+    let quando = new Date(a, m - 1, d, antes.getHours(), antes.getMinutes(), antes.getSeconds());
+    if (quando.getTime() > Date.now()) quando = new Date();
+
+    ed.salvando = true;
+    travarEdicao(true);
+    const botao = $('ge-salvar');
+    edMsg('');
+    const enviados = [];
+    try {
+      for (let i = 0; i < ed.fotosNovas.length; i++) {
+        botao.textContent = 'Enviando foto ' + (i + 1) + ' de ' + ed.fotosNovas.length + '…';
+        const f = await prepararFoto(ed.fotosNovas[i].arquivo);
+        if (!f) { const e = new Error('foto'); e.fotoInvalida = i + 1; throw e; }
+        const caminho = g.grupo + '/foto-e' + (i + 1) + '-' + Date.now() + '.' + f.extensao;
+        const up = await sb.storage.from(PASTA).upload(caminho, f.corpo, { contentType: f.tipoMime, upsert: false });
+        if (up.error) throw up.error;
+        enviados.push(caminho);
+      }
+      botao.textContent = 'Salvando…';
+      const { error } = await sb.rpc('gemba_editar_registro', {
+        p_grupo: g.grupo,
+        p_data: quando.toISOString(),
+        p_resultado: conf ? 'Conforme' : 'Desvio',
+        p_processo: proc,
+        p_motivo: conf ? null : motivo,
+        p_acao: conf ? null : acao,
+        p_observacao: String($('ge-obs').value || '').trim(),
+        p_fotos: ed.fotosFicam.concat(enviados),
+        p_colaboradores: ed.ids.slice()
+      });
+      if (error) throw error;
+      // Fotos tiradas do registro: apaga os arquivos
+      await removerArquivos(ed.fotosSaem);
+      // Lê de novo as linhas do registro e põe na tabela
+      const novo = await sb.from(TABELA).select(CAMPOS_REG).eq('grupo', g.grupo);
+      if (novo.error) throw novo.error;
+      todos = todos.filter((x) => x.grupo !== g.grupo).concat(novo.data || [])
+        .sort((x, y) => (x.data > y.data ? -1 : x.data < y.data ? 1 : x.id - y.id));
+      ed.salvando = false;
+      travarEdicao(false);
+      botao.textContent = 'Salvar alterações';
+      fecharEdicao();
+      desenharTodos();
+      mostrarMsg('gemba-msg-todos', 'Registro de ' + diaBr(dia) + ' atualizado.', true);
+    } catch (e) {
+      await removerArquivos(enviados);
+      ed.salvando = false;
+      travarEdicao(false);
+      botao.textContent = 'Salvar alterações';
+      const texto = e && e.fotoInvalida
+        ? 'Não consegui ler a foto nova ' + e.fotoInvalida + '. Tire essa foto (×) ou escolha outra em JPEG ou PNG.'
+        : traduzirErro(e);
+      edMsg('Não foi possível salvar. Nada foi alterado. ' + texto, false);
+      desenharFotosEdicao();
+    }
   }
 
   /* ---------------- "+ Adicionar" ---------------- */
@@ -972,6 +1244,7 @@
     abrirFecharLista(false);
     carregadoPara = null;
     $('gemba-dia').value = '';
+    if (!$('gemba-editar').hidden) { ed.salvando = false; fecharEdicao(); }
     sel.resultado = 'Desvio'; sel.colabs = []; sel.proc = null; sel.motivo = null; sel.acao = null;
     fotosSel.forEach((f) => URL.revokeObjectURL(f.previa));
     fotosSel = [];
@@ -1015,6 +1288,23 @@
     desenharQuando();
   });
   $('gemba-voltar-hoje').addEventListener('click', voltarParaHoje);
+  // Janela "Editar registro"
+  $('ge-x').addEventListener('click', fecharEdicao);
+  $('ge-cancelar').addEventListener('click', fecharEdicao);
+  $('ge-salvar').addEventListener('click', salvarEdicao);
+  $('ge-res-desvio').addEventListener('click', () => { if (!ed.salvando) { ed.resultado = 'Desvio'; edMsg(''); desenharEdicao(); } });
+  $('ge-res-conforme').addEventListener('click', () => { if (!ed.salvando) { ed.resultado = 'Conforme'; edMsg(''); desenharEdicao(); } });
+  $('ge-busca').addEventListener('input', desenharListaEdicao);
+  $('ge-busca').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') ev.preventDefault(); });
+  $('ge-proc').addEventListener('change', () => {
+    const atual = $('ge-motivo').value;
+    const lista = motivosDe($('ge-proc').value);
+    preencherSelect('ge-motivo', lista, lista.includes(atual) ? atual : '', 'Escolha o motivo…');
+  });
+  $('ge-foto-arquivo').addEventListener('change', (ev) => escolherFotosEdicao(ev.target));
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape' && !$('gemba-editar').hidden) fecharEdicao();
+  });
   $('gemba-res-desvio').addEventListener('click', () => escolherResultado('Desvio'));
   $('gemba-res-conforme').addEventListener('click', () => escolherResultado('Conforme'));
   $('gemba-todos-abrir').addEventListener('click', abrirFecharTodos);
