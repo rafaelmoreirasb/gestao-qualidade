@@ -3614,3 +3614,56 @@ body.crono-travado { overflow: hidden; }
   .gemba-res { height: 52px; font-size: 16px; }
   .gemba-todos-miniaturas { padding-left: 8px; }
 }
+
+/* ---------- Gemba: dia e hora do Gemba (alteração 13/11/2026) ---------- */
+
+.gemba-quando {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.gemba-quando-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.gemba-quando-campo input {
+  height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--cinza-campo);
+  border-radius: var(--raio);
+  background: var(--branco);
+  color: var(--preto);
+  font-family: inherit;
+  font-size: 16px;
+}
+
+.gemba-quando-campo input:focus {
+  outline: 2px solid var(--vermelho);
+  outline-offset: 0;
+  border-color: var(--vermelho);
+}
+
+.gemba-quando-hora input { width: 120px; }
+
+.gemba-voltar-hoje { height: 44px; }
+
+/* Aviso quando o dia escolhido não é hoje */
+.gemba-aviso-dia {
+  padding: 10px 14px;
+  border-left: 4px solid var(--vermelho);
+  border-radius: var(--raio);
+  background: var(--amarelo);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .gemba-quando-campo:first-child { flex: 1 1 160px; }
+  .gemba-quando-campo:first-child input { width: 100%; }
+}

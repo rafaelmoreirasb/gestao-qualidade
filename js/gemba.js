@@ -11,6 +11,9 @@
      "gemba" do Storage; todas as linhas do grupo têm a mesma lista.
    - "Todos os Gemba": tabela com todo o histórico (uma linha por
      registro salvo), busca, rolagem por dentro e seta para abrir/fechar.
+   - Dia e hora do Gemba: padrão agora; dá para escolher um dia passado
+     (desde 13/10/2026, nunca futuro). O dia escolhido fica marcado
+     depois de salvar, com aviso quando não é hoje.
    - Resultado da observação: ❌ Desvio (com motivo e ação) ou
      ✅ Conforme (só processo; motivo e ação ficam vazios). Cada pessoa
      marcada vira uma linha, nos dois casos.
@@ -57,6 +60,13 @@
   const plural = (n, um, varios) => n + ' ' + (n === 1 ? um : varios);
   const dataBr = (iso) => { const d = new Date(iso); return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear(); };
   const MAX_NOMES_TABELA = 2;   // nomes visíveis na coluna Pessoas
+  const DIA_MINIMO = '2026-10-13';   // início da contagem do Painel
+  const SEMANA = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  const isoDia = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const hojeIso = () => isoDia(new Date());
+  const agoraHora = () => { const d = new Date(); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+  const diaBr = (iso) => iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4);
+  let horaEditada = false;      // você mexeu na hora? (senão, usa a hora atual ao salvar)
 
   function novoCodigo() {
     if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
@@ -194,7 +204,33 @@
     return d;
   }
 
+  // Dia e hora do Gemba
+  function desenharQuando() {
+    const hoje = hojeIso();
+    const dia = $('gemba-dia');
+    dia.min = DIA_MINIMO;
+    dia.max = hoje;
+    if (!dia.value) dia.value = hoje;
+    if (!horaEditada) $('gemba-hora').value = agoraHora();
+    const outroDia = dia.value && dia.value !== hoje;
+    const aviso = $('gemba-aviso-dia');
+    aviso.hidden = !outroDia;
+    if (outroDia) {
+      const [a, m, d] = dia.value.split('-').map(Number);
+      aviso.textContent = '📅 Registrando para ' + SEMANA[new Date(a, m - 1, d).getDay()] + ', ' + diaBr(dia.value) + ' (não é hoje)';
+    }
+    $('gemba-voltar-hoje').hidden = !outroDia;
+  }
+
+  function voltarParaHoje() {
+    $('gemba-dia').value = hojeIso();
+    horaEditada = false;
+    mostrarMsg('gemba-msg', '');
+    desenharQuando();
+  }
+
   function desenharTudo() {
+    desenharQuando();
     desenharResultado();
     desenharColab();
     desenharProcessos();
@@ -787,7 +823,7 @@
 
   function travarFormulario(travar) {
     ['gemba-busca', 'gemba-novo-proc', 'gemba-add-proc', 'gemba-motivo', 'gemba-novo-motivo', 'gemba-add-motivo',
-      'gemba-nova-acao', 'gemba-add-acao', 'gemba-obs', 'gemba-lista-limpar'].forEach((id) => { $(id).disabled = travar; });
+      'gemba-nova-acao', 'gemba-add-acao', 'gemba-obs', 'gemba-lista-limpar', 'gemba-dia', 'gemba-hora', 'gemba-voltar-hoje'].forEach((id) => { $(id).disabled = travar; });
     document.querySelectorAll('#aba-gemba .gemba-res, #aba-gemba .gemba-opcao, #aba-gemba .gemba-acao, #aba-gemba .gemba-lista-item input, #aba-gemba .gemba-miniatura-tirar')
       .forEach((b) => { b.disabled = travar; });
   }
@@ -800,7 +836,18 @@
     if (!sel.proc) falta.push('processo');
     if (!conf && !sel.motivo) falta.push('motivo');
     if (!conf && !sel.acao) falta.push('ação tomada');
+    const diaTxt = $('gemba-dia').value;
+    const horaTxt = horaEditada ? $('gemba-hora').value : agoraHora();
+    if (!diaTxt) falta.push('dia do Gemba');
+    if (!horaTxt) falta.push('hora');
     if (falta.length) { mostrarMsg('gemba-msg', 'Falta escolher: ' + falta.join(', ') + '.', false); return; }
+    const [da, dm, dd] = diaTxt.split('-').map(Number);
+    const [hh, mi] = horaTxt.split(':').map(Number);
+    const quando = new Date(da, dm - 1, dd, hh, mi, 0);
+    if (isNaN(quando.getTime())) { mostrarMsg('gemba-msg', 'Dia ou hora inválidos.', false); return; }
+    if (diaTxt < DIA_MINIMO) { mostrarMsg('gemba-msg', 'O dia do Gemba precisa ser a partir de ' + diaBr(DIA_MINIMO) + ' (início da contagem do Painel).', false); return; }
+    if (quando.getTime() > Date.now() + 60000) { mostrarMsg('gemba-msg', 'O dia e a hora do Gemba não podem estar no futuro.', false); return; }
+    const diaHoje = diaTxt === hojeIso();
 
     salvando = true;
     const botao = $('gemba-salvar');
@@ -837,6 +884,7 @@
         colaborador_id: id,
         grupo,
         fotos: enviados,
+        data: quando.toISOString(),
         resultado: conf ? 'Conforme' : 'Desvio',
         processo: sel.proc,
         motivo: conf ? null : sel.motivo,
@@ -846,8 +894,8 @@
       const { data, error } = await sb.from(TABELA).insert(linhas).select(CAMPOS_REG);
       if (error) throw error;
 
-      // O registro novo entra no topo da tabela "Todos os Gemba"
-      todos = (data || []).slice().sort((a, b) => a.id - b.id).concat(todos);
+      // O registro novo entra na tabela "Todos os Gemba", na posição do dia do Gemba
+      todos = (data || []).concat(todos).sort((a, b) => (a.data > b.data ? -1 : a.data < b.data ? 1 : a.id - b.id));
 
       // Limpa o formulário; o processo e a escolha Desvio/Conforme continuam marcados
       fotosSel.forEach((f) => URL.revokeObjectURL(f.previa));
@@ -864,6 +912,7 @@
       const quem = pessoas.length > 1 ? 'para ' + plural(pessoas.length, 'pessoa', 'pessoas')
         : (pessoas.length ? 'para ' + pessoas[0].nome : 'sem colaborador');
       mostrarMsg('gemba-msg', (conf ? '✅ Conforme salvo ' : 'Registro salvo ') + quem +
+        (diaHoje ? '' : ' · ' + diaBr(diaTxt).slice(0, 5) + ' às ' + horaTxt) +
         (enviados.length ? ', com ' + plural(enviados.length, 'foto', 'fotos') : '') + '.', true);
     } catch (e) {
       // Nada fica pela metade: apaga as fotos que já tinham subido
@@ -925,6 +974,8 @@
     if (!todosAberto) abrirFecharTodos();   // na próxima entrada, a tabela começa aberta
     abrirFecharLista(false);
     carregadoPara = null;
+    $('gemba-dia').value = '';
+    horaEditada = false;
     sel.resultado = 'Desvio'; sel.colabs = []; sel.proc = null; sel.motivo = null; sel.acao = null;
     fotosSel.forEach((f) => URL.revokeObjectURL(f.previa));
     fotosSel = [];
@@ -960,6 +1011,15 @@
   });
   $('gemba-foto-arquivo').addEventListener('change', (ev) => escolherFotos(ev.target));
   $('gemba-salvar').addEventListener('click', salvar);
+  $('gemba-dia').addEventListener('change', () => {
+    const v = $('gemba-dia').value;
+    if (v && v > hojeIso()) $('gemba-dia').value = hojeIso();
+    if (v && v < DIA_MINIMO) $('gemba-dia').value = DIA_MINIMO;
+    mostrarMsg('gemba-msg', '');
+    desenharQuando();
+  });
+  $('gemba-hora').addEventListener('change', () => { horaEditada = !!$('gemba-hora').value; mostrarMsg('gemba-msg', ''); });
+  $('gemba-voltar-hoje').addEventListener('click', voltarParaHoje);
   $('gemba-res-desvio').addEventListener('click', () => escolherResultado('Desvio'));
   $('gemba-res-conforme').addEventListener('click', () => escolherResultado('Conforme'));
   $('gemba-todos-abrir').addEventListener('click', abrirFecharTodos);

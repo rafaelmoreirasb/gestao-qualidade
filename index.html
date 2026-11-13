@@ -257,6 +257,18 @@
               <button type="button" class="gemba-res gemba-res-conforme" id="gemba-res-conforme" data-resultado="Conforme" aria-pressed="false">✅ Conforme</button>
             </div>
 
+            <!-- Dia e hora do Gemba (padrão: agora; dá para escolher um dia passado) -->
+            <div class="gemba-quando">
+              <label class="gemba-quando-campo">📅 Dia do Gemba
+                <input type="date" id="gemba-dia" required>
+              </label>
+              <label class="gemba-quando-campo gemba-quando-hora">Hora
+                <input type="time" id="gemba-hora" required>
+              </label>
+              <button type="button" class="botao botao-contorno gemba-voltar-hoje" id="gemba-voltar-hoje" hidden>Voltar para hoje</button>
+            </div>
+            <div class="gemba-aviso-dia" id="gemba-aviso-dia" role="status" hidden></div>
+
             <!-- Passo 1: colaboradores (opcional; lista que começa fechada) -->
             <div class="gemba-passo">
               <div class="gemba-passo-topo">
