@@ -28,6 +28,9 @@ const sb = configurado
   : null;
 
 
+// A aba Faltante Aduana (faltantes.html, numa moldura) usa este mesmo login para falar com o servidor.
+window.gqSb = sb;
+
 /* ---------------- Funções comuns de login ---------------- */
 
 async function entrar(email, senha) {

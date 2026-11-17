@@ -1,0 +1,8 @@
+{
+  "functions": {
+    "api/faltantes.js": {
+      "maxDuration": 60,
+      "includeFiles": "js/faltantes-regras.js"
+    }
+  }
+}

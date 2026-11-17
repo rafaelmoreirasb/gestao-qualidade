@@ -3759,3 +3759,6 @@ body.crono-travado { overflow: hidden; }
   .ge-botoes { flex-direction: column-reverse; }
   .ge-botoes .botao { width: 100%; }
 }
+
+/* ===== Faltante Aduana (o painel fica numa moldura que cresce com o conteúdo) ===== */
+.faltantes-quadro { display: block; width: 100%; min-height: 70vh; border: 0; background: transparent; }
