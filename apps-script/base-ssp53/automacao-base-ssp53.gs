@@ -1,7 +1,8 @@
 // =====================================================================
 //  AUTOMAÇÃO BASE SSP53 (conta pessoal) - tudo grava nesta planilha
 //  Histórico, Direcionamento Manual e Base Inventário: só linhas novas a cada 15 minutos
-//  Torre Aduana, Inventário e One Bipe: espelho a cada 1 hora
+//  Torre Aduana e One Bipe: espelho a cada 1 hora
+//  (o espelho do Inventário foi desligado em 17/11/2026: o painel usa a aba Base Inventário)
 //  Aduana, Auditoria de Carrinho e Problem Solving: arquivo importar-relatorios.gs (mesma pasta do Inventário)
 // =====================================================================
 const OP_DESTINO_ID = '1m2rcujuC2w5qIsrm81nBdTgJxZv3HuukhMTtQBmIH8E'; // Base SSP53
@@ -9,7 +10,7 @@ const OP_MIRASSOL   = '1qArFIEGsFJhxCKYjkJnbKiQZCcfFuY5O91FZQQmzO2k'; // Base Mi
 
 const OP_ESPELHOS = {
   torre:      { origemGid: 456294767,  destinoGid: 1744108768, nome: 'Torre Aduana' },
-  inventario: { origemGid: 1547186020, destinoGid: 393712910,  nome: 'Inventário' },
+  // inventario: { origemGid: 1547186020, destinoGid: 393712910, nome: 'Inventário' }, // desligado em 17/11/2026
   oneBipe:    { origemGid: 1654222074, destinoGid: 801707561,  nome: 'One Bipe' },
 };
 
@@ -24,7 +25,9 @@ const OP_TEMPO_MAX   = 5 * 60 * 1000;    // margem antes do limite de 6 minutos
 
 // ---------- Funções chamadas pelos gatilhos ----------
 function atualizarTorreAduana() { opEspelhar(OP_ESPELHOS.torre); }
-function atualizarInventario()  { opEspelhar(OP_ESPELHOS.inventario); }
+// Espelho do Inventário DESLIGADO em 17/11/2026 (a aba "Inventário" ocupava 2,7 milhões de células e o painel usa a
+// Base Inventário). A função ficou só para um gatilho antigo que sobrar não dar erro: ela não faz nada.
+function atualizarInventario()  { console.log('Espelho do Inventário desligado (17/11/2026). Apague este gatilho em Acionadores.'); }
 function atualizarOneBipe()     { opEspelhar(OP_ESPELHOS.oneBipe); }
 
 // Rode UMA vez para ativar tudo (apaga e recria todos os gatilhos deste projeto)
@@ -32,10 +35,10 @@ function criarTodosGatilhos() {
   ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
   ['importarNovasLinhas', 'importarDirecionamento', 'importarBaseInventario', 'importarRelatorios']
     .forEach(f => ScriptApp.newTrigger(f).timeBased().everyMinutes(15).create());
-  ['atualizarTorreAduana', 'atualizarInventario', 'atualizarOneBipe']
+  ['atualizarTorreAduana', 'atualizarOneBipe']
     .forEach(f => ScriptApp.newTrigger(f).timeBased().everyHours(1).create());
   ScriptApp.newTrigger('arquivarRelatoriosAntigos').timeBased().everyDays(1).atHour(3).create(); // importar-relatorios.gs
-  console.log('Gatilhos criados: Histórico, Direcionamento, Base Inventário e Relatórios a cada 15 min, 3 espelhos a cada hora, arquivamento às 3h');
+  console.log('Gatilhos criados: Histórico, Direcionamento, Base Inventário e Relatórios a cada 15 min, 2 espelhos (Torre e One Bipe) a cada hora, arquivamento às 3h');
 }
 
 // ---------- Espelho (a aba de destino fica igual à de origem) ----------

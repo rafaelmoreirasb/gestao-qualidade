@@ -62,7 +62,10 @@ O Apps Script pode estar em inglês: os botões estão em inglês com a traduç�
 
 ## Observações
 - **Tipo do pacote** (Aduana) e **Tipo** (Auditoria de Carrinho) ficam em branco. Volumoso × Sorting vem da aba One Bipe.
-- O app lê o inventário da aba **Base Inventário** (colunas Pacote, Situação, Área, Operador, Comentário, Data e Hora). A aba
-  **Inventário** (espelho da Base Mirassol Oficial) não é mais usada pelo painel.
+- O app lê o inventário da aba **Base Inventário** (colunas Pacote, Situação, Área, Operador, Comentário, Data e Hora).
+- **Espelho do Inventário desligado em 17/11/2026:** a aba **Inventário** (espelho da Base Mirassol Oficial, 2,7 milhões de
+  células) não é mais usada pelo painel. A função `atualizarInventario` não faz mais nada e saiu do `criarTodosGatilhos`.
+  Depois de colar a automação nova: apague o gatilho `atualizarInventario` em **Triggers** e apague a aba **Inventário** da
+  Base SSP53 (os dados continuam na Base Mirassol Oficial).
 - Se você rodar `criarTodosGatilhos` (arquivo da automação), ele apaga e recria **todos** os gatilhos, já incluindo os dois
   novos.

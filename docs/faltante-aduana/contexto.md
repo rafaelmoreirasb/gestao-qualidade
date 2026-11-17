@@ -34,7 +34,7 @@ Documentos desta pasta:
    (Inventário, Aduana, Auditoria de Carrinho, Problem Solving)                                       │
 Planilha do Labor ─(script do Histórico, 15 min)──────────────────────────────────────────────────────┤
 Planilha do Direcionamento ─(script, 15 min)──────────────────────────────────────────────────────────┼─► BASE SSP53
-Torre Aduana, One Bipe (espelho da Base Mirassol Oficial, 1 h) ───────────────────────────────────────┘   (Google Sheets)
+Torre Aduana, One Bipe (espelho da Base Mirassol Oficial, 1 h; o espelho do Inventário foi desligado em 17/11) ───────────────────────────────────────┘   (Google Sheets)
                                                                                                           ▲ lê e grava
                                      app no Vercel: api/faltantes.js (Google Sheets API, conta de serviço) ┘
                                                     ▲ pedido com o login do app (só Administrador)
