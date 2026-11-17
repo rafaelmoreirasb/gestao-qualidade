@@ -7,7 +7,7 @@
 //  Como funciona:
 //   - Você joga os 4 relatórios do dia, todos juntos, na pasta "Importar Inventário" do Drive.
 //   - O Inventário continua com a função importarBaseInventario (arquivo da automação).
-//   - Esta função (importarRelatorios, a cada 15 min) reconhece os outros 3 PELOS CABEÇALHOS
+//   - Esta função (importarRelatorios, a cada 5 min) reconhece os outros 3 PELOS CABEÇALHOS
 //     (o nome do arquivo não importa), grava na aba certa SEM DUPLICAR e move para "Processados".
 //     Problem Solving: um caso que mudou de estado ATUALIZA a linha.
 //   - Arquivo que ninguém reconhece vai para "Não reconhecidos" e você recebe e-mail.
@@ -30,7 +30,9 @@ const REL_CONFIG = {
   DIAS_NA_PRINCIPAL: 15,
   HORA_ARQUIVAMENTO: 3,
   ABA_LOG: 'Log importação',
-  TEMPO_MAX_MS: 4.5 * 60 * 1000,
+  TEMPO_MAX_MS: 4.5 * 60 * 1000,          // migração e arquivamento
+  ESPERA_TRAVA_MS: 30 * 1000,              // se outro script estiver gravando, espera só 30 s (senão tenta na próxima rodada)
+  INICIAR_ARQUIVO_ATE_MS: 2 * 60 * 1000,   // só começa um arquivo novo se a execução tiver menos de 2 min (o Google corta em 6)
   LIMITE_CELULAS: 10000000,
 };
 
@@ -95,9 +97,12 @@ function relEhInventario(cabecalho) {
 
 // ===== ROTINA PRINCIPAL (gatilho a cada 15 min) =====
 function importarRelatorios() {
+  const inicio = Date.now(); // o limite de 6 minutos do Google conta desde aqui (inclusive a espera abaixo)
   const lock = LockService.getScriptLock();
-  if (!lock.tryLock(4 * 60 * 1000)) return; // espera a outra importação (Histórico, Inventário...) terminar
-  const inicio = Date.now();
+  if (!lock.tryLock(REL_CONFIG.ESPERA_TRAVA_MS)) { // outro script (Histórico, Inventário...) está gravando
+    console.log('Relatórios: outro script está gravando agora. Tento de novo na próxima rodada.');
+    return;
+  }
   const erros = [];
   try {
     const ss = SpreadsheetApp.openById(REL_CONFIG.PLANILHA_ID);
@@ -114,7 +119,7 @@ function importarRelatorios() {
     let feitos = 0;
 
     for (const arq of arquivos) {
-      if (Date.now() - inicio > REL_CONFIG.TEMPO_MAX_MS) { console.log('Tempo quase no limite: o resto vai na próxima execução'); break; }
+      if (Date.now() - inicio > REL_CONFIG.INICIAR_ARQUIVO_ATE_MS) { console.log('Sem tempo para mais um arquivo: o resto vai na próxima rodada'); break; }
       const nome = arq.getName();
       try {
         const tabela = relLerArquivo(arq);
@@ -542,7 +547,7 @@ function criarGatilhosRelatorios() {
   ScriptApp.getProjectTriggers()
     .filter((t) => ['importarRelatorios', 'arquivarRelatoriosAntigos'].includes(t.getHandlerFunction()))
     .forEach((t) => ScriptApp.deleteTrigger(t));
-  ScriptApp.newTrigger('importarRelatorios').timeBased().everyMinutes(15).create();
+  ScriptApp.newTrigger('importarRelatorios').timeBased().everyMinutes(5).create();
   ScriptApp.newTrigger('arquivarRelatoriosAntigos').timeBased().everyDays(1).atHour(REL_CONFIG.HORA_ARQUIVAMENTO).create();
-  console.log('Gatilhos criados: relatórios a cada 15 min e arquivamento diário às ' + REL_CONFIG.HORA_ARQUIVAMENTO + 'h.');
+  console.log('Gatilhos criados: relatórios a cada 5 min e arquivamento diário às ' + REL_CONFIG.HORA_ARQUIVAMENTO + 'h.');
 }

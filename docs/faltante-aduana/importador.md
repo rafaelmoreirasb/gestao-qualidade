@@ -7,7 +7,9 @@
 
 ## O que acontece
 Todo dia você joga os 4 arquivos exportados, **todos juntos**, na pasta **Importar Inventário** do Drive.
-Pode ser pelo computador ou pelo app do Drive no celular. A cada 15 minutos:
+Pode ser pelo computador ou pelo app do Drive no celular. O Inventário entra a cada 15 minutos e os outros 3 a cada 5 minutos
+(um arquivo grande pode levar 2 ou 3 rodadas, porque o script do Histórico também grava na planilha e o Google limita cada
+execução a 6 minutos):
 
 | Arquivo (reconhecido pelos cabeçalhos; o nome não importa) | Aba da Base SSP53 | Quem importa |
 |---|---|---|
@@ -48,7 +50,7 @@ O Apps Script pode estar em inglês: os botões estão em inglês com a traduç�
    - **Antes de copiar, confere o limite de 10 milhões de células.** Se não couber, para com a mensagem "não cabe" e não
      copia nada daquela aba. A função **verCelulasDaPlanilha** mostra quanto cada aba ocupa.
 6. **Ligue os gatilhos**: escolha **criarGatilhosRelatorios** e clique em **Run**. Ela cria `importarRelatorios` (a cada
-   15 min) e `arquivarRelatoriosAntigos` (todo dia às 3h) e **não mexe** nos outros gatilhos.
+   5 min) e `arquivarRelatoriosAntigos` (todo dia às 3h) e **não mexe** nos outros gatilhos.
 7. Teste: jogue os 4 arquivos de hoje na pasta **Importar Inventário**. Depois de 15 a 20 minutos, eles estão em
    **Processados**, as abas têm as linhas novas e a aba **Log importação** mostra o resultado.
 8. Quando tudo estiver certo, **desligue o importador antigo** (projeto "Importar Relatórios" da planilha Conteneirização):
