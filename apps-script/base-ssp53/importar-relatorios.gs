@@ -1,8 +1,8 @@
 // =====================================================================
 //  IMPORTAR RELATÓRIOS — Aduana, Auditoria de Carrinho e Problem Solving
 //  Arquivo NOVO do projeto Apps Script da planilha Base SSP53 (Extensões › Apps Script).
-//  Fica ao lado do arquivo da "AUTOMAÇÃO BASE SSP53" e usa as constantes dele
-//  (OP_DESTINO_ID, BINV_PASTA_ID, BINV_PROCESSADOS_ID).
+//  Fica num arquivo SEPARADO, ao lado do arquivo da "AUTOMAÇÃO BASE SSP53" (não cole por cima dele).
+//  Tem os próprios IDs (planilha e pastas), então funciona sozinho.
 //
 //  Como funciona:
 //   - Você joga os 4 relatórios do dia, todos juntos, na pasta "Importar Inventário" do Drive.
@@ -21,6 +21,9 @@
 // =====================================================================
 
 const REL_CONFIG = {
+  PLANILHA_ID: '1m2rcujuC2w5qIsrm81nBdTgJxZv3HuukhMTtQBmIH8E',        // Base SSP53
+  PASTA_ENTRADA_ID: '1DwoP6MnKzcNyncIdXN99dTGnK6OiyZOG',             // pasta "Importar Inventário"
+  PASTA_PROCESSADOS_ID: '1did_nU3myYJkPGvUf0i8GXO3BMrBAOBg',         // subpasta "Processados"
   PLANILHA_ANTIGA_ID: '1nDqe83XDoY-A3u6rNxaMP2RT74mZNjrYSDUY2c9dKhk', // Conteneirização de Pacotes - Base SSP53
   PASTA_ARQUIVO: 'Faltantes – Arquivo',
   NAO_RECONHECIDOS: 'Não reconhecidos', // subpasta criada dentro da pasta de entrada
@@ -97,9 +100,9 @@ function importarRelatorios() {
   const inicio = Date.now();
   const erros = [];
   try {
-    const ss = SpreadsheetApp.openById(OP_DESTINO_ID);
-    const entrada = DriveApp.getFolderById(BINV_PASTA_ID);
-    const processados = DriveApp.getFolderById(BINV_PROCESSADOS_ID);
+    const ss = SpreadsheetApp.openById(REL_CONFIG.PLANILHA_ID);
+    const entrada = DriveApp.getFolderById(REL_CONFIG.PASTA_ENTRADA_ID);
+    const processados = DriveApp.getFolderById(REL_CONFIG.PASTA_PROCESSADOS_ID);
     const arquivos = [];
     const it = entrada.getFiles();
     while (it.hasNext()) {
@@ -256,7 +259,7 @@ function arquivarRelatoriosAntigos() {
   if (!lock.tryLock(4 * 60 * 1000)) return;
   const erros = [];
   try {
-    const ss = SpreadsheetApp.openById(OP_DESTINO_ID);
+    const ss = SpreadsheetApp.openById(REL_CONFIG.PLANILHA_ID);
     const limite = new Date();
     limite.setHours(0, 0, 0, 0);
     limite.setDate(limite.getDate() - REL_CONFIG.DIAS_NA_PRINCIPAL);
@@ -323,7 +326,7 @@ const REL_ABAS_MIGRAR = ['Aduana', 'Auditoria de Carrinho', 'Problem Solving', '
 function migrarAbasPlanilhaAntiga() {
   const inicio = Date.now();
   const antiga = SpreadsheetApp.openById(REL_CONFIG.PLANILHA_ANTIGA_ID);
-  const ss = SpreadsheetApp.openById(OP_DESTINO_ID);
+  const ss = SpreadsheetApp.openById(REL_CONFIG.PLANILHA_ID);
   for (const nome of REL_ABAS_MIGRAR) {
     if (Date.now() - inicio > REL_CONFIG.TEMPO_MAX_MS) {
       console.log('Tempo quase no limite. Rode migrarAbasPlanilhaAntiga de novo para continuar.');
@@ -358,7 +361,7 @@ function migrarAbasPlanilhaAntiga() {
 
 /** Mostra no registro de execução quantas células cada aba ocupa (para acompanhar o limite de 10 milhões). */
 function verCelulasDaPlanilha() {
-  const ss = SpreadsheetApp.openById(OP_DESTINO_ID);
+  const ss = SpreadsheetApp.openById(REL_CONFIG.PLANILHA_ID);
   ss.getSheets().forEach((a) => console.log(a.getName() + ': ' + (a.getMaxRows() * a.getMaxColumns()).toLocaleString('pt-BR')));
   console.log('TOTAL: ' + relCelulasUsadas(ss).toLocaleString('pt-BR') + ' de 10.000.000');
 }

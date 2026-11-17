@@ -37,6 +37,8 @@ O Apps Script pode estar em inglês: os botões estão em inglês com a traduç�
       Aduana na Base Inventário) e o `criarTodosGatilhos` também recria os gatilhos novos.
 3. **Crie o arquivo novo**: ao lado de **Files** (Arquivos), clique em **+** › **Script**, dê o nome `importar-relatorios` e cole
    todo o conteúdo de `apps-script/base-ssp53/importar-relatorios.gs`. Clique no disquete (**Save**).
+   **Não cole por cima do arquivo da automação** (normalmente o `Código.gs`): no fim, o projeto tem **2 arquivos**, o da
+   automação e o `importar-relatorios`. O importador tem os próprios IDs e funciona sozinho.
 4. *(Só se for usar `.xlsx`)* **Services** (Serviços) › **+** › **Drive API** › **Add**. Para `.csv` não precisa.
 5. **Traga o histórico da planilha antiga**: no topo, escolha a função **migrarAbasPlanilhaAntiga** e clique em **Run**
    (Executar). Na primeira vez o Google pede permissão: **Review permissions** › sua conta › **Advanced** (Avançado) ›
