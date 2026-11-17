@@ -30,6 +30,7 @@
         <a href="#painel" data-aba="painel">Painel</a>
         <a href="#gemba" data-aba="gemba">Gemba</a>
         <a href="#torre" data-aba="torre">Torre de Aduana</a>
+        <a href="#faltantes" data-aba="faltantes">Faltante Aduana</a>
         <a href="#pokayoke" data-aba="pokayoke">Poka-Yoke</a>
         <a href="#eficacia" data-aba="eficacia">Eficácia</a>
         <a href="#cronograma" data-aba="cronograma">Cronograma</a>
@@ -467,6 +468,11 @@
       <section class="aba" id="aba-torre" data-titulo="Torre de Aduana" hidden>
         <h1 class="titulo">Torre de Aduana</h1>
         <div class="cartao em-construcao"><p>Em construção</p></div>
+      </section>
+
+      <!-- ===== Faltante Aduana (js/faltantes.js + faltantes.html + api/faltantes.js) ===== -->
+      <section class="aba" id="aba-faltantes" data-titulo="Faltante Aduana" hidden>
+        <iframe id="faltantes-quadro" class="faltantes-quadro" title="Faltante Aduana" loading="lazy"></iframe>
       </section>
 
       <!-- ===== Poka-Yoke (js/pokayoke.js) ===== -->
@@ -1163,5 +1169,6 @@
   <script src="js/pokayoke.js"></script>
   <script src="js/eficacia.js"></script>
   <script src="js/pel.js"></script>
+  <script src="js/faltantes.js"></script>
 </body>
 </html>
