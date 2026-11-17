@@ -112,6 +112,20 @@
       return 'Verificado no inventário em ' + ((inv.dados['Área'] || inv.dados['Ârea']) || 'área não informada') + ' depois do faltante na Aduana' +
         (A.torre(p, 'faltante').length ? ' (faltante também na Torre)' : '') + ' · carrinho: ' + carTxt;
     },
+    // R07 — qualquer resultado na auditoria de carrinho, Faltante na Aduana e o PRÓXIMO registro é um bipe no Histórico
+    //       → Erro de Conteinerização. "Próximo" ignora Torre e outros registros da Aduana (mesma conferência). (17/11)
+    'R07': (p) => {
+      if (!p.temSorting) return false;
+      const i = p.eventos.findIndex((x) => x.fonte === 'aduana' && norm(x.dados['Estado']) === 'faltante');
+      if (i < 0) return false;
+      const prox = p.eventos.slice(i + 1).find((e) => e.fonte !== 'torre' && e.fonte !== 'aduana');
+      if (!prox || prox.fonte !== 'historico') return false;
+      const car = A.eventosDe(p, 'carrinho');
+      const carTxt = car.length ? [...new Set(car.map((x) => x.dados['Estado']))].join('/') : 'não auditado';
+      const hora = prox.quando instanceof Date ? String(prox.quando.getHours()).padStart(2, '0') + ':' + String(prox.quando.getMinutes()).padStart(2, '0') : '';
+      return 'Bipado no Histórico' + (hora ? ' às ' + hora : '') + (prox.dados['Processo'] ? ' (' + prox.dados['Processo'] + ')' : '') +
+        ' logo depois do faltante na Aduana · carrinho: ' + carTxt;
+    },
   };
 
   /* Regras iniciais, usadas enquanto a aba "Regras" não existe ou está vazia (mesmos campos da aba).
@@ -123,6 +137,7 @@
     { ordem: 4, codigo: 'R04', ligada: true, resultado: 'Pacote Avariado', pergunta: 'Bipado no Histórico, faltante na Aduana e na Torre, e depois Problem Solving: pacote avariado / não reparado?', observacao: 'Com ou sem auditoria de carrinho', abas: 'Histórico, Aduana, Torre Aduana, Problem Solving' },
     { ordem: 5, codigo: 'R05', ligada: true, resultado: 'Erro de Conteinerização', pergunta: 'Bipado no Histórico, Pendente/Faltante ou não bipado na auditoria de carrinho, Faltante na Aduana na rota de origem e A MAIS na Aduana em outra rota?', observacao: '', abas: 'Histórico, Auditoria de Carrinho, Aduana' },
     { ordem: 6, codigo: 'R06', ligada: true, resultado: 'Erro de Conteinerização', pergunta: 'Bipado no Histórico, Pendente/Faltante ou não bipado na auditoria de carrinho, Faltante na Aduana e logo em seguida Verificado no Inventário (com ou sem Faltante na Torre)?', observacao: '', abas: 'Histórico, Auditoria de Carrinho, Aduana, Torre Aduana, Inventário' },
+    { ordem: 7, codigo: 'R07', ligada: true, resultado: 'Erro de Conteinerização', pergunta: 'Bipado no Histórico, bipado ou não na auditoria de carrinho, Faltante na Aduana e logo depois bipado no Histórico?', observacao: '"Logo depois" = o próximo registro depois do faltante (Torre e outros registros da Aduana não contam)', abas: 'Histórico, Auditoria de Carrinho, Aduana' },
   ];
 
   /** Junta a aba Regras com a LOGICA: cada linha ganha temLogica.

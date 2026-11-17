@@ -49,6 +49,7 @@ e olham só a janela de 36 h. "Faltante na aduana" é verdade para todo pacote d
 | 4 | R04 | Bipado no Histórico, faltante na Aduana e na Torre (bipado ou não na auditoria de carrinho) e depois **Problem Solving: Problema = pacote avariado e Resolução = não reparado**? | Pacote Avariado | Histórico, Aduana, Torre Aduana, Problem Solving |
 | 5 | R05 | Bipado no Histórico, depois **Pendente, Faltante ou não bipado na auditoria de carrinho**, **Faltante na Aduana na rota de origem** e **A mais na Aduana em outra rota**? (09/11) | Erro de Conteinerização | Histórico, Auditoria de Carrinho, Aduana |
 | 6 | R06 | Bipado no Histórico, depois **Pendente, Faltante ou não bipado na auditoria de carrinho**, **Faltante na Aduana** e **logo em seguida Verificado no Inventário** (com ou sem Faltante na Torre)? (11/11) | Erro de Conteinerização | Histórico, Auditoria de Carrinho, Aduana, Torre Aduana, Inventário |
+| 7 | R07 | Bipado no Histórico, **bipado ou não na auditoria de carrinho** (qualquer resultado), **Faltante na Aduana** e **logo depois bipado no Histórico**? (17/11) | Erro de Conteinerização | Histórico, Auditoria de Carrinho, Aduana |
 
 Regra nova que entra no código e ainda não está na aba `Regras` passa a valer sozinha, **no fim da lista**. Para mudar a
 ordem ou desligar, ponha/edite a linha dela na aba.
@@ -68,6 +69,11 @@ ordem ou desligar, ponha/edite a linha dela na aba.
 - *R06*: carrinho como na R05 (nenhum registro ou só Pendente/Faltante); o **primeiro** registro do Inventário depois do
   Faltante na Aduana tem `Situação` = Verificados. A Torre não é exigida (só aparece no detalhe). Parecida com a R03
   (que exige Faltante na Torre e não olha o carrinho); como a R03 vem antes, quando as duas batem aparece R03.
+- *R07*: depois do registro "Faltante" na Aduana, o **próximo** registro da linha do tempo é um bipe no Histórico (qualquer
+  processo). Para achar o "próximo", **não contam** a Torre Aduana nem outros registros da própria Aduana (são a mesma
+  conferência). Se antes do bipe aparecer Inventário, Problem Solving, Direcionamento ou Auditoria de Carrinho, **não vale**.
+  O carrinho pode ter qualquer resultado (ou nenhum) e só aparece no detalhe. Fica por último: as regras mais específicas
+  (R01 a R06) decidem antes.
 
 ---
 
