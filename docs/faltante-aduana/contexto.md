@@ -76,11 +76,17 @@ secreta do Supabase **nunca** entram no código.
 
 | Planilha | ID |
 |---|---|
-| **Conteneirização de Pacotes - Base SSP53** (principal) | `1nDqe83XDoY-A3u6rNxaMP2RT74mZNjrYSDUY2c9dKhk` |
+| **Base SSP53** (principal, desde 17/11/2026) | `1m2rcujuC2w5qIsrm81nBdTgJxZv3HuukhMTtQBmIH8E` |
+| Conteneirização de Pacotes - Base SSP53 (a principal até 17/11/2026; o importador ainda grava nela) | `1nDqe83XDoY-A3u6rNxaMP2RT74mZNjrYSDUY2c9dKhk` |
 | Origem do Histórico (Labor), gid=0 | `1O4clXDtcty6TiCVsBXFu0I45Hv9LSysBoI70M4Kd6qc` |
 | Origem do Direcionamento Manual, gid=1903954199 | `1No0tZ8yI7HJpKV2V2_PgKqIBpHXVlbTKsdy-lhBzkYk` |
 
-**Abas da planilha principal.** O painel acha as colunas pelo **nome do cabeçalho**, então não mude os nomes.
+**Abas da planilha principal (Base SSP53).** O painel acha as colunas pelo **nome do cabeçalho**, então não mude os nomes.
+
+> **Situação em 17/11/2026:** a Base SSP53 já tem Histórico, Torre Aduana, Inventário, One Bipe, Direcionamento Manual e
+> Colaboradores. **Faltam Aduana, Auditoria de Carrinho e Problem Solving** (o importador ainda grava na planilha antiga) e
+> Regras, Classificação manual, Resumo diário, Responsáveis e Log importação (o app cria as quatro primeiras sozinho; copie da
+> planilha antiga para não perder o que já foi classificado). Sem a aba Aduana, o painel não acha nenhum faltante.
 
 | Aba | Colunas usadas | Quem alimenta |
 |---|---|---|

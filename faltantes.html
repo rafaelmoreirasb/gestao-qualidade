@@ -753,7 +753,7 @@
   }
 
   /* ---------- eventos ---------- */
-  $('#rodape').textContent = 'Dados ao vivo da planilha "Conteneirização de Pacotes - Base SSP53". Atualiza sozinho a cada ' + CONFIG.ATUALIZAR_MIN + ' min. Regras: ' + (window.REGRAS ? window.REGRAS.versao : '—') + '.';
+  $('#rodape').textContent = 'Dados ao vivo da planilha "Base SSP53". Atualiza sozinho a cada ' + CONFIG.ATUALIZAR_MIN + ' min. Regras: ' + (window.REGRAS ? window.REGRAS.versao : '—') + '.';
   $('#btnAtualizar').onclick = () => atualizar(true);
   $('#selDia').onchange = (e) => { salvarVistos(); S.dia = e.target.value; S.vistosAntes = null; S.filtro = null; S.pacotes = []; try { history.replaceState(null, '', '#' + encodeURIComponent(S.dia)); } catch (x) {} atualizar(false); };
   document.querySelectorAll('#menu a').forEach((a) => { a.onclick = (e) => { e.preventDefault(); if (a.dataset.aba !== S.aba) trocarAba(a.dataset.aba); }; });

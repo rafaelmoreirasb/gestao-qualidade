@@ -176,7 +176,7 @@ Ações no formato **5W2H**, com Origem e Status.
 Painel dos pacotes **faltantes na aduana** para a reunião diária. Veio do projeto `rafaelmoreirasb/painel-faltantes`, que antes
 rodava como Web App do Google Apps Script.
 
-**Os dados continuam na planilha do Google Sheets** "Conteneirização de Pacotes - Base SSP53". O app só lê e apresenta. A
+**Os dados continuam na planilha do Google Sheets** **"Base SSP53"** (desde 17/11/2026; antes era a "Conteneirização de Pacotes - Base SSP53"). O app só lê e apresenta. A
 classificação manual e os responsáveis por ilha também são gravados lá.
 
 **O que a aba mostra**
@@ -193,6 +193,13 @@ classificação manual e os responsáveis por ilha também são gravados lá.
 - **Responsáveis por ilha**: sub-aba própria. Ilha = letra da rota. Quem tem erro de conteinerização em pacote Volumoso
   aparece como "cobrar: Nome".
 - Atualiza sozinho a cada 5 min. O botão **Atualizar agora** relê a planilha.
+
+**Abas que a planilha Base SSP53 precisa ter** (nomes iguais, porque o painel acha as colunas pelo cabeçalho): Aduana,
+Histórico, Auditoria de Carrinho, Problem Solving, Inventário, Torre Aduana, Direcionamento Manual e One Bipe. Em 17/11/2026
+**faltavam Aduana, Auditoria de Carrinho e Problem Solving** (elas vêm do importador dos CSV, que ainda grava na planilha antiga):
+sem a aba **Aduana** o painel mostra "Ainda não há faltantes na aba Aduana". As abas Regras, Classificação manual, Resumo diário e
+Responsáveis o app **cria sozinho** na primeira vez que precisar; para não perder o que já foi classificado, copie-as da planilha
+antiga. A lista completa de abas e colunas está em [`docs/faltante-aduana/contexto.md`](docs/faltante-aduana/contexto.md), seção 4.
 
 **Quem vê**: só o **Administrador**, como as outras abas. O servidor também confere o papel antes de responder.
 
@@ -215,7 +222,7 @@ classificação manual e os responsáveis por ilha também são gravados lá.
    3. Vá em **IAM & Admin > Service Accounts > Create service account**. Dê um nome, por exemplo "faltante-aduana", e clique em **Done**. Não precisa de papel.
    4. Abra a conta criada, vá em **Keys > Add key > Create new key > JSON**. Um arquivo `.json` é baixado. **Guarde em lugar seguro e
       nunca suba no GitHub.**
-3. **Planilha**: abra a planilha principal e clique em **Compartilhar**. Cole o e-mail da conta de serviço (termina em
+3. **Planilha**: abra a planilha **Base SSP53** e clique em **Compartilhar**. Cole o e-mail da conta de serviço (termina em
    `iam.gserviceaccount.com`, está no arquivo JSON em `client_email`) como **Editor**. Se a DHL não deixar compartilhar com esse
    e-mail, pare aqui e avise.
 4. **Vercel** > projeto gestao-qualidade > **Settings > Environment Variables**. Crie as 4 variáveis abaixo (Production e
@@ -224,7 +231,7 @@ classificação manual e os responsáveis por ilha também são gravados lá.
    | Nome | Valor |
    |---|---|
    | `GOOGLE_SA_JSON` | o conteúdo inteiro do arquivo `.json` (abrir no Bloco de Notas, copiar tudo e colar) |
-   | `PLANILHA_ID` | `1nDqe83XDoY-A3u6rNxaMP2RT74mZNjrYSDUY2c9dKhk` |
+   | `PLANILHA_ID` | `1m2rcujuC2w5qIsrm81nBdTgJxZv3HuukhMTtQBmIH8E` (planilha **Base SSP53**) |
    | `SUPABASE_URL` | o mesmo endereço que está em `js/supabase.js` |
    | `SUPABASE_SERVICE_ROLE` | Supabase > Project Settings > API Keys > **secret key** (a chave secreta; nunca vai para o código) |
 

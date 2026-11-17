@@ -6,7 +6,7 @@
 
    Variáveis de ambiente (Vercel > Settings > Environment Variables):
      GOOGLE_SA_JSON         conteúdo do arquivo JSON da conta de serviço do Google
-     PLANILHA_ID            ID da planilha "Conteneirização de Pacotes - Base SSP53"
+     PLANILHA_ID            ID da planilha "Base SSP53"
      SUPABASE_URL           mesmo endereço que está em js/supabase.js
      SUPABASE_SERVICE_ROLE  chave secreta do Supabase (Project Settings > API Keys > secret)
    ========================================================== */

@@ -11,7 +11,8 @@ Você joga os arquivos exportados (Aduana, Auditoria de Carrinho, Problem Solvin
 
 1. reconhece cada arquivo pelos cabeçalhos (o nome do arquivo não importa; aceita `.csv` e `.xlsx`);
 2. trata as colunas para o formato da aba (data e hora separadas, rota sem o número, hora 24h);
-3. junta na aba certa da planilha **Conteneirização de Pacotes - Base SSP53** sem duplicar
+3. junta na aba certa da planilha **Conteneirização de Pacotes - Base SSP53** sem duplicar (**pendência:** desde 17/11/2026 o painel lê a
+   planilha **Base SSP53**; o importador precisa passar a gravar nela)
    (no Problem Solving, um caso que mudou de estado **atualiza** a linha);
 4. move o arquivo para **Faltantes – Entrada › Processados › AAAA-MM-DD**;
 5. registra tudo na aba **Log importação** e manda e-mail se der erro.
