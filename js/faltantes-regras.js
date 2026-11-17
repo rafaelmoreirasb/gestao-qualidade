@@ -12,8 +12,8 @@
  *   p.dia                dia analisado, "dd/mm/aaaa"
  *   p.aduana             linha da aba Aduana que marcou o faltante (campos pelo nome da coluna)
  *   p.temSorting         true se o pacote teve bipe no Histórico (sorting) no dia analisado
- *   p.inicio / p.fim     começo e fim da janela (Date): 1º bipe do Histórico no dia até 36 h depois
- *   p.janelaFechada      true se as 36 h já passaram (não entra mais nada)
+ *   p.inicio / p.fim     começo e fim da janela (Date): 1º bipe do Histórico no dia até 48 h depois
+ *   p.janelaFechada      true se as 48 h já passaram (não entra mais nada)
  *   p.eventos            linha do tempo, em ordem de horário. Cada evento:
  *        { quando: Date, fonte: 'historico'|'carrinho'|'aduana'|'ps'|'inventario'|'torre'|'direcionamento',
  *          texto: 'resumo legível', dados: { 'Nome da coluna': 'valor', ... } }

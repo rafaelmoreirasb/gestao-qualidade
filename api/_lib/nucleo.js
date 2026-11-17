@@ -1,7 +1,7 @@
 /* ==========================================================
    api/_lib/nucleo.js
    FALTANTE ADUANA — lógica do servidor (lê e grava a planilha do Google Sheets).
-   É o antigo Painel.gs (Apps Script) passado para Node: mesma janela de 36 h a partir do sorting,
+   É o antigo Painel.gs (Apps Script) passado para Node: janela a partir do sorting (48 h desde 17/11/2026; antes 36 h),
    mesma leitura só dos dias D..D+2, mesmas regras, resumo diário, responsáveis e Volumoso × Sorting.
 
    criarNucleo({ planilha, cache, regras, usuario })
@@ -12,7 +12,7 @@
    ========================================================== */
 
 const CFG = {
-  JANELA_HORAS: 36,   // linha do tempo: 1º bipe do pacote no Histórico (sorting) no dia + 36 h
+  JANELA_HORAS: 48,   // linha do tempo: 1º bipe do pacote no Histórico (sorting) no dia + 48 h (era 36 h até 17/11/2026)
   DIAS_LEITURA: 3,    // lê o dia analisado e os 2 seguintes
   CACHE_SEG: 6 * 3600,      // dia antigo: guardado 6 h
   CACHE_RECENTE_SEG: 600,   // dia dos últimos 4 dias (ainda recebe bipes): 10 min
@@ -163,7 +163,7 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
   async function dadosDoDia(dia, forcar) {
     const D = lerDataHora(dia);
     if (!D) throw new Error('Dia inválido: ' + dia);
-    const chave = 'dia:' + dia;
+    const chave = 'dia:' + dia + ':' + CFG.JANELA_HORAS + 'h'; // com a janela na chave: mudar a janela recalcula tudo
     if (!forcar) { const c = await cache.ler(chave); if (c) return c; }
     const inicioProc = Date.now();
     const dias = Array.from({ length: CFG.DIAS_LEITURA }, (_, i) => somaDias(D, i));
@@ -198,7 +198,7 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
       }
     });
 
-    // 3) janela: começa no sorting — 1º bipe do pacote no dia no Histórico (qualquer processo) + 36 h
+    // 3) janela: começa no sorting — 1º bipe do pacote no dia no Histórico (qualquer processo) + JANELA_HORAS
     const pacotes = [];
     for (const [id, x] of falt) {
       const vistos = {};

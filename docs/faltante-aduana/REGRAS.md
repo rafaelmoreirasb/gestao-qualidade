@@ -16,8 +16,8 @@ ainda não tem lógica no código aparece como "sem lógica ainda — pedir ao C
 
 **Como o painel monta cada pacote:** faltante = linha da aba **Aduana** com Estado "Faltante" no dia analisado.
 Tudo começa no **sorting**: a linha do tempo começa no **primeiro bipe do pacote no dia na aba Histórico** (qualquer
-processo — sorting ou conteinerização) e vai até **36 h depois**, juntando Histórico, Auditoria de Carrinho, Aduana,
-Problem Solving, Inventário, Torre Aduana e Direcionamento Manual. Passadas as 36 h, não entra mais nada daquele pacote.
+processo — sorting ou conteinerização) e vai até **48 h depois** (era 36 h até 17/11/2026), juntando Histórico, Auditoria de Carrinho, Aduana,
+Problem Solving, Inventário, Torre Aduana e Direcionamento Manual. Passadas as 48 h, não entra mais nada daquele pacote.
 Sem bipe no Histórico no dia: a linha do tempo começa à 00:00 e o pacote ganha a etiqueta "sem sorting no dia".
 As regras olham essa linha do tempo. A mesma regra vale para separáveis e volumosos.
 
@@ -38,7 +38,7 @@ A manual vence. Se depois uma regra passar a dar outro resultado, o painel mostr
 ## Regras vigentes
 
 Regras iniciais mandadas pelo Rafael em 08/11/2026. Todas exigem que o pacote tenha sido **bipado no Histórico no dia**
-e olham só a janela de 36 h. "Faltante na aduana" é verdade para todo pacote do painel. Ordem = a que o Rafael mandou
+e olham só a janela de 48 h. "Faltante na aduana" é verdade para todo pacote do painel. Ordem = a que o Rafael mandou
 (muda na aba `Regras`).
 
 | Ordem | Código | Pergunta (se SIM, o pacote para aqui) | Resultado | Abas usadas |
