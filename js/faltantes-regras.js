@@ -44,22 +44,17 @@
     torre: (p, estado) => p.eventos.filter((e) => e.fonte === 'torre' && norm(e.dados['Estado aduana']) === norm(estado)),
     /** Rota da Torre: Gaiola (rota otim,) ou, se vazia, a parte antes do "|" da coluna Rota. */
     rotaTorre: (e) => String(e.dados['Gaiola (rota otim,)'] || String(e.dados['Rota'] || '').split('|')[0]).trim(),
-    /** Auditoria de Carrinho: registro "Faltante" numa vaga de OUTRA rota (diferente da rota em que faltou na Aduana).
-        Só compara vaga com formato de rota (ex.: B3_PM1); vaga só com número (ex.: 60) não dá para comparar e não conta. */
-    carrinhoFaltanteOutraRota: (p) => {
-      const rf = norm(String((p.aduana && p.aduana['ID da rota']) || ''));
-      return p.eventos.find((e) => e.fonte === 'carrinho' && norm(e.dados['Estado']) === 'faltante' &&
-        /^[a-z]+\d+_/i.test(String(e.dados['Gaiola'] || '').trim()) && norm(e.dados['Gaiola']) !== rf) || null;
-    },
+    /** Auditoria de Carrinho: registro "A mais" (o pacote foi achado no carrinho de outra vaga), em qualquer vaga. */
+    carrinhoAMais: (p) => p.eventos.find((e) => e.fonte === 'carrinho' && norm(e.dados['Estado']) === 'a mais') || null,
   };
 
   const ERRO_AUDITORIA = 'Erro de Conteinerização + Erro de Auditoria de Carrinho';
-  /** R01, R03 e R07 ganham o complemento quando o carrinho deu Faltante em outra rota (17/11). */
+  /** R01, R03 e R07 ganham o complemento quando o carrinho deu "A mais" (17/11). */
   const comAuditoria = (p, detalhe) => {
     if (!detalhe) return detalhe;
-    const c = A.carrinhoFaltanteOutraRota(p);
+    const c = A.carrinhoAMais(p);
     if (!c) return detalhe;
-    return { resultado: ERRO_AUDITORIA, detalhe: String(detalhe).replace(/ · carrinho: [^·]*$/, '') + ' · carrinho: Faltante na vaga ' + c.dados['Gaiola'] + ' (faltou na Aduana na ' + (A.rotaFaltante(p) || '?') + ')' };
+    return { resultado: ERRO_AUDITORIA, detalhe: String(detalhe).replace(/ · carrinho: [^·]*$/, '') + ' · carrinho: A mais na vaga ' + (c.dados['Gaiola'] || '?') + ' (faltou na Aduana na ' + (A.rotaFaltante(p) || '?') + ')' };
   };
 
   /*
@@ -142,12 +137,12 @@
       return comAuditoria(p, 'Bipado no Histórico' + (hora ? ' às ' + hora : '') + (prox.dados['Processo'] ? ' (' + prox.dados['Processo'] + ')' : '') +
         ' logo depois do faltante na Aduana · carrinho: ' + carTxt);
     },
-    // R08 — Faltante na Auditoria de Carrinho numa vaga de OUTRA rota e Faltante na Aduana (sem cair numa regra antes)
+    // R08 — "A mais" na Auditoria de Carrinho (achado no carrinho de outra vaga) e Faltante na Aduana (sem cair numa regra antes)
     //       → Erro de Conteinerização + Erro de Auditoria de Carrinho. (17/11)
     'R08': (p) => {
       if (!p.temSorting) return false;
-      const c = A.carrinhoFaltanteOutraRota(p);
-      return c ? 'Carrinho: Faltante na vaga ' + c.dados['Gaiola'] + ', depois Faltante na Aduana na ' + (A.rotaFaltante(p) || '?') : false;
+      const c = A.carrinhoAMais(p);
+      return c ? 'Carrinho: A mais na vaga ' + (c.dados['Gaiola'] || '?') + ' · Faltante na Aduana na ' + (A.rotaFaltante(p) || '?') : false;
     },
   };
 
@@ -161,7 +156,7 @@
     { ordem: 5, codigo: 'R05', ligada: true, resultado: 'Erro de Conteinerização', pergunta: 'Bipado no Histórico, Pendente/Faltante ou não bipado na auditoria de carrinho, Faltante na Aduana na rota de origem e A MAIS na Aduana em outra rota?', observacao: '', abas: 'Histórico, Auditoria de Carrinho, Aduana' },
     { ordem: 6, codigo: 'R06', ligada: true, resultado: 'Erro de Conteinerização', pergunta: 'Bipado no Histórico, Pendente/Faltante ou não bipado na auditoria de carrinho, Faltante na Aduana e logo em seguida Verificado no Inventário (com ou sem Faltante na Torre)?', observacao: '', abas: 'Histórico, Auditoria de Carrinho, Aduana, Torre Aduana, Inventário' },
     { ordem: 7, codigo: 'R07', ligada: true, resultado: 'Erro de Conteinerização', pergunta: 'Bipado no Histórico, bipado ou não na auditoria de carrinho, Faltante na Aduana e logo depois bipado no Histórico?', observacao: '"Logo depois" = o próximo registro depois do faltante (Torre e outros registros da Aduana não contam)', abas: 'Histórico, Auditoria de Carrinho, Aduana' },
-    { ordem: 8, codigo: 'R08', ligada: true, resultado: 'Erro de Conteinerização + Erro de Auditoria de Carrinho', pergunta: 'Bipado no Histórico, Faltante na Auditoria de Carrinho numa vaga de outra rota e Faltante na Aduana?', observacao: 'R01, R03 e R07 também mostram este resultado quando o carrinho deu Faltante em outra rota', abas: 'Histórico, Auditoria de Carrinho, Aduana' },
+    { ordem: 8, codigo: 'R08', ligada: true, resultado: 'Erro de Conteinerização + Erro de Auditoria de Carrinho', pergunta: 'Bipado no Histórico, A mais na Auditoria de Carrinho (achado em outra vaga) e Faltante na Aduana?', observacao: 'R01, R03 e R07 também mostram este resultado quando o carrinho deu A mais', abas: 'Histórico, Auditoria de Carrinho, Aduana' },
   ];
 
   /** Junta a aba Regras com a LOGICA: cada linha ganha temLogica.

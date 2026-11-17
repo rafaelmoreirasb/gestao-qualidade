@@ -50,9 +50,9 @@ e olham só a janela de 36 h. "Faltante na aduana" é verdade para todo pacote d
 | 5 | R05 | Bipado no Histórico, depois **Pendente, Faltante ou não bipado na auditoria de carrinho**, **Faltante na Aduana na rota de origem** e **A mais na Aduana em outra rota**? (09/11) | Erro de Conteinerização | Histórico, Auditoria de Carrinho, Aduana |
 | 6 | R06 | Bipado no Histórico, depois **Pendente, Faltante ou não bipado na auditoria de carrinho**, **Faltante na Aduana** e **logo em seguida Verificado no Inventário** (com ou sem Faltante na Torre)? (11/11) | Erro de Conteinerização | Histórico, Auditoria de Carrinho, Aduana, Torre Aduana, Inventário |
 | 7 | R07 | Bipado no Histórico, **bipado ou não na auditoria de carrinho** (qualquer resultado), **Faltante na Aduana** e **logo depois bipado no Histórico**? (17/11) | Erro de Conteinerização | Histórico, Auditoria de Carrinho, Aduana |
-| 8 | R08 | Bipado no Histórico, **Faltante na Auditoria de Carrinho numa vaga de outra rota** e **Faltante na Aduana**? (17/11) | Erro de Conteinerização + Erro de Auditoria de Carrinho | Histórico, Auditoria de Carrinho, Aduana |
+| 8 | R08 | Bipado no Histórico, **A mais na Auditoria de Carrinho** (achado no carrinho de outra vaga) e **Faltante na Aduana**? (17/11) | Erro de Conteinerização + Erro de Auditoria de Carrinho | Histórico, Auditoria de Carrinho, Aduana |
 
-**Complemento de auditoria (17/11):** quando o pacote cai na **R01, R03 ou R07** e a Auditoria de Carrinho deu **Faltante numa vaga de outra rota**, o resultado passa a ser **Erro de Conteinerização + Erro de Auditoria de Carrinho** (o código da regra continua R01/R03/R07). A R08 pega o mesmo caso quando nenhuma regra antes se aplicou.
+**Complemento de auditoria (17/11):** quando o pacote cai na **R01, R03 ou R07** e a Auditoria de Carrinho deu **A mais** (achado no carrinho de outra vaga), o resultado passa a ser **Erro de Conteinerização + Erro de Auditoria de Carrinho** (o código da regra continua R01/R03/R07). A R08 pega o mesmo caso quando nenhuma regra antes se aplicou.
 
 Regra nova que entra no código e ainda não está na aba `Regras` passa a valer sozinha, **no fim da lista**. Para mudar a
 ordem ou desligar, ponha/edite a linha dela na aba.
@@ -77,10 +77,8 @@ ordem ou desligar, ponha/edite a linha dela na aba.
   conferência). Se antes do bipe aparecer Inventário, Problem Solving, Direcionamento ou Auditoria de Carrinho, **não vale**.
   O carrinho pode ter qualquer resultado (ou nenhum) e só aparece no detalhe. Fica por último: as regras mais específicas
   (R01 a R06) decidem antes.
-- *Carrinho Faltante em outra rota* (complemento da R01/R03/R07 e R08): registro da Auditoria de Carrinho com `Estado` =
-  Faltante e `Gaiola` diferente do `ID da rota` em que o pacote faltou na Aduana. Só compara vaga com formato de rota
-  (letras + número + "_", ex.: B3_PM1); vaga só com número (ex.: 60) não dá para comparar e não conta. Pode ser antes ou
-  depois do faltante na Aduana, dentro da janela.
+- *Carrinho A mais* (complemento da R01/R03/R07 e R08): algum registro da Auditoria de Carrinho com `Estado` = A mais,
+  em qualquer vaga (`Gaiola`), antes ou depois do faltante na Aduana, dentro da janela. O detalhe mostra a vaga.
 
 ---
 
