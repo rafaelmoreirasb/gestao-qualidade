@@ -2,7 +2,10 @@
 
 App web da operação DHL Supply Chain Mirassol SSP53 para registrar desvios de processo, treinamentos e planos de ação.
 
-## Situação atual: Fase 9 — Calculadora PEL e contas por papel + Alterações PEL 1 (09/11/2026) e PEL 2 (11/11/2026)
+## Situação atual: Fase 10 — Faltante Aduana (17/11/2026, no link de teste)
+
+- **Fase 10:** nova aba **Faltante Aduana** (só Administrador). É o painel dos pacotes faltantes na aduana para a reunião diária, que antes rodava no Google Apps Script. Os dados continuam na planilha do Google Sheets. Ver a seção "Fase 10 · Aba Faltante Aduana" e a pasta [`docs/faltante-aduana/`](docs/faltante-aduana/contexto.md).
+- Antes: Fase 9 — Calculadora PEL e contas por papel + Alterações PEL 1 (09/11/2026) e PEL 2 (11/11/2026).
 
 - **Tela de login** por e-mail e senha (Supabase). Senha errada é recusada com a mensagem "E-mail ou senha incorretos".
 - O login fica lembrado no navegador até você clicar em **Sair** (ou a sessão expirar).
@@ -168,7 +171,7 @@ Ações no formato **5W2H**, com Origem e Status.
 - **Importar planilha** = **sincronizar com a lista de ativos do RH** (.xlsx ou .csv, primeira aba, colunas **Matrícula**, **Nome** e **CPF**; as outras colunas são ignoradas). A planilha deve ter **todos os ativos**. Antes de gravar aparece um **resumo**: novos (entram como Ativo), quem não está na planilha (vira **Desligado**), Desligados que voltaram (reativados), nome ou CPF diferente (atualizados com o da planilha) e sem mudança, com a lista de nomes de cada grupo. Se mais de 20% dos ativos forem virar Desligado, aparece um aviso vermelho. Só grava ao clicar em **Confirmar atualização**; **Cancelar** não muda nada. Ninguém é excluído. CPF vazio ou inválido na planilha não apaga o CPF guardado; CPF sem o zero da frente (Excel) é completado. A planilha não é guardada, só os dados.
 - **Busca por CPF** também no Gemba (passo 1) e na janela de participantes do Cronograma.
 
-## Aba Faltante Aduana (desde 17/11/2026)
+## Fase 10 · Aba Faltante Aduana (desde 17/11/2026)
 
 Painel dos pacotes **faltantes na aduana** para a reunião diária. Veio do projeto `rafaelmoreirasb/painel-faltantes`, que antes
 rodava como Web App do Google Apps Script.
@@ -233,6 +236,24 @@ classificação manual e os responsáveis por ilha também são gravados lá.
    
    Os outros gatilhos **continuam**, porque eles **gravam** os dados na planilha: `importarRelatorios`, `arquivarAntigos`, Histórico,
    Direcionamento e o script da Torre.
+
+### Roteiro de teste (link de teste, entrando como Administrador)
+
+1. O menu mostra **Faltante Aduana**. Abrir a aba: aparece o painel com o dia mais recente, os números e "Dados preparados às…".
+2. Escolher um dia que você conhece: conferir a quantidade de faltantes e 2 ou 3 linhas do tempo.
+3. **Tipo: Volumoso / Sorting**: os botões filtram, e cada pacote tem a etiqueta.
+4. Classificar um pacote "em aberto" (Sua classificação + Raciocínio): conferir a linha nova na aba **Classificação manual** da
+   planilha, com o seu e-mail.
+5. Sub-aba **Responsáveis por ilha**: preencher uma ilha e conferir na aba **Responsáveis** da planilha. Testar "Copiar do dia
+   anterior".
+6. Período **Semana** e **Mês**: aparecem os números, a evolução por dia e os rankings (só Volumoso).
+7. No celular: a aba abre e não rola para o lado.
+8. Entrar com uma conta de **Analista**: a aba Faltante Aduana não aparece.
+
+Depois de aprovado: Pull request `teste` → `main` e, no Apps Script, desligar o painel antigo (passo 6 do "Como ligar").
+
+Documentos da aba (regras, rotina diária, decisões, contexto geral e importador): pasta
+[`docs/faltante-aduana/`](docs/faltante-aduana/contexto.md).
 
 Se aparecer "Falta configurar no Vercel: …", falta alguma das variáveis acima. "Sem acesso à planilha" quer dizer que a planilha
 não foi compartilhada com a conta de serviço.
@@ -344,6 +365,14 @@ sql/013_colaboradores_cpf.sql      coluna cpf em colaboradores (11 números) e �
 sql/014_gemba_conforme.sql         coluna resultado (Desvio/Conforme) em registros_gemba; motivo e ação obrigatórios só no Desvio
 sql/015_gemba_editar.sql           permissão de alterar registros_gemba, coluna editado_em e função gemba_editar_registro (edição tudo ou nada)
 js/pel.js             aba Calculadora PEL (calculadora, Visão geral, Usuários, Sites e trimestre)
+faltantes.html        aba Faltante Aduana: a tela do painel (abre numa moldura dentro da aba)
+js/faltantes.js       abre a moldura da aba Faltante Aduana
+js/faltantes-regras.js regras de classificação R01–R06 (rodam na tela e no servidor)
+api/faltantes.js      função do Vercel da aba Faltante Aduana (confere login e papel)
+api/_lib/             núcleo (linha do tempo, regras, resumo, responsáveis), Google Sheets API e Supabase
+sql/016_faltantes_cache.sql   tabela faltantes_cache (cache do painel; só o servidor acessa)
+vercel.json           tempo máximo da função e arquivo de regras junto dela
+docs/faltante-aduana/ regras, rotina diária, decisões, contexto geral e importador da aba Faltante Aduana
 css/pel.css           estilo da aba PEL (tudo dentro de #aba-pel) e das telas de cadastro
 img/pel/              medalhas do PET (Não classifica, Bronze, Prata, Ouro, Platina)
 LEIAME.md             este arquivo
