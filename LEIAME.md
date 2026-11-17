@@ -182,7 +182,7 @@ classificação manual e os responsáveis por ilha também são gravados lá.
 **O que a aba mostra**
 - Cada pacote com `Estado = Faltante` na aba Aduana, no dia escolhido.
 - A **linha do tempo** de cada pacote:
-  - começa no 1º bipe do pacote no dia na aba Histórico (o sorting) e vai até 36 h depois;
+  - começa no 1º bipe do pacote no dia na aba Histórico (o sorting) e vai até 48 h depois (36 h até 17/11/2026);
   - junta Histórico, Auditoria de Carrinho, Aduana, Problem Solving, Inventário, Torre Aduana e Direcionamento Manual.
 - A **classificação** de cada pacote:
   - feita pelas regras R01–R06 (aba `Regras` da planilha + `js/faltantes-regras.js`);

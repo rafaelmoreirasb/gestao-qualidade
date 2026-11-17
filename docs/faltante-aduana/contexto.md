@@ -15,9 +15,9 @@ Documentos desta pasta:
 - Para a **reunião diária** da operação SSP53. O painel mostra cada pacote que deu **Faltante na aduana** (aba Aduana da
   planilha, `Estado = Faltante`) num dia.
 - Cada pacote tem a **linha do tempo**:
-  - começa no **sorting** (o 1º bipe do pacote no dia na aba Histórico, qualquer processo) e vai até **36 h depois**;
+  - começa no **sorting** (o 1º bipe do pacote no dia na aba Histórico, qualquer processo) e vai até **48 h depois** (era 36 h até 17/11/2026);
   - junta Histórico, Auditoria de Carrinho, Aduana, Problem Solving, Inventário, Torre Aduana e Direcionamento Manual;
-  - depois das 36 h não entra mais nada;
+  - depois das 48 h não entra mais nada;
   - sem bipe no Histórico no dia, a linha do tempo começa à 00:00 e o pacote ganha a etiqueta "sem sorting no dia".
 - **Classifica** cada pacote pelas regras R01–R06 ([`REGRAS.md`](REGRAS.md)). O que nenhuma cobre fica **"Regra em aberto"** e é
   classificado à mão. A classificação manual sempre vence a regra; se as duas discordarem, o painel pergunta qual manter.
