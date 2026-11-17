@@ -43,9 +43,10 @@ const FONTES = {
       'Origem de dano', 'Motivo', 'Tipo de dano', 'Tipo de caso', 'Rota sugerida', 'Motivo da exclusão', 'ID do caso'],
     texto: (g) => juntar(g('Problema'), g('Estado'), g('Resolução'), g('Status de resolução'), g('Motivo'),
       g('Rota sugerida') && 'rota sugerida ' + g('Rota sugerida'), g('Problem Solver')) },
-  inventario: { aba: 'Inventário', id: 'Shipment ID', data: 'Data Reporte', hora: 'Horario',
-    colunas: ['Shipment ID', 'Situação', 'Ârea', 'Operador', 'Comentario', 'Verificado', 'Pendente', 'Deslocado', 'Data Reporte', 'Horario'],
-    texto: (g) => juntar(g('Situação'), g('Ârea'), g('Operador'), g('Comentario')) },
+  // Desde 17/11/2026: aba "Base Inventário" (CSV importado pelo Apps Script da Base SSP53), não mais o espelho "Inventário"
+  inventario: { aba: 'Base Inventário', id: 'Pacote', data: 'Data', hora: 'Hora',
+    colunas: ['Pacote', 'Situação', 'Área', 'Operador', 'Comentário', 'Data', 'Hora'],
+    texto: (g) => juntar(g('Situação'), g('Área'), g('Operador'), g('Comentário')) },
   torre: { aba: 'Torre Aduana', id: 'Shipment ID', data: 'Concluido em', hora: null,
     colunas: ['Shipment ID', 'Estado aduana', 'Rota', 'Gaiola (rota otim,)', 'Doca', 'Estado carrinho', 'Hora aduana', 'Auditor aduana',
       'Classificacao', 'Situacao', 'Status tratativa', 'Tratativa - responsavel/obs', 'Concluido em'],

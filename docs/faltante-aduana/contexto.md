@@ -30,10 +30,11 @@ Documentos desta pasta:
 ## 2. Como funciona no app
 
 ```
-Relatórios do dia (CSV) ─► pasta do Drive "Faltantes – Entrada" ─(importador, Apps Script, 15 min)─┐
-Planilha do Labor ─(script do Histórico, 15 min)──────────────────────────────────────────────────┤
-Planilha do Direcionamento ─(script, 15 min)──────────────────────────────────────────────────────┼─► PLANILHA PRINCIPAL
-Inventário, Torre Aduana, One Bipe (já chegam na planilha) ───────────────────────────────────────┘   (Google Sheets)
+4 relatórios do dia (CSV) ─► pasta do Drive "Importar Inventário" ─(Apps Script da Base SSP53, 15 min)─┐
+   (Inventário, Aduana, Auditoria de Carrinho, Problem Solving)                                       │
+Planilha do Labor ─(script do Histórico, 15 min)──────────────────────────────────────────────────────┤
+Planilha do Direcionamento ─(script, 15 min)──────────────────────────────────────────────────────────┼─► BASE SSP53
+Torre Aduana, One Bipe (espelho da Base Mirassol Oficial, 1 h) ───────────────────────────────────────┘   (Google Sheets)
                                                                                                           ▲ lê e grava
                                      app no Vercel: api/faltantes.js (Google Sheets API, conta de serviço) ┘
                                                     ▲ pedido com o login do app (só Administrador)
@@ -91,10 +92,10 @@ secreta do Supabase **nunca** entram no código.
 | Aba | Colunas usadas | Quem alimenta |
 |---|---|---|
 | Histórico | Data, Horas, IdPacote, SubStatus, UserID, Processo, Ext, Origem | script do Histórico |
-| Aduana | Shipment ID, Placa, Data auditoria, Hora, ID da rota, Estado, Rep auditoria | importador |
-| Auditoria de Carrinho | Shipment ID, Data, Hora, Gaiola, Estado, Rep auditoria | importador |
+| Aduana | Shipment ID, Placa, Data auditoria, Hora, ID da rota, Estado, Rep auditoria | importador (`importarRelatorios`) |
+| Auditoria de Carrinho | Shipment ID, Data, Hora, Gaiola, Estado, Rep auditoria | importador (`importarRelatorios`) |
 | Problem Solving | ID do pacote, Problema, Estado, Problem Solver, Hora, Data, Resolução, Status de resolução, Motivo, Rota sugerida… | importador (atualiza pelo ID do caso) |
-| Inventário | Shipment ID, Situação, Ârea, Operador, Comentario, Data Reporte, Horario | já se atualiza sozinha |
+| Base Inventário | Pacote, Situação, Área, Operador, Comentário, Data, Hora | importador (`importarBaseInventario`). Desde 17/11/2026 o painel lê esta aba, não mais o espelho "Inventário" |
 | Torre Aduana | Shipment ID, Estado aduana, Gaiola (rota otim,), Classificacao, Status tratativa, Concluido em… | script do Rafael (lê outra planilha) |
 | Direcionamento Manual | Carimbo de data/hora, ID DO PRODUTO, STATUS, REDIRECIONAMENTO, ROTA, CICLO | script do Direcionamento |
 | One Bipe | DATA , Shipment ID | já chega na planilha; define **Volumoso** |

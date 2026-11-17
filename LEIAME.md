@@ -195,8 +195,12 @@ classificação manual e os responsáveis por ilha também são gravados lá.
 - Atualiza sozinho a cada 5 min. O botão **Atualizar agora** relê a planilha.
 
 **Abas que a planilha Base SSP53 precisa ter** (nomes iguais, porque o painel acha as colunas pelo cabeçalho): Aduana,
-Histórico, Auditoria de Carrinho, Problem Solving, Inventário, Torre Aduana, Direcionamento Manual e One Bipe. Em 17/11/2026
-**faltavam Aduana, Auditoria de Carrinho e Problem Solving** (elas vêm do importador dos CSV, que ainda grava na planilha antiga):
+Histórico, Auditoria de Carrinho, Problem Solving, **Base Inventário**, Torre Aduana, Direcionamento Manual e One Bipe. O inventário
+vem da aba **Base Inventário** (desde 17/11/2026; a aba "Inventário", espelho da Base Mirassol Oficial, não é mais usada).
+**Os 4 relatórios do dia** (Inventário, Aduana, Auditoria de Carrinho e Problem Solving) entram juntos pela pasta **Importar
+Inventário** do Drive, pelo Apps Script da Base SSP53 (código em [`apps-script/base-ssp53/`](apps-script/base-ssp53/); instalação em
+[`docs/faltante-aduana/importador.md`](docs/faltante-aduana/importador.md)). Em 17/11/2026
+**faltavam Aduana, Auditoria de Carrinho e Problem Solving** (a função `migrarAbasPlanilhaAntiga` traz o histórico da planilha antiga):
 sem a aba **Aduana** o painel mostra "Ainda não há faltantes na aba Aduana". As abas Regras, Classificação manual, Resumo diário e
 Responsáveis o app **cria sozinho** na primeira vez que precisar; para não perder o que já foi classificado, copie-as da planilha
 antiga. A lista completa de abas e colunas está em [`docs/faltante-aduana/contexto.md`](docs/faltante-aduana/contexto.md), seção 4.

@@ -76,7 +76,7 @@
       const f = A.torre(p, 'faltante')[0];
       if (!f) return false;
       const inv = p.eventos.find((e) => e.fonte === 'inventario' && e.quando >= f.quando);
-      return inv && norm(inv.dados['Situação']).startsWith('verificad') ? 'Verificado no inventário em ' + (inv.dados['Ârea'] || 'área não informada') : false;
+      return inv && norm(inv.dados['Situação']).startsWith('verificad') ? 'Verificado no inventário em ' + ((inv.dados['Área'] || inv.dados['Ârea']) || 'área não informada') : false;
     },
     // R04 — faltante na Torre e Problem Solving: pacote avariado / não reparado → Pacote Avariado
     'R04': (p) => {
@@ -109,7 +109,7 @@
       const inv = p.eventos.find((e) => e.fonte === 'inventario' && e.quando >= f.quando); // 1º inventário depois do faltante
       if (!inv || !norm(inv.dados['Situação']).startsWith('verificad')) return false;
       const carTxt = car.length ? [...new Set(car.map((x) => x.dados['Estado']))].join('/') : 'não auditado';
-      return 'Verificado no inventário em ' + (inv.dados['Ârea'] || 'área não informada') + ' depois do faltante na Aduana' +
+      return 'Verificado no inventário em ' + ((inv.dados['Área'] || inv.dados['Ârea']) || 'área não informada') + ' depois do faltante na Aduana' +
         (A.torre(p, 'faltante').length ? ' (faltante também na Torre)' : '') + ' · carrinho: ' + carTxt;
     },
   };
