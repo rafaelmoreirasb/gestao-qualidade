@@ -51,9 +51,18 @@ O Apps Script pode estar em inglês: os botões estão em inglês com a traduç�
      copia nada daquela aba. A função **verCelulasDaPlanilha** mostra quanto cada aba ocupa.
 6. **Ligue os gatilhos**: escolha **criarGatilhosRelatorios** e clique em **Run**. Ela cria `importarRelatorios` (a cada
    5 min) e `arquivarRelatoriosAntigos` (todo dia às 3h) e **não mexe** nos outros gatilhos.
-7. Teste: jogue os 4 arquivos de hoje na pasta **Importar Inventário**. Depois de 15 a 20 minutos, eles estão em
+7. **Aviso para o app** (para a tela atualizar sozinha): no Apps Script, ⚙️ **Project Settings** (Configurações do projeto) ›
+   **Script Properties** (Propriedades do script) › **Add script property** (Adicionar propriedade), duas vezes:
+   - `APP_URL` = o endereço do app (o link de teste enquanto a Fase 10 não estiver no main; depois, o link oficial). Para
+     avisar os dois, separe por vírgula.
+   - `FALTANTES_SEGREDO` = a mesma senha da variável `FALTANTES_SEGREDO` do Vercel.
+   - *(Só se o Vercel pedir login no link de teste)* `VERCEL_BYPASS` = Vercel › Settings › Deployment Protection ›
+     **Protection Bypass for Automation**.
+
+   Depois rode a função **testarAvisoApp**: no registro deve aparecer `Aviso ao app (...): {"r":{"geradoEm":...`.
+8. Teste: jogue os 4 arquivos de hoje na pasta **Importar Inventário**. Depois de 15 a 20 minutos, eles estão em
    **Processados**, as abas têm as linhas novas e a aba **Log importação** mostra o resultado.
-8. Quando tudo estiver certo, **desligue o importador antigo** (projeto "Importar Relatórios" da planilha Conteneirização):
+9. Quando tudo estiver certo, **desligue o importador antigo** (projeto "Importar Relatórios" da planilha Conteneirização):
    **Triggers** (Acionadores) › apague `importarRelatorios` e `arquivarAntigos`.
 
 ## Quando algo der errado
@@ -62,6 +71,7 @@ O Apps Script pode estar em inglês: os botões estão em inglês com a traduç�
 | Arquivo foi para **Não reconhecidos** | O cabeçalho do relatório mudou. Mande o arquivo para o Claude ajustar o script. |
 | E-mail "Faltante Aduana: erro em Importação de relatórios" | Veja a aba **Log importação**: a mensagem diz o arquivo e o motivo. |
 | Arquivos parados na pasta há mais de 30 min | Apps Script › **Triggers**: confira se `importarRelatorios` e `importarBaseInventario` estão lá. |
+| `Aviso ao app ... respondeu 401` | A senha `FALTANTES_SEGREDO` do Apps Script é diferente da do Vercel (ou falta o Redeploy). Se a resposta for uma página de login da Vercel, configure `VERCEL_BYPASS`. |
 | Erro "cells beyond the limit" / "não cabe" | A planilha chegou perto de 10 milhões de células. Rode `verCelulasDaPlanilha` e libere espaço. |
 
 ## Observações

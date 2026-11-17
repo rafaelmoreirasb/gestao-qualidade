@@ -55,6 +55,17 @@ function planilhaGoogle({ id, sa }) {
       const j = await chamar('/values/' + encodeURIComponent(faixa(aba, a1)) + '?valueRenderOption=FORMATTED_VALUE&majorDimension=ROWS');
       return j.values || [];
     },
+    /** Lê vários trechos da mesma aba de uma vez (values:batchGet). Devolve uma lista de tabelas, na mesma ordem. */
+    async lerVarios(aba, faixasA1) {
+      const saida = [];
+      for (let i = 0; i < faixasA1.length; i += 40) { // até 40 trechos por pedido (o endereço não pode ficar enorme)
+        const parte = faixasA1.slice(i, i + 40);
+        const q = parte.map((a1) => 'ranges=' + encodeURIComponent(faixa(aba, a1))).join('&');
+        const j = await chamar('/values:batchGet?' + q + '&valueRenderOption=FORMATTED_VALUE&majorDimension=ROWS');
+        (j.valueRanges || []).forEach((v) => saida.push(v.values || []));
+      }
+      return saida;
+    },
     async atualizar(aba, a1, valores) {
       await chamar('/values/' + encodeURIComponent(faixa(aba, a1)) + '?valueInputOption=RAW', { method: 'PUT', body: JSON.stringify({ values: valores }) });
     },

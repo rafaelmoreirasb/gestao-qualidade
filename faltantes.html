@@ -224,7 +224,7 @@
 <script src="js/faltantes-regras.js"></script>
 <script>
 (() => {
-  const CONFIG = { ATUALIZAR_MIN: 5, JANELA_HORAS: 36 };
+  const CONFIG = { ATUALIZAR_MIN: 5, VERSAO_SEG: 60, JANELA_HORAS: 36 };
   const NOMES = { historico: 'Histórico', carrinho: 'Aud. carrinho', aduana: 'Aduana', ps: 'Problem Solving', inventario: 'Inventário', torre: 'Torre', direcionamento: 'Direcionamento' };
   const SUGESTOES = ['Erro de conteinerização', 'Erro de conteinerização + erro na auditoria', 'Erro na puxada', 'Erro de puxada, etiqueta blanca',
     'Erro de aduana', 'Pacote Avariado', 'Pacote perdido', 'Pacote Perdido Risco de Allowance', 'Pacote no inventário - deslocado - ok'];
@@ -753,7 +753,7 @@
   }
 
   /* ---------- eventos ---------- */
-  $('#rodape').textContent = 'Dados ao vivo da planilha "Base SSP53". Atualiza sozinho a cada ' + CONFIG.ATUALIZAR_MIN + ' min. Regras: ' + (window.REGRAS ? window.REGRAS.versao : '—') + '.';
+  $('#rodape').textContent = 'Dados ao vivo da planilha "Base SSP53". Atualiza sozinho quando a planilha recebe dados novos (confere a cada ' + Math.round(CONFIG.VERSAO_SEG / 60) + ' min) e a cada ' + CONFIG.ATUALIZAR_MIN + ' min. Regras: ' + (window.REGRAS ? window.REGRAS.versao : '—') + '.';
   $('#btnAtualizar').onclick = () => atualizar(true);
   $('#selDia').onchange = (e) => { salvarVistos(); S.dia = e.target.value; S.vistosAntes = null; S.filtro = null; S.pacotes = []; try { history.replaceState(null, '', '#' + encodeURIComponent(S.dia)); } catch (x) {} atualizar(false); };
   document.querySelectorAll('#menu a').forEach((a) => { a.onclick = (e) => { e.preventDefault(); if (a.dataset.aba !== S.aba) trocarAba(a.dataset.aba); }; });
@@ -764,6 +764,20 @@
   addEventListener('pagehide', salvarVistos);
   document.addEventListener('visibilitychange', () => { if (document.hidden) salvarVistos(); else if (S.aba === 'faltantes') atualizar(false); });
   setInterval(() => { if (!document.hidden && S.aba === 'faltantes') atualizar(false); }, CONFIG.ATUALIZAR_MIN * 60 * 1000);
+  // A planilha avisa o servidor quando recebe dados novos e ele já deixa os dias recentes prontos ("versão").
+  // A tela só confere a versão (rápido) e, se mudou, recarrega o dia — que já vem pronto do cache.
+  S.versaoVista = null;
+  async function conferirVersao() {
+    if (document.hidden || S.aba !== 'faltantes' || S.carregando) return;
+    try {
+      const v = await chamar('painelVersao');
+      const g = Number(v && v.geradoEm) || 0;
+      if (S.versaoVista === null) { S.versaoVista = g; return; }
+      if (g > S.versaoVista) { S.versaoVista = g; atualizar(false); }
+    } catch (e) { console.warn('versão', e); }
+  }
+  setInterval(conferirVersao, CONFIG.VERSAO_SEG * 1000);
+  conferirVersao();
   // link com ?aba=responsaveis (ou #responsaveis) abre direto na aba Responsáveis — base para a permissão do assistente
   const iniciar = (aba) => { if (aba === 'responsaveis') trocarAba('responsaveis'); else atualizar(false); };
   iniciar(new URLSearchParams(location.search).get('aba') || '');

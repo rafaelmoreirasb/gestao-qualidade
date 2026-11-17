@@ -16,6 +16,10 @@
 //     "Arquivo Faltantes AAAA-MM" (pasta "Faltantes – Arquivo"), para a Base SSP53 não passar
 //     do limite de 10 milhões de células. Nada é apagado de vez.
 //
+//   - Depois de importar, AVISA O APP (relAvisarApp): o app recalcula os dias recentes e a tela aberta mostra os
+//     dados novos em 1 a 2 minutos, sem clicar em "Atualizar agora". Precisa das propriedades do script
+//     APP_URL e FALTANTES_SEGREDO (Configurações do projeto › Propriedades do script). Ver importador.md.
+//
 //  Uma vez só: migrarAbasPlanilhaAntiga (traz o histórico da planilha antiga) e
 //  criarGatilhosRelatorios (liga os gatilhos). Passo a passo: docs/faltante-aduana/importador.md
 // =====================================================================
@@ -98,6 +102,7 @@ function relEhInventario(cabecalho) {
 // ===== ROTINA PRINCIPAL (gatilho a cada 15 min) =====
 function importarRelatorios() {
   const inicio = Date.now(); // o limite de 6 minutos do Google conta desde aqui (inclusive a espera abaixo)
+  let houveNovos = false;
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(REL_CONFIG.ESPERA_TRAVA_MS)) { // outro script (Histórico, Inventário...) está gravando
     console.log('Relatórios: outro script está gravando agora. Tento de novo na próxima rodada.');
@@ -146,12 +151,14 @@ function importarRelatorios() {
       }
     }
     if (!feitos && !erros.length) console.log('Relatórios: nenhum arquivo novo (Aduana, Carrinho, Problem Solving)');
+    houveNovos = feitos > 0;
   } catch (e) {
     erros.push(e.message);
   } finally {
     lock.releaseLock();
     if (erros.length) relAvisarErro('Importação de relatórios', erros);
   }
+  if (houveNovos) relAvisarApp('relatorios'); // depois de liberar a planilha para os outros scripts
 }
 
 /** Trata a tabela lida do arquivo e grava na aba do relatório. Devolve as contagens. */
@@ -540,6 +547,39 @@ function relAvisarErro(titulo, erros) {
     console.error('Não consegui enviar e-mail: ' + e.message);
   }
   console.error(erros.join('\n'));
+}
+
+// ===== AVISO PARA O APP =====
+// Chama o app (api/faltantes) com a senha combinada. O app recalcula os dias mais recentes (até ~40 s) e a tela aberta
+// percebe em até 1 minuto. Propriedades do script (Configurações do projeto › Propriedades do script):
+//   APP_URL            endereço do app (ex.: o link de teste). Vários endereços: separe por vírgula.
+//   FALTANTES_SEGREDO  a mesma senha da variável FALTANTES_SEGREDO do Vercel
+//   VERCEL_BYPASS      (só se o Vercel pedir login no link de teste) o "Protection Bypass for Automation" do Vercel
+// Usada também pelo arquivo da automação (Histórico, Inventário, Direcionamento, Torre).
+function relAvisarApp(origem) {
+  const props = PropertiesService.getScriptProperties();
+  const urls = String(props.getProperty('APP_URL') || '').split(',').map((u) => u.trim().replace(/\/+$/, '')).filter(String);
+  const segredo = props.getProperty('FALTANTES_SEGREDO');
+  if (!urls.length || !segredo) { console.log('Aviso ao app: falta APP_URL ou FALTANTES_SEGREDO nas propriedades do script.'); return; }
+  const headers = { 'X-Faltantes-Segredo': segredo };
+  const bypass = props.getProperty('VERCEL_BYPASS');
+  if (bypass) headers['x-vercel-protection-bypass'] = bypass;
+  for (const url of urls) {
+    try {
+      const r = UrlFetchApp.fetch(url + '/api/faltantes?origem=' + encodeURIComponent(origem || ''),
+        { method: 'post', headers, payload: '', muteHttpExceptions: true, followRedirects: false });
+      const txt = r.getContentText().slice(0, 300);
+      if (r.getResponseCode() === 200) console.log('Aviso ao app (' + url + '): ' + txt);
+      else console.error('Aviso ao app (' + url + ') respondeu ' + r.getResponseCode() + ': ' + txt);
+    } catch (e) {
+      console.error('Aviso ao app (' + url + ') falhou: ' + e.message);
+    }
+  }
+}
+
+/** Rode para testar o aviso: no registro de execução deve aparecer "Aviso ao app (...): {"r":{"geradoEm":...". */
+function testarAvisoApp() {
+  relAvisarApp('teste');
 }
 
 // ===== GATILHOS: rode UMA vez (não mexe nos outros gatilhos) =====

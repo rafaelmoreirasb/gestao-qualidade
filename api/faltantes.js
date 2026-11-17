@@ -9,6 +9,8 @@
      PLANILHA_ID            ID da planilha "Base SSP53"
      SUPABASE_URL           mesmo endereço que está em js/supabase.js
      SUPABASE_SERVICE_ROLE  chave secreta do Supabase (Project Settings > API Keys > secret)
+     FALTANTES_SEGREDO      senha combinada com o Apps Script da Base SSP53: quando a planilha recebe dados novos,
+                            o script chama esta função com o cabeçalho X-Faltantes-Segredo e o app recalcula os dias recentes
    ========================================================== */
 process.env.TZ = 'America/Sao_Paulo'; // as datas da planilha são horário de Brasília
 
@@ -17,9 +19,19 @@ const path = require('path');
 const { criarNucleo } = require('./_lib/nucleo');
 const { planilhaGoogle } = require('./_lib/sheets');
 const { supabaseServidor } = require('./_lib/supabase');
+const crypto = require('crypto');
+
+/** Confere a senha do Apps Script sem vazar o tamanho/posição do erro (comparação em tempo constante). */
+function segredoConfere(recebido) {
+  const certo = process.env.FALTANTES_SEGREDO || '';
+  if (certo.length < 16 || !recebido) return false;
+  const a = crypto.createHash('sha256').update(String(recebido)).digest();
+  const b = crypto.createHash('sha256').update(certo).digest();
+  return crypto.timingSafeEqual(a, b);
+}
 
 const PAPEIS_LIBERADOS = ['admin'];
-const FUNCOES = ['painelListarDias', 'painelDadosDoDia', 'painelSalvarClassificacao', 'painelResumoPeriodo',
+const FUNCOES = ['painelListarDias', 'painelVersao', 'painelDadosDoDia', 'painelSalvarClassificacao', 'painelResumoPeriodo',
   'painelResponsaveis', 'painelSalvarResponsavel', 'painelPreencherResumo', 'painelCriarAbaRegras'];
 
 let regrasTexto = null;
@@ -36,6 +48,19 @@ module.exports = async function handler(req, res) {
     if (faltando.length) return responder(500, { erro: 'Falta configurar no Vercel: ' + faltando.join(', ') + '.' });
 
     const sb = supabaseServidor({ url: process.env.SUPABASE_URL, chaveServico: process.env.SUPABASE_SERVICE_ROLE });
+
+    // Aviso da planilha (Apps Script): só pode pedir o recálculo dos dias recentes, nada mais.
+    const segredo = req.headers['x-faltantes-segredo'];
+    if (segredo !== undefined) {
+      if (!segredoConfere(segredo)) return responder(401, { erro: 'Senha do aviso não confere (FALTANTES_SEGREDO no Vercel e no Apps Script).' });
+      const nucleo = criarNucleo({
+        planilha: planilhaGoogle({ id: process.env.PLANILHA_ID, sa: process.env.GOOGLE_SA_JSON }),
+        cache: sb.cache, regras: regras(), usuario: 'planilha (aviso automático)',
+      });
+      const origem = String((req.query && req.query.origem) || '').slice(0, 40);
+      return responder(200, { r: await nucleo.prepararRecentes(origem) });
+    }
+
     const tokenUsuario = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
     const usuario = await sb.usuarioDoToken(tokenUsuario);
     if (!usuario) return responder(401, { erro: 'Entre no app de novo (sessão expirada).' });

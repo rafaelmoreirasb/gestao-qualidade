@@ -18,6 +18,9 @@ const CFG = {
   CACHE_RECENTE_SEG: 600,   // dia dos últimos 4 dias (ainda recebe bipes): 10 min
   DIAS_RECENTES: 4,
   DIAS_CACHE_SEG: 300,      // lista de dias: 5 min
+  PREPARAR_DIAS: 3,         // quando a planilha avisa que recebeu dados, recalcula os 3 dias mais recentes
+  PREPARAR_TEMPO_MS: 40000, // ... sem passar de 40 s (o Vercel corta em 60)
+  JUNTAR_BLOCOS: 300,       // blocos de linhas do mesmo dia com menos de 300 linhas entre eles são lidos juntos
   ABA_MANUAL: 'Classificação manual',
   ABA_REGRAS: 'Regras',
   ABA_RESUMO: 'Resumo diário',
@@ -119,21 +122,30 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
     const idx = {};
     cab.forEach((c, i) => { const k = norm(c); if (c && !(k in idx)) idx[k] = i; });
     if (!(norm(f.id) in idx)) return { linhas: [], aviso: 'Aba "' + f.aba + '": não achei a coluna "' + f.id + '".' };
-    // Acha o trecho de linhas dos dias (lendo só a coluna de data) para não ler a aba inteira
-    let ini = 2, fim = null;
-    if (f.data && dias && norm(f.data) in idx) {
-      const alvo = new Set(dias.map(dmy));
-      const L = letra(idx[norm(f.data)]);
-      const col = await P.ler(f.aba, L + '2:' + L);
-      let a = -1, b = -1;
-      for (let i = 0; i < col.length; i++) if (alvo.has(diaDe((col[i] || [])[0]))) { if (a < 0) a = i; b = i; }
-      if (a < 0) return { linhas: [] };
-      ini = a + 2; fim = b + 2;
-    }
     const usar = f.colunas.filter((c) => norm(c) in idx);
     const menor = Math.min(...usar.map((c) => idx[norm(c)])), maior = Math.max(...usar.map((c) => idx[norm(c)]));
-    const valores = await P.ler(f.aba, letra(menor) + ini + ':' + letra(maior) + (fim || ''));
-    const linhas = valores.map((r) => { const o = {}; usar.forEach((c) => { o[c] = cel(r[idx[norm(c)] - menor]).trim(); }); return o; });
+    const C1 = letra(menor), C2 = letra(maior);
+    const paraObj = (r) => { const o = {}; usar.forEach((c) => { o[c] = cel(r[idx[norm(c)] - menor]).trim(); }); return o; };
+
+    // Sem filtro de dia: lê a aba inteira (só as colunas usadas)
+    if (!(f.data && dias && norm(f.data) in idx)) return { linhas: (await P.ler(f.aba, C1 + '2:' + C2)).map(paraObj) };
+
+    // Com filtro: lê só a coluna de data e depois SÓ os blocos de linhas desses dias. As linhas da planilha não estão
+    // em ordem de data (cada importação vai para o fim), então o mesmo dia pode estar em vários pedaços da aba.
+    const alvo = new Set(dias.map(dmy));
+    const L = letra(idx[norm(f.data)]);
+    const col = await P.ler(f.aba, L + '2:' + L);
+    const blocos = []; // [linhaInicial, linhaFinal] da planilha
+    for (let i = 0; i < col.length; i++) {
+      if (!alvo.has(diaDe((col[i] || [])[0]))) continue;
+      const lin = i + 2, ult = blocos[blocos.length - 1];
+      if (ult && lin - ult[1] <= CFG.JUNTAR_BLOCOS) ult[1] = lin; else blocos.push([lin, lin]);
+    }
+    if (!blocos.length) return { linhas: [] };
+    const faixas = blocos.map(([a, b]) => C1 + a + ':' + C2 + b);
+    const tabelas = P.lerVarios ? await P.lerVarios(f.aba, faixas) : await Promise.all(faixas.map((x) => P.ler(f.aba, x)));
+    const linhas = [];
+    tabelas.forEach((t) => t.forEach((r) => linhas.push(paraObj(r))));
     return { linhas };
   }
 
@@ -206,6 +218,22 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
     // Resumo diário (base de semana/mês): regravado sempre que o dia é recalculado
     try { await gravarResumoDias({ [dia]: await linhasResumo(dia, out) }); } catch (e) { out.avisos.push('Resumo diário não foi atualizado: ' + e.message); }
     return out;
+  }
+
+  /* ---------- a planilha avisou que recebeu dados novos ---------- */
+  /** Recalcula a lista de dias e os dias mais recentes (enquanto houver tempo) e grava a "versão" que a tela confere. */
+  async function prepararRecentes(origem) {
+    const t0 = Date.now();
+    const dias = await listarDias(true);
+    const feitos = [];
+    for (const d of dias.slice(0, CFG.PREPARAR_DIAS)) {
+      if (feitos.length && Date.now() - t0 > CFG.PREPARAR_TEMPO_MS) break;
+      await dadosDoDia(d.dia, true);
+      feitos.push(d.dia);
+    }
+    const versao = { geradoEm: Date.now(), dias: feitos, origem: String(origem || ''), segundos: Math.round((Date.now() - t0) / 100) / 10 };
+    await cache.gravar('versao', versao, 7 * 86400);
+    return versao;
   }
 
   /* ---------- aba Regras ---------- */
@@ -424,6 +452,9 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
   /* ---------- funções chamadas pela tela (mesmos nomes do antigo Apps Script) ---------- */
   return {
     painelListarDias: (forcar) => listarDias(!!forcar),
+    /** Barato: só lê no cache quando foi a última preparação (a tela confere a cada 1 min). */
+    painelVersao: async () => (await cache.ler('versao')) || { geradoEm: 0, dias: [] },
+    prepararRecentes,
     painelDadosDoDia: async (dia, forcar) => {
       const d = await marcarTipos(await dadosDoDia(dia, !!forcar));
       const [manual, regras] = await Promise.all([lerManual(), lerRegras()]);

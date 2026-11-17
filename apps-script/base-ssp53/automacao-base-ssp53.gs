@@ -4,6 +4,7 @@
 //  Torre Aduana e One Bipe: espelho a cada 1 hora
 //  (o espelho do Inventário foi desligado em 17/11/2026: o painel usa a aba Base Inventário)
 //  Aduana, Auditoria de Carrinho e Problem Solving: arquivo importar-relatorios.gs (mesma pasta do Inventário)
+//  Depois de gravar dados novos, avisa o app (relAvisarApp, no arquivo importar-relatorios.gs)
 // =====================================================================
 const OP_DESTINO_ID = '1m2rcujuC2w5qIsrm81nBdTgJxZv3HuukhMTtQBmIH8E'; // Base SSP53
 const OP_MIRASSOL   = '1qArFIEGsFJhxCKYjkJnbKiQZCcfFuY5O91FZQQmzO2k'; // Base Mirassol Oficial - SSP53
@@ -24,7 +25,12 @@ const OP_BLOCO       = 25000;            // linhas gravadas por vez nos espelhos
 const OP_TEMPO_MAX   = 5 * 60 * 1000;    // margem antes do limite de 6 minutos
 
 // ---------- Funções chamadas pelos gatilhos ----------
-function atualizarTorreAduana() { opEspelhar(OP_ESPELHOS.torre); }
+function atualizarTorreAduana() { opEspelhar(OP_ESPELHOS.torre); opAvisarApp('torre'); }
+
+// Avisa o app que a planilha recebeu dados novos (função relAvisarApp do arquivo importar-relatorios.gs)
+function opAvisarApp(origem) {
+  if (typeof relAvisarApp === 'function') relAvisarApp(origem);
+}
 // Espelho do Inventário DESLIGADO em 17/11/2026 (a aba "Inventário" ocupava 2,7 milhões de células e o painel usa a
 // Base Inventário). A função ficou só para um gatilho antigo que sobrar não dar erro: ela não faz nada.
 function atualizarInventario()  { console.log('Espelho do Inventário desligado (17/11/2026). Apague este gatilho em Acionadores.'); }
@@ -81,6 +87,7 @@ function opEspelhar(cfg) {
 function importarDirecionamento() {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(4 * 60 * 1000)) return; // espera a outra importação terminar
+  let houveNovas = false;
 
   try {
     const origem = opAbaPorGid(SpreadsheetApp.openById(DIR_ORIGEM_ID), DIR_ORIGEM_GID);
@@ -127,9 +134,11 @@ function importarDirecionamento() {
       destino.getRange(inicio, 1, novas.length, novas[0].length).setValues(novas);
     }
     console.log('Direcionamento: ' + novas.length + ' linhas novas' + (restantes ? ' (faltam ' + restantes + ')' : ''));
+    houveNovas = novas.length > 0;
   } finally {
     lock.releaseLock();
   }
+  if (houveNovas) opAvisarApp('direcionamento');
 }
 
 // Rode UMA vez: traz o que já existe na aba antiga, para não perder o histórico
@@ -175,6 +184,7 @@ const TEM_CABECALHO   = true;
 function importarNovasLinhas() {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(4 * 60 * 1000)) return; // espera a outra importação terminar
+  let houveNovas = false;
 
   try {
     const planOrigem = SpreadsheetApp.openById(ORIGEM_ID);
@@ -221,9 +231,11 @@ function importarNovasLinhas() {
       destino.getRange(inicioGrav, 1, novas.length, novas[0].length).setValues(novas);
     }
     console.log(novas.length + ' linhas novas importadas');
+    houveNovas = novas.length > 0;
   } finally {
     lock.releaseLock();
   }
+  if (houveNovas) opAvisarApp('historico');
 }
 
 function chave(linha) {
@@ -352,6 +364,7 @@ const BINV_MESES          = { jan: 1, fev: 2, mar: 3, abr: 4, mai: 5, jun: 6, ju
 function importarBaseInventario() {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(4 * 60 * 1000)) return; // espera a outra importação terminar
+  let total = 0;
 
   try {
     const pasta = DriveApp.getFolderById(BINV_PASTA_ID);
@@ -381,7 +394,6 @@ function importarBaseInventario() {
     }
 
     const agora = new Date();
-    let total = 0;
     for (const arquivo of arquivos) {
       let conteudo;
       try {
@@ -418,6 +430,7 @@ function importarBaseInventario() {
   } finally {
     lock.releaseLock();
   }
+  if (total > 0) opAvisarApp('inventario');
 }
 
 // Cabeçalho do CSV do Inventário: "Pacote","Data de Escaneamento","Situação","Área","Operador","Comentário"

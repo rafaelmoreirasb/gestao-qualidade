@@ -192,7 +192,12 @@ classificação manual e os responsáveis por ilha também são gravados lá.
 - **Período**: Um dia · Semana · Mês · Escolher dias, com dados da aba `Resumo diário`.
 - **Responsáveis por ilha**: sub-aba própria. Ilha = letra da rota. Quem tem erro de conteinerização em pacote Volumoso
   aparece como "cobrar: Nome".
-- Atualiza sozinho a cada 5 min. O botão **Atualizar agora** relê a planilha.
+- **Atualiza sozinho quando a planilha recebe dados novos:** depois de importar (relatórios, Inventário, Histórico,
+  Direcionamento ou Torre), o Apps Script da Base SSP53 avisa o app (`relAvisarApp`, com a senha `FALTANTES_SEGREDO`); o app
+  recalcula os 3 dias mais recentes e a tela aberta confere a cada 1 min se há versão nova e recarrega sozinha (os dados
+  aparecem 1 a 2 min depois da importação). Além disso, recarrega a cada 5 min. O botão **Atualizar agora** relê a planilha.
+- Para achar um dia, o app lê a coluna de data e depois **só os blocos de linhas daquele dia** (as abas não ficam em ordem
+  de data, porque cada importação vai para o fim).
 
 **Abas que a planilha Base SSP53 precisa ter** (nomes iguais, porque o painel acha as colunas pelo cabeçalho): Aduana,
 Histórico, Auditoria de Carrinho, Problem Solving, **Base Inventário**, Torre Aduana, Direcionamento Manual e One Bipe. O inventário
@@ -238,6 +243,7 @@ antiga. A lista completa de abas e colunas está em [`docs/faltante-aduana/conte
    | `PLANILHA_ID` | `1m2rcujuC2w5qIsrm81nBdTgJxZv3HuukhMTtQBmIH8E` (planilha **Base SSP53**) |
    | `SUPABASE_URL` | o mesmo endereço que está em `js/supabase.js` |
    | `SUPABASE_SERVICE_ROLE` | Supabase > Project Settings > API Keys > **secret key** (a chave secreta; nunca vai para o código) |
+   | `FALTANTES_SEGREDO` | uma senha longa (32 letras e números), a **mesma** da propriedade `FALTANTES_SEGREDO` do Apps Script da Base SSP53. Com ela a planilha avisa o app que recebeu dados novos |
 
    Depois disso, faça um **Redeploy** para as variáveis valerem.
 5. Abra o link de teste, entre como Administrador e abra **Faltante Aduana**. Confira um dia que você conhece.
