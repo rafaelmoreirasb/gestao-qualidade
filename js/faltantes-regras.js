@@ -137,6 +137,20 @@
       return comAuditoria(p, 'Bipado no Histórico' + (hora ? ' às ' + hora : '') + (prox.dados['Processo'] ? ' (' + prox.dados['Processo'] + ')' : '') +
         ' logo depois do faltante na Aduana · carrinho: ' + carTxt);
     },
+    // R09 — bipado no sorting, Faltante na Aduana e o ÚLTIMO registro do Inventário (depois do faltante, dentro das 48 h)
+    //       é "Pendente": o pacote continuava sem ser achado → Risco de Allowance. Verificado depois = não entra. (18/11)
+    'R09': (p) => {
+      if (!p.temSorting) return false;
+      const i = p.eventos.findIndex((x) => x.fonte === 'aduana' && norm(x.dados['Estado']) === 'faltante');
+      if (i < 0) return false;
+      const inv = p.eventos.slice(i + 1).filter((e) => e.fonte === 'inventario');
+      const ult = inv[inv.length - 1];
+      if (!ult || !norm(ult.dados['Situação']).startsWith('pendente')) return false;
+      const q = ult.quando instanceof Date ? String(ult.quando.getDate()).padStart(2, '0') + '/' + String(ult.quando.getMonth() + 1).padStart(2, '0') + ' ' +
+        String(ult.quando.getHours()).padStart(2, '0') + ':' + String(ult.quando.getMinutes()).padStart(2, '0') : '';
+      return 'Último registro no inventário: Pendente' + (q ? ' em ' + q : '') + ((ult.dados['Área'] || ult.dados['Ârea']) ? ' (' + (ult.dados['Área'] || ult.dados['Ârea']) + ')' : '') +
+        (inv.length > 1 ? ' · ' + inv.length + ' registros no inventário' : '');
+    },
     // R08 — "A mais" na Auditoria de Carrinho (achado no carrinho de outra vaga) e Faltante na Aduana (sem cair numa regra antes)
     //       → Erro de Conteinerização + Erro de Auditoria de Carrinho. (17/11)
     'R08': (p) => {
@@ -157,6 +171,7 @@
     { ordem: 6, codigo: 'R06', ligada: true, resultado: 'Erro de Conteinerização', pergunta: 'Bipado no Histórico, Pendente/Faltante ou não bipado na auditoria de carrinho, Faltante na Aduana e logo em seguida Verificado no Inventário (com ou sem Faltante na Torre)?', observacao: '', abas: 'Histórico, Auditoria de Carrinho, Aduana, Torre Aduana, Inventário' },
     { ordem: 7, codigo: 'R07', ligada: true, resultado: 'Erro de Conteinerização', pergunta: 'Bipado no Histórico, bipado ou não na auditoria de carrinho, Faltante na Aduana e logo depois bipado no Histórico?', observacao: '"Logo depois" = o próximo registro depois do faltante (Torre e outros registros da Aduana não contam)', abas: 'Histórico, Auditoria de Carrinho, Aduana' },
     { ordem: 8, codigo: 'R08', ligada: true, resultado: 'Erro de Conteinerização + Erro de Auditoria de Carrinho', pergunta: 'Bipado no Histórico, A mais na Auditoria de Carrinho (achado em outra vaga) e Faltante na Aduana?', observacao: 'R01, R03 e R07 também mostram este resultado quando o carrinho deu A mais', abas: 'Histórico, Auditoria de Carrinho, Aduana' },
+    { ordem: 9, codigo: 'R09', ligada: true, resultado: 'Risco de Allowance', pergunta: 'Bipado no sorting, Faltante na Aduana e o último registro no Inventário (dentro das 48 h) é Pendente?', observacao: 'Se depois foi Verificado no inventário, não entra', abas: 'Histórico, Aduana, Inventário' },
   ];
 
   /** Junta a aba Regras com a LOGICA: cada linha ganha temLogica.

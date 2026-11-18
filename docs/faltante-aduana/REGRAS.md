@@ -51,6 +51,7 @@ e olham só a janela de 48 h. "Faltante na aduana" é verdade para todo pacote d
 | 6 | R06 | Bipado no Histórico, depois **Pendente, Faltante ou não bipado na auditoria de carrinho**, **Faltante na Aduana** e **logo em seguida Verificado no Inventário** (com ou sem Faltante na Torre)? (11/11) | Erro de Conteinerização | Histórico, Auditoria de Carrinho, Aduana, Torre Aduana, Inventário |
 | 7 | R07 | Bipado no Histórico, **bipado ou não na auditoria de carrinho** (qualquer resultado), **Faltante na Aduana** e **logo depois bipado no Histórico**? (17/11) | Erro de Conteinerização | Histórico, Auditoria de Carrinho, Aduana |
 | 8 | R08 | Bipado no Histórico, **A mais na Auditoria de Carrinho** (achado no carrinho de outra vaga) e **Faltante na Aduana**? (17/11) | Erro de Conteinerização + Erro de Auditoria de Carrinho | Histórico, Auditoria de Carrinho, Aduana |
+| 9 | R09 | Bipado no sorting, **Faltante na Aduana** e o **último registro no Inventário** (depois do faltante, dentro das 48 h) é **Pendente**? (18/11) | Risco de Allowance | Histórico, Aduana, Inventário |
 
 **Complemento de auditoria (17/11):** quando o pacote cai na **R01, R03 ou R07** e a Auditoria de Carrinho deu **A mais** (achado no carrinho de outra vaga), o resultado passa a ser **Erro de Conteinerização + Erro de Auditoria de Carrinho** (o código da regra continua R01/R03/R07). A R08 pega o mesmo caso quando nenhuma regra antes se aplicou.
 
@@ -77,6 +78,10 @@ ordem ou desligar, ponha/edite a linha dela na aba.
   conferência). Se antes do bipe aparecer Inventário, Problem Solving, Direcionamento ou Auditoria de Carrinho, **não vale**.
   O carrinho pode ter qualquer resultado (ou nenhum) e só aparece no detalhe. Fica por último: as regras mais específicas
   (R01 a R06) decidem antes.
+- *R09*: olha **todos** os registros da aba Base Inventário do pacote depois do faltante na Aduana, dentro das 48 h, e
+  pega o **último**. Se a Situação é Pendente, o pacote continuava sem ser achado → Risco de Allowance. Se depois apareceu
+  Verificado, não entra. Carrinho com qualquer resultado. Fica por último (ordem 9): se o pacote também cai numa regra de
+  erro (R01 a R08), vale o erro.
 - *Carrinho A mais* (complemento da R01/R03/R07 e R08): algum registro da Auditoria de Carrinho com `Estado` = A mais,
   em qualquer vaga (`Gaiola`), antes ou depois do faltante na Aduana, dentro da janela. O detalhe mostra a vaga.
 
