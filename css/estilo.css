@@ -3762,3 +3762,20 @@ body.crono-travado { overflow: hidden; }
 
 /* ===== Faltante Aduana (o painel fica numa moldura que cresce com o conteúdo) ===== */
 .faltantes-quadro { display: block; width: 100%; min-height: 70vh; border: 0; background: transparent; }
+
+/* ===== Fase 11 · Permissões: aba em modo Ver (só consulta) ===== */
+.gq-so-ver [data-editar] { display: none !important; }
+.gq-so-ver .crono-janela-carga { pointer-events: none; background: #F2F2F2; }
+.gq-so-ver h1.titulo::after {
+  content: "Só ver";
+  display: inline-block;
+  margin-left: 10px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  background: #1A1A1A;
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .3px;
+  vertical-align: middle;
+}

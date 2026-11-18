@@ -10,16 +10,16 @@ function supabaseServidor({ url, chaveServico }) {
   // A chave secreta vai só no cabeçalho apikey (funciona com a chave nova sb_secret_… e com a antiga service_role).
   const cab = { apikey: chaveServico, 'Content-Type': 'application/json' };
 
-  /** Devolve { email, papel } de quem mandou o token, ou null se o token não vale. */
+  /** Devolve { email, papel, abas } de quem mandou o token, ou null se o token não vale. */
   async function usuarioDoToken(tokenUsuario) {
     if (!tokenUsuario) return null;
     const r = await fetch(base + '/auth/v1/user', { headers: { apikey: chaveServico, Authorization: 'Bearer ' + tokenUsuario } });
     if (!r.ok) return null;
     const u = await r.json();
     if (!u || !u.id) return null;
-    const p = await fetch(base + '/rest/v1/pel_perfis?select=papel,nome&user_id=eq.' + encodeURIComponent(u.id), { headers: cab });
+    const p = await fetch(base + '/rest/v1/pel_perfis?select=papel,nome,abas&user_id=eq.' + encodeURIComponent(u.id), { headers: cab });
     const perfis = p.ok ? await p.json() : [];
-    return { id: u.id, email: u.email || '', papel: perfis[0] ? perfis[0].papel : '', nome: perfis[0] ? perfis[0].nome : '' };
+    return { id: u.id, email: u.email || '', papel: perfis[0] ? perfis[0].papel : '', nome: perfis[0] ? perfis[0].nome : '', abas: perfis[0] && perfis[0].abas && typeof perfis[0].abas === 'object' ? perfis[0].abas : {} };
   }
 
   const cache = {

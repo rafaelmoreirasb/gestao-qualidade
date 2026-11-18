@@ -198,6 +198,7 @@
       sel.appendChild(o);
     });
     sel.value = ativo ? 'Ativo' : 'Desligado';
+    sel.disabled = !gqPodeEditar('colaboradores'); // modo Ver: só olhar (Fase 11)
     sel.addEventListener('change', () => mudarStatus(c, sel));
     cs.appendChild(sel);
     linha.appendChild(cs);
@@ -209,6 +210,7 @@
     const cl = celula('centro');
     const lix = document.createElement('button');
     lix.type = 'button';
+    lix.dataset.editar = '';
     lix.className = 'botao-lixeira';
     lix.setAttribute('aria-label', 'Excluir ' + c.nome);
     lix.title = 'Excluir (só para cadastro feito errado)';

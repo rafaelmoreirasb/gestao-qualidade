@@ -1,7 +1,8 @@
 /* ==========================================================
    api/faltantes.js — função do Vercel da aba "Faltante Aduana"
    A tela (faltantes.html) manda POST { fn, args } com o token de login do Supabase.
-   Só responde para quem está logado com papel liberado (hoje: Administrador).
+   Só responde para quem está logado com a aba liberada: Administrador, ou conta com a aba
+   Faltante Aduana em Ver (só consulta) ou Editar (consulta e salva) — Fase 11, sql/017.
    Os dados continuam na planilha do Google Sheets: esta função só lê e grava lá.
 
    Variáveis de ambiente (Vercel > Settings > Environment Variables):
@@ -30,7 +31,15 @@ function segredoConfere(recebido) {
   return crypto.timingSafeEqual(a, b);
 }
 
-const PAPEIS_LIBERADOS = ['admin'];
+// Fase 11: o Administrador marca, para cada conta, a aba em Ver ou Editar (pel_perfis.abas)
+const PAPEIS_COM_ABAS = ['usuario', 'analista', 'gestao'];
+const FUNCOES_QUE_GRAVAM = ['painelSalvarClassificacao', 'painelSalvarResponsavel', 'painelPreencherResumo', 'painelCriarAbaRegras'];
+function nivelFaltantes(usuario) {
+  if (usuario.papel === 'admin') return 'editar';
+  if (!PAPEIS_COM_ABAS.includes(usuario.papel)) return null;
+  const n = usuario.abas && usuario.abas.faltantes;
+  return n === 'editar' || n === 'ver' ? n : null;
+}
 const FUNCOES = ['painelListarDias', 'painelVersao', 'painelDadosDoDia', 'painelSalvarClassificacao', 'painelResumoPeriodo',
   'painelResponsaveis', 'painelSalvarResponsavel', 'painelPreencherResumo', 'painelCriarAbaRegras'];
 
@@ -64,7 +73,8 @@ module.exports = async function handler(req, res) {
     const tokenUsuario = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
     const usuario = await sb.usuarioDoToken(tokenUsuario);
     if (!usuario) return responder(401, { erro: 'Entre no app de novo (sessão expirada).' });
-    if (!PAPEIS_LIBERADOS.includes(usuario.papel)) return responder(403, { erro: 'Sua conta não tem acesso à aba Faltante Aduana.' });
+    const nivel = nivelFaltantes(usuario);
+    if (!nivel) return responder(403, { erro: 'Sua conta não tem acesso à aba Faltante Aduana.' });
 
     let corpo = req.body;
     if (typeof corpo === 'string') corpo = JSON.parse(corpo || '{}');
@@ -74,6 +84,7 @@ module.exports = async function handler(req, res) {
     }
     const fn = String(corpo.fn || '');
     if (!FUNCOES.includes(fn)) return responder(400, { erro: 'Função desconhecida: ' + fn });
+    if (FUNCOES_QUE_GRAVAM.includes(fn) && nivel !== 'editar') return responder(403, { erro: 'Sua conta só pode ver a aba Faltante Aduana (não pode salvar).' });
 
     const nucleo = criarNucleo({
       planilha: planilhaGoogle({ id: process.env.PLANILHA_ID, sa: process.env.GOOGLE_SA_JSON }),

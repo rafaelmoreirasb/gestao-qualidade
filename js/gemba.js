@@ -616,12 +616,14 @@
     const cLix = el('div', 'centro gemba-todos-botoes');
     const lapis = el('button', 'botao-lixeira gemba-lapis', '✎');
     lapis.type = 'button';
+    lapis.dataset.editar = ''; // some no modo Ver (Fase 11)
     lapis.title = 'Editar este registro';
     lapis.setAttribute('aria-label', 'Editar registro de ' + g.linhas.map(nomeDaLinha).join(', ') + ' em ' + dataBr(r.data));
     lapis.addEventListener('click', () => abrirEdicao(g));
     cLix.appendChild(lapis);
     const lix = el('button', 'botao-lixeira');
     lix.type = 'button';
+    lix.dataset.editar = '';
     lix.title = 'Excluir (só para lançamento feito errado)';
     lix.setAttribute('aria-label', 'Excluir registro de ' + g.linhas.map(nomeDaLinha).join(', ') + ' em ' + dataBr(r.data) + ' às ' + horaDe(r.data));
     lix.innerHTML = ICONE_LIXEIRA;

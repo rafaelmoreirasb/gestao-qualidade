@@ -479,6 +479,7 @@
 
       const lix = document.createElement('button');
       lix.type = 'button';
+      lix.dataset.editar = '';
       lix.className = 'botao-lixeira';
       lix.setAttribute('aria-label', 'Excluir ' + t.tema);
       lix.title = 'Excluir (só para lançamento feito errado)';
@@ -730,6 +731,7 @@
       const cx = document.createElement('input');
       cx.type = 'checkbox';
       cx.checked = marcado;
+      cx.disabled = !gqPodeEditar('cronograma'); // modo Ver: só olhar (Fase 11)
       cx.addEventListener('change', () => alternar(t, c, cx));
       const nome = document.createElement('span');
       nome.textContent = c.nome + ' ';

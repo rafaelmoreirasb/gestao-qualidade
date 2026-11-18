@@ -64,7 +64,39 @@ const el = (id) => document.getElementById(id);
 
 // Cadastro: só e-mails deste domínio (a regra também está no banco)
 const DOMINIO_CADASTRO = '@dhl.com';
-const NOMES_PAPEIS = { pendente: 'Pendente', analista: 'Analista', gestao: 'Gestão', admin: 'Administrador', bloqueado: 'Bloqueado' };
+const NOMES_PAPEIS = { pendente: 'Pendente', usuario: 'Usuário', analista: 'Analista', gestao: 'Gestão', admin: 'Administrador', bloqueado: 'Bloqueado' };
+
+/* ---------------- Permissões por aba (Fase 11) ----------------
+   Cada conta tem em pel_perfis.abas a lista das abas liberadas:
+   {"gemba":"editar","painel":"ver"}. O Administrador vê e edita tudo.
+   A PEL continua decidida pelo papel (Analista e Gestão entram nela).
+   O banco confere as mesmas regras (sql/017); a tela só esconde o que
+   a conta não pode usar. */
+const GQ_ABAS_LIBERAVEIS = ['painel', 'gemba', 'faltantes', 'pokayoke', 'eficacia', 'cronograma', 'planoacao', 'colaboradores'];
+let gqPerfilAtual = null;
+
+// 'editar', 'ver' ou null (sem acesso) para a conta logada
+function gqNivelAba(aba) {
+  const p = gqPerfilAtual;
+  if (!p) return null;
+  if (p.papel === 'admin') return 'editar';
+  if (aba === 'pel') return (p.papel === 'analista' || p.papel === 'gestao') ? 'editar' : null;
+  if (!['usuario', 'analista', 'gestao'].includes(p.papel)) return null;
+  const n = p.abas && typeof p.abas === 'object' ? p.abas[aba] : null;
+  return n === 'editar' || n === 'ver' ? n : null;
+}
+function gqPodeEditar(aba) { return gqNivelAba(aba) === 'editar'; }
+window.gqNivelAba = gqNivelAba;
+window.gqPodeEditar = gqPodeEditar;
+
+// Abas que aparecem no menu para esta conta (null = todas, Administrador)
+function gqListaAbas(perfil) {
+  if (!perfil) return ['pel'];
+  if (perfil.papel === 'admin') return null;
+  const lista = GQ_ABAS_LIBERAVEIS.filter((a) => gqNivelAba(a));
+  if (gqNivelAba('pel')) lista.push('pel');
+  return lista;
+}
 
 let recuperandoSenha = /type=recovery/.test(location.hash);
 let usuarioCarregado = null; // id da conta cujo perfil já foi carregado
@@ -106,8 +138,10 @@ function mostrarPapel(perfil) {
 
 // Avisa o menu e a aba Calculadora PEL de quem entrou
 function avisarPerfil(sessao, perfil) {
-  // Administrador vê todas as abas; Analista e Gestão só a Calculadora PEL
-  window.gqAbasPermitidas = perfil && perfil.papel === 'admin' ? null : ['pel'];
+  // Administrador vê todas as abas; as outras contas veem as abas liberadas
+  // pelo Administrador (Fase 11) e, se forem Analista ou Gestão, a PEL.
+  gqPerfilAtual = perfil || null;
+  window.gqAbasPermitidas = gqListaAbas(perfil);
   if (typeof window.gqAtualizarMenu === 'function') window.gqAtualizarMenu();
   document.dispatchEvent(new CustomEvent('gq:perfil', { detail: { usuario: sessao ? sessao.user : null, perfil } }));
 }
@@ -139,11 +173,13 @@ async function aplicarSessao(sessao, forcar) {
   if (!perfil) {
     mostrarStatus('Conta sem acesso', 'Este app aceita só contas com e-mail ' + DOMINIO_CADASTRO + '. Clique em Sair e crie uma conta com o seu e-mail DHL.');
   } else if (perfil.papel === 'pendente') {
-    mostrarStatus('Conta aguardando liberação', 'Sua conta foi criada. O administrador precisa definir se você é Analista ou Gestão, e qual é o seu site. Assim que ele liberar, clique em Verificar de novo.');
+    mostrarStatus('Conta aguardando liberação', 'Sua conta foi criada. O administrador precisa liberar o seu acesso. Assim que ele liberar, clique em Verificar de novo.');
   } else if (perfil.papel === 'bloqueado') {
     mostrarStatus('Conta sem acesso', 'Sua conta está bloqueada. Fale com o administrador.');
   } else if (perfil.papel === 'analista' && !perfil.site) {
     mostrarStatus('Falta definir o seu site', 'Sua conta é de Analista, mas o administrador ainda não escolheu o seu site. Assim que ele escolher, clique em Verificar de novo.');
+  } else if (perfil.papel === 'usuario' && !GQ_ABAS_LIBERAVEIS.some((a) => perfil.abas && ['ver', 'editar'].includes(perfil.abas[a]))) {
+    mostrarStatus('Nenhuma aba liberada', 'Sua conta foi liberada, mas o administrador ainda não escolheu quais abas você pode abrir. Assim que ele escolher, clique em Verificar de novo.');
   } else {
     mostrarTela('app');
     avisarPerfil(sessao, perfil);

@@ -350,7 +350,7 @@ function pyInterpretarPlanilha(linhas, tipos, hoje) {
       ch.type = 'checkbox';
       ch.className = 'py-caixa';
       ch.checked = !!p.hoje;
-      ch.disabled = !p.hoje && p.pendente === 0;
+      ch.disabled = (!p.hoje && p.pendente === 0) || !gqPodeEditar('pokayoke'); // modo Ver: só olhar (Fase 11)
       ch.setAttribute('aria-label', 'Treinado hoje: ' + p.usuario);
       ch.title = p.hoje ? 'Treinado hoje (clique para desmarcar se marcou errado)' : (p.pendente ? 'Marcar como treinado hoje' : 'Nada a treinar');
       ch.addEventListener('change', () => alternarTreino(p, ch));
