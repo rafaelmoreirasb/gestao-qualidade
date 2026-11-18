@@ -37,6 +37,7 @@
         <a href="#planoacao" data-aba="planoacao">Plano de ação</a>
         <a href="#colaboradores" data-aba="colaboradores">Colaboradores</a>
         <a href="#pel" data-aba="pel" title="Calculadora PEL">PEL</a>
+        <a href="#permissoes" data-aba="permissoes" title="Contas, papéis e abas de cada pessoa">Permissões</a>
       </nav>
 
       <div class="usuario" id="area-usuario" hidden>
@@ -925,6 +926,34 @@
         </section>
       </section>
 
+      <!-- ===== Permissões (js/permissoes.js) · Fase 11 · só o Administrador ===== -->
+      <section class="aba" id="aba-permissoes" data-titulo="Permissões" hidden>
+        <h1 class="titulo">Permissões <span class="titulo-contagem" id="perm-contagem"></span></h1>
+
+        <section class="cartao cartao-lista">
+          <div class="cartao-topo perm-topo">
+            <div class="perm-filtros" id="perm-filtros" role="group" aria-label="Filtro de papel">
+              <button type="button" class="perm-chip" data-f="" aria-pressed="true">Todos</button>
+              <button type="button" class="perm-chip" data-f="pendente" aria-pressed="false">Pendentes <span class="perm-chip-n" id="perm-n-pendente"></span></button>
+              <button type="button" class="perm-chip" data-f="usuario" aria-pressed="false">Usuários</button>
+              <button type="button" class="perm-chip" data-f="analista" aria-pressed="false">Analistas</button>
+              <button type="button" class="perm-chip" data-f="gestao" aria-pressed="false">Gestão</button>
+              <button type="button" class="perm-chip" data-f="admin" aria-pressed="false">Administradores</button>
+              <button type="button" class="perm-chip" data-f="bloqueado" aria-pressed="false">Bloqueados</button>
+            </div>
+            <input type="search" id="perm-busca" class="perm-busca" placeholder="Buscar nome ou e-mail" aria-label="Buscar nome ou e-mail">
+          </div>
+          <div id="perm-msg" class="mensagem" role="status" hidden></div>
+          <div class="perm-rolagem">
+            <table class="perm-tabela">
+              <thead id="perm-cabecalho"></thead>
+              <tbody id="perm-linhas"></tbody>
+            </table>
+          </div>
+          <div class="nota">Contas novas chegam como <b>Pendente</b>: escolha o <b>Papel</b> para liberar. <b>Usuário</b> = vê só as abas marcadas; <b>Analista</b> e <b>Gestão</b> entram na PEL e também podem receber abas. Em cada aba: <b>—</b> sem acesso · <b>Ver</b> = consulta, sem gravar · <b>Editar</b> = usa a aba inteira. Salva na hora; vale quando a pessoa recarregar a página ou entrar de novo.</div>
+        </section>
+      </section>
+
       <!-- ===== Colaboradores (js/colaboradores.js) ===== -->
       <section class="aba" id="aba-colaboradores" data-titulo="Colaboradores" hidden>
         <h1 class="titulo">Colaboradores <span class="titulo-contagem" id="colab-contagem"></span></h1>
@@ -1005,7 +1034,6 @@
           <nav class="pel-menu" id="pel-menu" aria-label="Seções da Calculadora PEL" hidden>
             <button type="button" data-sub="calc">Calculadora</button>
             <button type="button" data-sub="visao" data-papel="gestao admin">Visão geral</button>
-            <button type="button" data-sub="usuarios" data-papel="admin">Usuários</button>
             <button type="button" data-sub="sites" data-papel="admin">Sites e trimestre</button>
           </nav>
         </div>
@@ -1106,51 +1134,6 @@
           </div>
         </section>
           </section>
-          <section class="pel-sub" id="pel-usuarios" hidden>
-        <div class="painel-cartao-topo"><h2 class="subtitulo">Usuários</h2><span class="nota">Aprove as contas novas escolhendo o papel e, no botão Abas, quais abas do app cada conta vê (Ver) ou usa (Editar). Contas novas chegam como Pendente; o site é informado pela própria pessoa no cadastro.</span></div>
-        <section class="cartao painel-cartao">
-          <div class="painel-cartao-topo">
-            <div class="filtro-papel" id="filtro-papel">
-              <button type="button" class="chip" data-f="" aria-pressed="true">Todos</button>
-              <button type="button" class="chip" data-f="pendente" aria-pressed="false">Pendentes</button>
-              <button type="button" class="chip" data-f="usuario" aria-pressed="false">Usuários</button>
-              <button type="button" class="chip" data-f="analista" aria-pressed="false">Analistas</button>
-              <button type="button" class="chip" data-f="gestao" aria-pressed="false">Gestão</button>
-            </div>
-            <span class="salvo" id="usuarios-msg" aria-live="polite"></span>
-          </div>
-          <div class="scroll">
-            <table class="tabela-adm">
-              <thead><tr><th>Nome</th><th>E-mail</th><th>Criada em</th><th>Site</th><th>Papel</th><th>Abas do app</th></tr></thead>
-              <tbody id="usuarios-tbody"></tbody>
-            </table>
-          </div>
-        </section>
-        <!-- Janela "Abas" da conta (Fase 11 · Permissões) -->
-        <div class="crono-fundo" id="u-abas-fundo" hidden>
-          <section class="crono-janela u-abas-janela" role="dialog" aria-modal="true" aria-labelledby="u-abas-titulo">
-            <div class="crono-janela-topo">
-              <div>
-                <h2 class="crono-janela-tema" id="u-abas-titulo">Abas da conta</h2>
-                <div class="crono-janela-quando" id="u-abas-info"></div>
-              </div>
-              <button type="button" class="crono-seta" id="u-abas-x" aria-label="Fechar">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>
-              </button>
-            </div>
-            <p class="nota"><b>Ver</b> = abre a aba e consulta, sem gravar nada. <b>Editar</b> = usa a aba inteira (registrar, alterar, importar, excluir). A <b>PEL</b> continua decidida pelo papel (Analista ou Gestão).</p>
-            <table class="tabela-adm u-abas-tabela">
-              <thead><tr><th>Aba</th><th>Sem acesso</th><th>Ver</th><th>Editar</th></tr></thead>
-              <tbody id="u-abas-tbody"></tbody>
-            </table>
-            <div class="u-abas-rodape">
-              <span class="salvo" id="u-abas-msg" aria-live="polite"></span>
-              <button type="button" class="botao botao-contorno" id="u-abas-cancelar">Cancelar</button>
-              <button type="button" class="botao botao-principal" id="u-abas-salvar">Salvar</button>
-            </div>
-          </section>
-        </div>
-          </section>
           <section class="pel-sub" id="pel-sites" hidden>
         <section class="cartao painel-cartao">
           <div class="painel-cartao-topo"><h2 class="subtitulo">Trimestre em andamento</h2><span class="nota">Ao trocar o trimestre, os sites começam a preencher do zero. Os trimestres anteriores ficam guardados.</span></div>
@@ -1194,6 +1177,7 @@
   <script src="js/pokayoke.js"></script>
   <script src="js/eficacia.js"></script>
   <script src="js/pel.js"></script>
+  <script src="js/permissoes.js"></script>
   <script src="js/faltantes.js"></script>
 </body>
 </html>
