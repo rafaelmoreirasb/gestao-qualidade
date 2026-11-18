@@ -34,9 +34,14 @@ function planilhaGoogle({ id, sa }) {
   const credenciais = typeof sa === 'string' ? JSON.parse(sa) : sa;
   let abas = null; // nomes das abas (lidos uma vez por chamada)
 
-  async function chamar(caminho, opcoes) {
+  async function chamar(caminho, opcoes, tentativa = 0) {
     const r = await fetch(API + id + caminho, { ...(opcoes || {}), headers: { Authorization: 'Bearer ' + (await token(credenciais)), 'Content-Type': 'application/json' } });
     const j = await r.json().catch(() => ({}));
+    // Limite do Google (60 leituras por minuto): espera um pouco e tenta de novo (até 2 vezes, sem passar do tempo do Vercel)
+    if (r.status === 429 && tentativa < 2) {
+      await new Promise((ok) => setTimeout(ok, (tentativa + 1) * 10000));
+      return chamar(caminho, opcoes, tentativa + 1);
+    }
     if (!r.ok) {
       const msg = (j.error && j.error.message) || ('HTTP ' + r.status);
       if (r.status === 403 || r.status === 404) throw new Error('Sem acesso à planilha. Compartilhe a planilha com ' + credenciais.client_email + ' como Editor. (' + msg + ')');

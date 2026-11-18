@@ -20,7 +20,7 @@ const CFG = {
   DIAS_CACHE_SEG: 300,      // lista de dias: 5 min
   PREPARAR_DIAS: 3,         // quando a planilha avisa que recebeu dados, recalcula os 3 dias mais recentes
   PREPARAR_TEMPO_MS: 40000, // ... sem passar de 40 s (o Vercel corta em 60)
-  JUNTAR_BLOCOS: 300,       // blocos de linhas do mesmo dia com menos de 300 linhas entre eles são lidos juntos
+  JUNTAR_BLOCOS: 1500,      // blocos de linhas do mesmo dia com menos de 1500 linhas entre eles são lidos juntos (menos pedidos ao Google)
   ABA_MANUAL: 'Classificação manual',
   ABA_REGRAS: 'Regras',
   ABA_RESUMO: 'Resumo diário',
@@ -99,8 +99,28 @@ function ilhaDe(rota) { const m = String(rota || '').trim().toUpperCase().match(
 const agoraTxt = () => dmy(new Date()) + ' ' + new Date().toTimeString().slice(0, 8);
 const cel = (v) => (v == null ? '' : String(v));
 
+/** Dentro de UMA chamada ao servidor, guarda o cabeçalho (1:1) e as colunas inteiras (ex.: C2:C) já lidas, para não
+    pedir de novo ao Google (o limite é 60 leituras por minuto). Qualquer gravação na aba apaga o que estava guardado dela. */
+function comMemoria(planilha) {
+  const guardado = new Map();
+  const reutilizavel = (a1) => /^\d+:\d+$/.test(a1) || /^([A-Z]+)2:\1$/.test(a1);
+  const esquecer = (aba) => { for (const k of [...guardado.keys()]) if (k.startsWith(aba + '\u0000')) guardado.delete(k); };
+  return Object.assign(Object.create(planilha), {
+    ler(aba, a1) {
+      if (!reutilizavel(a1)) return planilha.ler(aba, a1);
+      const k = aba + '\u0000' + a1;
+      if (!guardado.has(k)) guardado.set(k, planilha.ler(aba, a1).catch((e) => { guardado.delete(k); throw e; }));
+      return guardado.get(k);
+    },
+    async atualizar(aba, ...r) { esquecer(aba); return planilha.atualizar(aba, ...r); },
+    async anexar(aba, ...r) { esquecer(aba); return planilha.anexar(aba, ...r); },
+    async limpar(aba, ...r) { esquecer(aba); return planilha.limpar(aba, ...r); },
+    async criarAba(aba, ...r) { esquecer(aba); return planilha.criarAba(aba, ...r); },
+  });
+}
+
 function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
-  const P = planilha;
+  const P = comMemoria(planilha);
   const quem = usuario || '(painel)';
   const memo = {}; // dentro de uma mesma chamada, não lê a mesma coisa duas vezes
 

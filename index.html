@@ -37,6 +37,7 @@
         <a href="#planoacao" data-aba="planoacao">Plano de ação</a>
         <a href="#colaboradores" data-aba="colaboradores">Colaboradores</a>
         <a href="#pel" data-aba="pel" title="Calculadora PEL">PEL</a>
+        <a href="#permissoes" data-aba="permissoes" title="Contas, papéis e abas de cada pessoa">Permissões</a>
       </nav>
 
       <div class="usuario" id="area-usuario" hidden>
@@ -249,7 +250,7 @@
       <section class="aba" id="aba-gemba" data-titulo="Gemba" hidden>
         <h1 class="titulo">Gemba</h1>
 
-        <div class="gemba-linha">
+        <div class="gemba-linha" data-editar>
           <section class="cartao gemba-form" aria-label="Novo registro">
 
             <!-- O que foi observado: Desvio (erro) ou Conforme (fazendo certo) -->
@@ -525,7 +526,7 @@
         </div>
 
         <!-- Base acumulada e importação da planilha diária -->
-        <section class="cartao py-importar">
+        <section class="cartao py-importar" data-editar>
           <div class="py-importar-linha">
             <div class="py-base">
               <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="8" ry="3"></ellipse><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"></path><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"></path></svg>
@@ -619,13 +620,13 @@
       <section class="aba" id="aba-cronograma" data-titulo="Cronograma" hidden>
         <div class="crono-topo">
           <h1 class="titulo">Cronograma</h1>
-          <button type="button" class="botao crono-botao-vermelho" id="crono-alternar">+ Novo treinamento</button>
+          <button type="button" class="botao crono-botao-vermelho" id="crono-alternar" data-editar>+ Novo treinamento</button>
         </div>
 
         <div id="crono-msg-geral" class="mensagem mensagem-erro" role="alert" hidden></div>
 
         <!-- Novo treinamento -->
-        <section class="cartao crono-form" id="crono-form" hidden>
+        <section class="cartao crono-form" id="crono-form" data-editar hidden>
           <h2 class="subtitulo">Novo treinamento</h2>
           <form id="crono-form-novo" novalidate>
             <div class="crono-campos">
@@ -757,14 +758,14 @@
                 <label for="crono-janela-carga" class="crono-janela-rotulo">Carga horária</label>
                 <div class="crono-janela-linha">
                   <input type="text" id="crono-janela-carga" class="crono-janela-carga" placeholder="00:10" inputmode="numeric" autocomplete="off" maxlength="5">
-                  <button type="button" class="botao botao-contorno" id="crono-janela-salvar-carga">Salvar</button>
+                  <button type="button" class="botao botao-contorno" id="crono-janela-salvar-carga" data-editar>Salvar</button>
                 </div>
               </div>
               <div class="crono-janela-bloco">
                 <div class="crono-janela-rotulo">Status</div>
                 <div class="crono-janela-linha">
                   <span class="crono-chip" id="crono-janela-chip"></span>
-                  <button type="button" class="botao crono-botao-vermelho" id="crono-janela-status">Marcar como realizado</button>
+                  <button type="button" class="botao crono-botao-vermelho" id="crono-janela-status" data-editar>Marcar como realizado</button>
                 </div>
                 <div class="crono-janela-dica" id="crono-janela-status-dica"></div>
               </div>
@@ -780,10 +781,10 @@
                 </div>
                 <div class="crono-anexo-botoes">
                   <button type="button" class="botao botao-contorno crono-botao-anexo" id="crono-anexo-foto-ver">Ver</button>
-                  <label class="botao botao-contorno crono-botao-anexo crono-anexo-escolher" id="crono-anexo-foto-rotulo"><span id="crono-anexo-foto-acao">Anexar</span>
+                  <label class="botao botao-contorno crono-botao-anexo crono-anexo-escolher" id="crono-anexo-foto-rotulo" data-editar><span id="crono-anexo-foto-acao">Anexar</span>
                     <input type="file" id="crono-anexo-foto-arquivo" accept="image/jpeg,image/png">
                   </label>
-                  <button type="button" class="botao-lixeira" id="crono-anexo-foto-remover" aria-label="Remover foto" title="Remover foto">
+                  <button type="button" class="botao-lixeira" id="crono-anexo-foto-remover" data-editar aria-label="Remover foto" title="Remover foto">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#D40511" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg>
                   </button>
                 </div>
@@ -796,10 +797,10 @@
                 </div>
                 <div class="crono-anexo-botoes">
                   <button type="button" class="botao botao-contorno crono-botao-anexo" id="crono-anexo-lista-ver">Ver</button>
-                  <label class="botao botao-contorno crono-botao-anexo crono-anexo-escolher" id="crono-anexo-lista-rotulo"><span id="crono-anexo-lista-acao">Anexar</span>
+                  <label class="botao botao-contorno crono-botao-anexo crono-anexo-escolher" id="crono-anexo-lista-rotulo" data-editar><span id="crono-anexo-lista-acao">Anexar</span>
                     <input type="file" id="crono-anexo-lista-arquivo" accept="application/pdf,.pdf">
                   </label>
-                  <button type="button" class="botao-lixeira" id="crono-anexo-lista-remover" aria-label="Remover lista de presença" title="Remover lista de presença">
+                  <button type="button" class="botao-lixeira" id="crono-anexo-lista-remover" data-editar aria-label="Remover lista de presença" title="Remover lista de presença">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#D40511" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg>
                   </button>
                 </div>
@@ -822,13 +823,13 @@
       <section class="aba" id="aba-planoacao" data-titulo="Plano de ação" hidden>
         <div class="plano-topo">
           <h1 class="titulo">Plano de ação</h1>
-          <button type="button" class="botao plano-botao-vermelho" id="plano-alternar">+ Nova ação</button>
+          <button type="button" class="botao plano-botao-vermelho" id="plano-alternar" data-editar>+ Nova ação</button>
         </div>
 
         <div id="plano-msg-geral" class="mensagem mensagem-erro" role="alert" hidden></div>
 
         <!-- Nova ação ou alterar ação (5W2H) -->
-        <section class="cartao plano-form" id="plano-form" hidden>
+        <section class="cartao plano-form" id="plano-form" data-editar hidden>
           <div>
             <h2 class="subtitulo" id="plano-form-titulo">Nova ação · 5W2H</h2>
             <p class="plano-dica">Responda às 7 perguntas. O quê, Quem e Quando são obrigatórios.</p>
@@ -925,12 +926,40 @@
         </section>
       </section>
 
+      <!-- ===== Permissões (js/permissoes.js) · Fase 11 · só o Administrador ===== -->
+      <section class="aba" id="aba-permissoes" data-titulo="Permissões" hidden>
+        <h1 class="titulo">Permissões <span class="titulo-contagem" id="perm-contagem"></span></h1>
+
+        <section class="cartao cartao-lista">
+          <div class="cartao-topo perm-topo">
+            <div class="perm-filtros" id="perm-filtros" role="group" aria-label="Filtro de papel">
+              <button type="button" class="perm-chip" data-f="" aria-pressed="true">Todos</button>
+              <button type="button" class="perm-chip" data-f="pendente" aria-pressed="false">Pendentes <span class="perm-chip-n" id="perm-n-pendente"></span></button>
+              <button type="button" class="perm-chip" data-f="usuario" aria-pressed="false">Usuários</button>
+              <button type="button" class="perm-chip" data-f="analista" aria-pressed="false">Analistas</button>
+              <button type="button" class="perm-chip" data-f="gestao" aria-pressed="false">Gestão</button>
+              <button type="button" class="perm-chip" data-f="admin" aria-pressed="false">Administradores</button>
+              <button type="button" class="perm-chip" data-f="bloqueado" aria-pressed="false">Bloqueados</button>
+            </div>
+            <input type="search" id="perm-busca" class="perm-busca" placeholder="Buscar nome ou e-mail" aria-label="Buscar nome ou e-mail">
+          </div>
+          <div id="perm-msg" class="mensagem" role="status" hidden></div>
+          <div class="perm-rolagem">
+            <table class="perm-tabela">
+              <thead id="perm-cabecalho"></thead>
+              <tbody id="perm-linhas"></tbody>
+            </table>
+          </div>
+          <div class="nota">Contas novas chegam como <b>Pendente</b>: escolha o <b>Papel</b> para liberar. <b>Usuário</b> = vê só as abas marcadas; <b>Analista</b> e <b>Gestão</b> entram na PEL e também podem receber abas. Em cada aba: <b>—</b> sem acesso · <b>Ver</b> = consulta, sem gravar · <b>Editar</b> = usa a aba inteira. Salva na hora; vale quando a pessoa recarregar a página ou entrar de novo.</div>
+        </section>
+      </section>
+
       <!-- ===== Colaboradores (js/colaboradores.js) ===== -->
       <section class="aba" id="aba-colaboradores" data-titulo="Colaboradores" hidden>
         <h1 class="titulo">Colaboradores <span class="titulo-contagem" id="colab-contagem"></span></h1>
 
         <div class="linha-cartoes">
-          <section class="cartao cartao-adicionar">
+          <section class="cartao cartao-adicionar" data-editar>
             <h2 class="subtitulo">Adicionar manualmente</h2>
             <form id="colab-form" class="form-adicionar" novalidate>
               <div class="grade-adicionar">
@@ -975,7 +1004,7 @@
           <div class="nota">A busca encontra o CPF com ou sem ponto e traço. Só colaboradores <strong>Ativos</strong> aparecem na busca do Gemba e na escolha de participantes do Cronograma. Desligados vão para o fim da lista e todo o histórico deles continua registrado. A lixeira serve só para corrigir cadastro feito errado.</div>
         </section>
 
-        <section class="cartao cartao-importar">
+        <section class="cartao cartao-importar" data-editar>
           <div class="importar-topo">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M8 13l3 4"></path><path d="M11 13l-3 4"></path><line x1="13" y1="15" x2="16" y2="15"></line></svg>
             <h2 class="subtitulo">Importar planilha</h2>
@@ -1005,7 +1034,6 @@
           <nav class="pel-menu" id="pel-menu" aria-label="Seções da Calculadora PEL" hidden>
             <button type="button" data-sub="calc">Calculadora</button>
             <button type="button" data-sub="visao" data-papel="gestao admin">Visão geral</button>
-            <button type="button" data-sub="usuarios" data-papel="admin">Usuários</button>
             <button type="button" data-sub="sites" data-papel="admin">Sites e trimestre</button>
           </nav>
         </div>
@@ -1106,26 +1134,6 @@
           </div>
         </section>
           </section>
-          <section class="pel-sub" id="pel-usuarios" hidden>
-        <div class="painel-cartao-topo"><h2 class="subtitulo">Usuários</h2><span class="nota">Aprove as contas novas escolhendo o papel. Contas novas chegam como Pendente; o site é informado pela própria pessoa no cadastro.</span></div>
-        <section class="cartao painel-cartao">
-          <div class="painel-cartao-topo">
-            <div class="filtro-papel" id="filtro-papel">
-              <button type="button" class="chip" data-f="" aria-pressed="true">Todos</button>
-              <button type="button" class="chip" data-f="pendente" aria-pressed="false">Pendentes</button>
-              <button type="button" class="chip" data-f="analista" aria-pressed="false">Analistas</button>
-              <button type="button" class="chip" data-f="gestao" aria-pressed="false">Gestão</button>
-            </div>
-            <span class="salvo" id="usuarios-msg" aria-live="polite"></span>
-          </div>
-          <div class="scroll">
-            <table class="tabela-adm">
-              <thead><tr><th>Nome</th><th>E-mail</th><th>Criada em</th><th>Site</th><th>Papel</th></tr></thead>
-              <tbody id="usuarios-tbody"></tbody>
-            </table>
-          </div>
-        </section>
-          </section>
           <section class="pel-sub" id="pel-sites" hidden>
         <section class="cartao painel-cartao">
           <div class="painel-cartao-topo"><h2 class="subtitulo">Trimestre em andamento</h2><span class="nota">Ao trocar o trimestre, os sites começam a preencher do zero. Os trimestres anteriores ficam guardados.</span></div>
@@ -1169,6 +1177,7 @@
   <script src="js/pokayoke.js"></script>
   <script src="js/eficacia.js"></script>
   <script src="js/pel.js"></script>
+  <script src="js/permissoes.js"></script>
   <script src="js/faltantes.js"></script>
 </body>
 </html>

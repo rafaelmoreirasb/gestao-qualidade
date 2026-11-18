@@ -5,14 +5,14 @@
    ========================================================== */
 
 (function () {
-  const ABAS = ['painel', 'gemba', 'torre', 'faltantes', 'pokayoke', 'eficacia', 'cronograma', 'planoacao', 'colaboradores', 'pel'];
+  const ABAS = ['painel', 'gemba', 'torre', 'faltantes', 'pokayoke', 'eficacia', 'cronograma', 'planoacao', 'colaboradores', 'pel', 'permissoes'];
   const PADRAO = 'painel';
   const TITULO_SITE = 'Gestão de Processo e Qualidade · Mirassol SSP53';
 
   const menu = document.getElementById('menu');
 
   // Abas que a conta logada pode abrir (null = todas). Definido em js/supabase.js:
-  // Administrador vê todas; Analista e Gestão só a Calculadora PEL.
+  // Administrador vê todas; as outras contas, as abas liberadas para elas (Fase 11).
   function permitidas() {
     return Array.isArray(window.gqAbasPermitidas) ? window.gqAbasPermitidas : ABAS;
   }
@@ -27,7 +27,10 @@
   function mostrarAba(nome) {
     ABAS.forEach((a) => {
       const sec = document.getElementById('aba-' + a);
-      if (sec) sec.hidden = a !== nome;
+      if (!sec) return;
+      sec.hidden = a !== nome;
+      // Modo Ver (Fase 11): esconde os botões de gravar, apagar e importar
+      sec.classList.toggle('gq-so-ver', typeof window.gqPodeEditar === 'function' && !!window.gqNivelAba(a) && !window.gqPodeEditar(a));
     });
     menu.querySelectorAll('a[data-aba]').forEach((link) => {
       if (link.dataset.aba === nome) link.setAttribute('aria-current', 'page');
@@ -55,4 +58,7 @@
     if ((location.hash || '').replace('#', '') !== aba && lista !== ABAS) history.replaceState(null, '', '#' + aba);
     mostrarAba(aba);
   };
+
+  // Se o perfil já chegou antes deste arquivo carregar, aplica agora (Fase 11)
+  if (window.gqAbasPermitidas !== undefined) window.gqAtualizarMenu();
 })();

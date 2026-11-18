@@ -351,6 +351,7 @@
         sel.appendChild(o);
       });
       sel.value = a.status;
+      sel.disabled = !gqPodeEditar('planoacao'); // modo Ver: só olhar (Fase 11)
       sel.addEventListener('change', () => mudarStatus(a, sel));
       cs.appendChild(sel);
       linha.appendChild(cs);
@@ -358,6 +359,7 @@
       const ca = celula('plano-col-botoes');
       const ed = document.createElement('button');
       ed.type = 'button';
+      ed.dataset.editar = '';
       ed.className = 'botao-lixeira plano-botao-editar';
       ed.setAttribute('aria-label', 'Alterar a ação ' + a.id);
       ed.title = 'Alterar a ação';
@@ -367,6 +369,7 @@
 
       const lix = document.createElement('button');
       lix.type = 'button';
+      lix.dataset.editar = '';
       lix.className = 'botao-lixeira';
       lix.setAttribute('aria-label', 'Excluir a ação ' + a.id);
       lix.title = 'Excluir (só para lançamento feito errado)';

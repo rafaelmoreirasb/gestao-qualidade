@@ -177,6 +177,9 @@
     .duas { grid-template-columns: 1fr; }
     .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tile { padding: 12px 14px; }
   }
+/* Fase 11: modo Ver (só consulta) */
+body.so-ver td.ed input, body.so-ver td.ed textarea, body.so-ver .linha-resp input, body.so-ver .linha-resp select { pointer-events: none; background: #F2F2F2; }
+body.so-ver .conflito button, body.so-ver #maisIlha, body.so-ver #copiarAnt { display: none; }
 </style>
 
 </head>
@@ -238,7 +241,12 @@
   const fmt = (n) => Number(n).toLocaleString('pt-BR');
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   /** Chama o servidor (api/faltantes.js no Vercel) com o login do app. Devolve o mesmo que o antigo Apps Script. */
+  // Fase 11: conta com a aba em "Ver" consulta tudo, mas não salva (o servidor confere também)
+  const SO_VER = (() => { try { return typeof window.parent.gqPodeEditar === 'function' && !window.parent.gqPodeEditar('faltantes'); } catch (e) { return false; } })();
+  if (SO_VER) document.body.classList.add('so-ver');
+  const GRAVA = ['painelSalvarClassificacao', 'painelSalvarResponsavel', 'painelPreencherResumo', 'painelCriarAbaRegras'];
   const chamar = async (fn, ...args) => {
+    if (SO_VER && GRAVA.includes(fn)) throw new Error('sua conta só pode ver esta aba.');
     const cliente = window.parent && window.parent.gqSb;
     const sessao = cliente ? (await cliente.auth.getSession()).data.session : null;
     if (!sessao) throw new Error('Entre no app de novo (sessão expirada).');

@@ -48,7 +48,7 @@ const SHE_ITEMS=[
 
 const MESES_PADRAO=["Setembro","Outubro","Novembro"];
 const PERIODO_PADRAO="Q4 2026";
-const PAPEIS={pendente:"Pendente",analista:"Analista",gestao:"Gestão",admin:"Administrador",bloqueado:"Bloqueado"};
+const PAPEIS={pendente:"Pendente",usuario:"Usuário",analista:"Analista",gestao:"Gestão",admin:"Administrador",bloqueado:"Bloqueado"};
 
 /* ==========================================================
    Utilitários
@@ -461,7 +461,6 @@ function mostrarSub(nome){
   document.querySelectorAll("#aba-pel .pel-sub").forEach(s=>s.hidden=s.id!=="pel-"+nome);
   subAtual=nome;
   if(nome==="visao")carregarVisao();
-  if(nome==="usuarios")carregarUsuarios();
   if(nome==="sites")carregarAbaSites();
   if(usuario)local.set("pel:sub:"+usuario.id,nome);
 }
@@ -543,39 +542,7 @@ function linhasMeses(s,l,nomes){
   }).join("");
 }
 
-/* ---------- Usuários ---------- */
-let perfis=[], filtroPapel="";
-async function carregarUsuarios(){
-  $("usuarios-tbody").innerHTML=`<tr><td colspan="5" class="vazio">Carregando…</td></tr>`;
-  await carregarSites().catch(()=>{});
-  const {data,error}=await sb.from("pel_perfis").select("*").order("criado_em",{ascending:false});
-  if(error){$("usuarios-tbody").innerHTML=`<tr><td colspan="5" class="vazio">Não foi possível carregar os usuários.</td></tr>`;return;}
-  perfis=data||[];desenharUsuarios();
-}
-function desenharUsuarios(){
-  const lista=perfis.filter(p=>!filtroPapel||p.papel===filtroPapel);
-  $("usuarios-tbody").innerHTML=lista.length?lista.map(p=>{
-    const eu=p.user_id===usuario.id;
-    return `<tr class="${p.papel==="pendente"?"pendente":""}" data-id="${p.user_id}"><td><b>${esc(p.nome||"—")}</b>${eu?' <span class="nota">(você)</span>':""}</td><td>${esc(p.email)}</td><td>${dataHora(p.criado_em)}</td>
-      <td>${siteTexto(p.site)}</td>
-      <td><select class="u-papel" aria-label="Papel de ${esc(p.email)}" ${eu?"disabled":""}>${Object.keys(PAPEIS).map(k=>`<option value="${k}" ${k===p.papel?"selected":""}>${PAPEIS[k]}</option>`).join("")}</select></td></tr>`;
-  }).join(""):`<tr><td colspan="5" class="vazio">Nenhuma conta ${filtroPapel?"com este papel":"ainda"}.</td></tr>`;
-}
-// Site da conta, só para leitura: "SSP53 · Mirassol-SP · SPI"
-function siteTexto(codigo){
-  if(!codigo)return `<span class="nota">Sem site</span>`;
-  const s=sites.find(x=>x.codigo===codigo);
-  return `<b>${esc(codigo)}</b>`+(s?[s.nome,s.regional].filter(Boolean).map(t=>" · "+esc(t)).join(""):"");
-}
-async function alterarUsuario(id,campo,valor){
-  const p=perfis.find(x=>x.user_id===id);if(!p)return;
-  msgSalvo($("usuarios-msg"),"Salvando…");
-  const {error}=await sb.from("pel_perfis").update({[campo]:valor}).eq("user_id",id);
-  if(error){msgSalvo($("usuarios-msg"),"Não foi possível salvar. "+(error.message||""),true);desenharUsuarios();return;}
-  p[campo]=valor;
-  msgSalvo($("usuarios-msg"),`${p.nome||p.email}: papel ${PAPEIS[valor]} salvo.`+(valor==="analista"&&!p.site?" Atenção: esta conta não tem site, então o analista ainda não consegue entrar.":""));
-  if(campo==="papel")desenharUsuarios();
-}
+/* Usuários: desde a Fase 11 ficam na aba Permissões (js/permissoes.js) */
 
 /* ---------- Sites e trimestre ---------- */
 async function carregarAbaSites(){
@@ -701,11 +668,6 @@ function ligarAdmin(){
       exp.setAttribute("aria-expanded",abrir);tr.classList.toggle("aberto",abrir);return;
     }
     const tr=e.target.closest("tr[data-site]");if(!tr)return;mostrarSub("calc");abrirSite(tr.dataset.site);
-  });
-  $("filtro-papel").addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b)return;filtroPapel=b.dataset.f;document.querySelectorAll("#filtro-papel .chip").forEach(c=>c.setAttribute("aria-pressed",c===b));desenharUsuarios();});
-  $("usuarios-tbody").addEventListener("change",e=>{
-    const tr=e.target.closest("tr[data-id]");if(!tr)return;
-    if(e.target.classList.contains("u-papel"))alterarUsuario(tr.dataset.id,"papel",e.target.value);
   });
   $("sites-tbody").addEventListener("click",e=>{
     const b=e.target.closest(".s-excluir");if(!b)return;

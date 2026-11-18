@@ -2,15 +2,16 @@
 
 App web da operação DHL Supply Chain Mirassol SSP53 para registrar desvios de processo, treinamentos e planos de ação.
 
-## Situação atual: Fase 10 — Faltante Aduana (17/11/2026, no link de teste)
+## Situação atual: Fase 11 — Permissões (18/11/2026, no link oficial)
 
+- **Fase 11:** nova aba **Permissões** (só Administrador). O Administrador escolhe, **conta por conta**, quais abas cada pessoa vê (**Ver**, só consulta) ou usa (**Editar**). Papel novo **Usuário** (não entra na PEL). A subaba Usuários saiu da PEL. Ver a seção "Fase 11 · Aba Permissões".
 - **Fase 10:** nova aba **Faltante Aduana** (só Administrador). É o painel dos pacotes faltantes na aduana para a reunião diária, que antes rodava no Google Apps Script. Os dados continuam na planilha do Google Sheets. Ver a seção "Fase 10 · Aba Faltante Aduana" e a pasta [`docs/faltante-aduana/`](docs/faltante-aduana/contexto.md).
 - Antes: Fase 9 — Calculadora PEL e contas por papel + Alterações PEL 1 (09/11/2026) e PEL 2 (11/11/2026).
 
 - **Tela de login** por e-mail e senha (Supabase). Senha errada é recusada com a mensagem "E-mail ou senha incorretos".
 - O login fica lembrado no navegador até você clicar em **Sair** (ou a sessão expirar).
-- Depois de entrar: cabeçalho DHL (logo, "Gestão de Processo e Qualidade", "Mirassol SSP53"), menu com as 10 abas, seu nome, o selo do seu papel (ex.: **Administrador**) e o botão **Sair**. Analista e Gestão veem só a aba PEL.
-- **Menu:** Painel, Gemba, Torre de Aduana, Faltante Aduana, Poka-Yoke, Eficácia, Cronograma, Plano de ação, Colaboradores e PEL. A aba aberta fica em vermelho e aparece no endereço (ex.: `#colaboradores`); ao recarregar, você continua nela. Sem login, o menu não aparece.
+- Depois de entrar: cabeçalho DHL (logo, "Gestão de Processo e Qualidade", "Mirassol SSP53"), menu com as abas que a sua conta pode abrir, seu nome, o selo do seu papel (ex.: **Administrador**) e o botão **Sair**. O Administrador vê todas; as outras contas veem só as abas liberadas para elas na aba Permissões (e a PEL, se forem Analista ou Gestão).
+- **Menu:** Painel, Gemba, Torre de Aduana, Faltante Aduana, Poka-Yoke, Eficácia, Cronograma, Plano de ação, Colaboradores, PEL e Permissões. A aba aberta fica em vermelho e aparece no endereço (ex.: `#colaboradores`); ao recarregar, você continua nela. Sem login, o menu não aparece.
 - **Aba ainda "Em construção":** Torre de Aduana (pausada até os nomes dos erros serem padronizados).
 
 ### Aba Painel — "Visão Geral" (funcionando)
@@ -275,6 +276,21 @@ Documentos da aba (regras, rotina diária, decisões, contexto geral e importado
 Se aparecer "Falta configurar no Vercel: …", falta alguma das variáveis acima. "Sem acesso à planilha" quer dizer que a planilha
 não foi compartilhada com a conta de serviço.
 
+## Fase 11 · Aba Permissões (desde 18/11/2026)
+
+A aba **Permissões** (`#permissoes`, depois da PEL) só aparece para o **Administrador**. É uma tabela tipo planilha: **uma linha por conta** e **uma coluna por aba** do app.
+
+- **Colunas:** Nome / e-mail, Site, Criada em, **Papel** e uma coluna para cada aba: Painel, Gemba, Faltante Aduana, Poka-Yoke, Eficácia, Cronograma, Plano de ação e Colaboradores. A última coluna (**PEL**) só informa: a PEL é decidida pelo papel.
+- **Em cada aba:** **—** (sem acesso), **Ver** (amarelo claro) ou **Editar** (preto). **Salva na hora**; vale quando a pessoa recarregar a página ou entrar de novo.
+  - **Ver** = a pessoa abre a aba e consulta tudo; os botões de gravar, apagar, importar e "+ Adicionar" não aparecem, os campos de status ficam travados e o título mostra o selo **"Só ver"**.
+  - **Editar** = usa a aba inteira, como o Administrador.
+- **Papéis:** Pendente (conta nova, não entra), **Usuário** (vê só as abas marcadas; sem PEL), Analista e Gestão (PEL como antes + as abas marcadas), Administrador (tudo, sem precisar marcar) e Bloqueado (não entra; as abas marcadas ficam guardadas e travadas).
+- **Filtros** por papel (Pendentes com o número de contas esperando) e **busca** por nome ou e-mail. Conta Pendente fica com a linha amarela. O Administrador não muda o próprio papel. Usuário sem nenhuma aba marcada vê o aviso "Nenhuma aba liberada".
+- **No banco** (`sql/017_permissoes_por_aba.sql`): campo `abas` em `pel_perfis` (ex.: `{"gemba":"editar","painel":"ver"}`), mapa `gq_tabela_abas` (qual aba lê e qual grava cada tabela/pasta) e a função `gq_pode`. A tranca antiga "só Administrador" (`gq_so_administrador`) foi trocada por regras por aba: para **ler** uma tabela é preciso Ver numa aba que a usa (ex.: Painel lê Gemba e Cronograma); para **gravar**, Editar na aba dona dela. Tabela fora do mapa (ex.: Torre) continua só do Administrador.
+- **Faltante Aduana:** o servidor (`api/faltantes.js`) confere a aba: com Ver, a pessoa vê o painel mas não salva Classificação, Responsáveis nem Resumo.
+- **Desfazer:** `sql/desfazer-017.sql` volta a regra "só o Administrador mexe nas abas" (as marcações ficam guardadas, sem efeito).
+- **Atenção (CPF):** quem tem Ver numa aba que lê colaboradores (Painel, Gemba, Eficácia, Cronograma, Colaboradores) não vê o CPF na tela dessas abas, mas tecnicamente conseguiria lê-lo pelo banco (a regra é por linha, não por coluna).
+
 ## Aba Calculadora PEL e contas por papel (desde 03/11/2026)
 
 A aba **PEL** (`#pel`) calcula a nota trimestral do PEL de cada site. Com ela, o app passou a aceitar **cadastro de contas** (só e-mail @dhl.com) e a ter **papéis**:
@@ -284,14 +300,15 @@ A aba **PEL** (`#pel`) calcula a nota trimestral do PEL de cada site. Com ela, o
 | Pendente | Conta recém-criada. Vê só o aviso "Conta aguardando liberação" |
 | Analista | **Só a aba PEL**: preenche os meses da calculadora **do próprio site**. Não muda metas, pesos nem textos |
 | Gestão | **Só a aba PEL**: Visão geral de **todos os sites** e calculadora de qualquer site em modo leitura. **Não** edita indicadores (desde 09/11/2026) |
-| Administrador | **Todas as abas do app** (Painel, Gemba, Colaboradores etc.) + PEL completa: **Editar indicadores** (nomes, descrições, fórmulas, pesos e metas, valem para todos os sites), subabas **Usuários** (aprovar contas e escolher o papel) e **Sites e trimestre**. Também pode preencher qualquer site |
+| Administrador | **Todas as abas do app** (Painel, Gemba, Colaboradores etc.) + PEL completa: **Editar indicadores** (nomes, descrições, fórmulas, pesos e metas, valem para todos os sites) e subaba **Sites e trimestre**. Aprovar contas e escolher papel e abas: aba **Permissões** (desde 18/11/2026). Também pode preencher qualquer site |
+| Usuário | (desde 18/11/2026) **Não entra na PEL**: vê só as abas marcadas na aba Permissões |
 | Bloqueado | Conta sem acesso |
 
 - **Quem já tinha login** antes do `sql/011_pel_login.sql` virou Administrador automaticamente (a sua conta).
 - **Criar minha conta** (tela de login): nome, e-mail **@dhl.com**, **Site** (ex.: `SSP53`), **Cidade** (ex.: `Mirassol-SP`), **Regional** (ex.: `SPI`) e senha (mínimo 8 caracteres), todos obrigatórios. A conta nasce **Pendente**. E-mail de outro domínio é recusado na tela e, no banco, não ganha perfil nem acesso.
 - **O site vem do cadastro:** o banco cadastra o site informado (se ainda não existir) e liga a conta a ele. Se o site já existe, a conta entra nele e valem a Cidade e a Regional do primeiro cadastro. O Administrador não cadastra sites. Site digitado errado: bloquear a conta e a pessoa cria outra (ou excluir a conta em Supabase → Authentication → Users).
-- **As outras abas ficam trancadas no banco:** uma regra extra em todas as tabelas e nas pastas de fotos e anexos exige ser Administrador. Analista e Gestão não leem nem gravam nada delas, mesmo digitando o endereço (ex.: `#gemba`).
-- **Liberação:** na subaba **Usuários** o Administrador só aprova e escolhe o **papel**; o site da conta aparece como texto (Site · Cidade · Regional) e não é trocado pela tela. O Administrador não consegue tirar o próprio acesso de administrador.
+- **As outras abas ficam trancadas no banco:** desde a Fase 11, cada tabela e pasta de fotos e anexos só abre para o Administrador ou para quem tem a aba liberada na aba Permissões (Ver para ler, Editar para gravar). Sem a aba liberada, a conta não lê nem grava nada dela, mesmo digitando o endereço (ex.: `#gemba`).
+- **Liberação:** na aba **Permissões** (antes, subaba Usuários da PEL) o Administrador aprova, escolhe o **papel** e as abas; o site da conta aparece como texto (Site · Cidade · Regional) e não é trocado pela tela. O Administrador não consegue tirar o próprio acesso de administrador.
 - **A aba PEL abre sempre na Visão geral** (Administrador e Gestão; o Analista vai direto à calculadora do site dele). Na Calculadora, os blocos Segurança, Eficiência e Processos começam sempre **fechados**.
 - **Topo da Calculadora** no padrão DHL: título "Calculadora PEL" grande com faixa vermelha e a faixa do site em amarelo DHL com linha vermelha (site em letra grande, ex.: **SSP53 · Mirassol-SP**). O selo **Soma dos pesos** fica no fim da calculadora, abaixo de Processos.
 - **Tela do Analista** mais limpa: sem o texto da regra, sem "Expandir todos", sem a nota "A média de cada indicador…" e sem "N/A nos meses".
@@ -318,7 +335,7 @@ A aba **PEL** (`#pel`) calcula a nota trimestral do PEL de cada site. Com ela, o
 2. **Authentication → Sign In / Providers → Email:** ligar **Allow new users to sign up** e **desligar Confirm email**. O e-mail padrão do Supabase só entrega para quem é do time do projeto e no máximo 2 por hora; como toda conta nova precisa da sua liberação, a confirmação não é necessária.
 3. **Authentication → URL Configuration:** em **Site URL**, o link oficial; em **Redirect URLs**, acrescentar também o link de teste.
 4. Juntar os arquivos no ramo **teste**, entrar com a sua conta e conferir: todas as abas continuam aparecendo e o selo **Administrador** fica ao lado do seu e-mail.
-5. Na aba **PEL**: preencher as metas (**Editar indicadores**) e liberar as contas do time (**Usuários**). Os sites entram sozinhos quando as pessoas criam a conta.
+5. Na aba **PEL**: preencher as metas (**Editar indicadores**). Liberar as contas do time na aba **Permissões**. Os sites entram sozinhos quando as pessoas criam a conta.
 
 - **Esqueci minha senha** manda um e-mail, então só funciona para todos depois de ligar um SMTP próprio (Authentication → Emails → SMTP Settings; ex.: Brevo, gratuito). Sem isso, o Administrador pode excluir a conta em Authentication → Users para a pessoa criar de novo.
 
@@ -337,7 +354,7 @@ A aba **PEL** (`#pel`) calcula a nota trimestral do PEL de cada site. Com ela, o
 | pokayoke_ranking e pokayoke_base (resumos) | `sql/006_pokayoke.sql` (Fase 6) | Cálculos prontos no banco (total e pendente por usuário e tipo; dias, datas e total da base), só leitura, com as mesmas regras de login |
 
 - **LISTA_ERROS_POKAYOKE** fica na tabela listas (itens criados pelo `sql/006_pokayoke.sql`).
-- RLS ligado em todas: só o usuário logado lê e grava. Visitante sem login não acessa nada. Desde o `sql/011_pel_login.sql`, as tabelas e pastas das abas antigas exigem também o papel **Administrador** (regra `gq_so_administrador`).
+- RLS ligado em todas: só o usuário logado lê e grava. Visitante sem login não acessa nada. Desde o `sql/011_pel_login.sql`, as tabelas e pastas das abas antigas exigem também o papel **Administrador**; desde o `sql/017_permissoes_por_aba.sql`, exigem Administrador **ou** a aba liberada para a conta (Ver para ler, Editar para gravar).
 - **Arquivos (Supabase Storage):** pasta **privada** `treinamentos` (criada pelo `sql/007_cronograma_anexos.sql`), só JPEG, PNG e PDF, até 10 MB. Cada treino tem sua subpasta (o número do treino). Só o usuário logado lê, envia e apaga. O plano gratuito do Supabase guarda 1 GB.
 - Pasta **privada** `gemba` (criada pelo `sql/009_gemba_grupo_fotos.sql`), só JPEG e PNG, até 10 MB: fotos do Gemba, uma subpasta por grupo. Só o usuário logado lê, envia e apaga.
 - Os scripts `sql/` são rodados à mão no Supabase (SQL Editor → New query → colar → Run), um por vez, em ordem.
@@ -356,9 +373,9 @@ A aba **PEL** (`#pel`) calcula a nota trimestral do PEL de cada site. Com ela, o
 index.html            página única: cabeçalho, menu, login e uma <section> por aba
 logo.png              logo DHL
 css/estilo.css        cores, fontes e componentes (menu, planilha, Gemba, Painel, Cronograma, Plano de ação, Poka-Yoke, Eficácia e impressão do calendário)
-js/supabase.js        conexão com o Supabase, entrar, sair, criar conta, esqueci a senha e papel de quem entrou (URL e chave pública no topo)
+js/supabase.js        conexão com o Supabase, entrar, sair, criar conta, esqueci a senha, papel e abas de quem entrou (gqNivelAba, gqPodeEditar) (URL e chave pública no topo)
 js/listas.js          leitura e acréscimo de itens nas LISTA_... (arquivo comum)
-js/menu.js            troca de abas (Analista e Gestão só abrem a aba PEL)
+js/menu.js            troca de abas (cada conta só abre as abas liberadas; aba em Ver ganha o selo "Só ver")
 js/planilha.js        leitura de .xlsx e .csv no navegador, sem biblioteca
 js/painel.js          aba Painel (indicadores, mapa de calor único e mapa por colaborador)
 js/gemba.js           aba Gemba (Desvio/Conforme, dia do Gemba, colaboradores opcionais em lista, várias pessoas por registro, fotos, tabela Todos os Gemba e edição pelo lápis)
@@ -381,13 +398,16 @@ sql/012_pel_site_no_cadastro.sql   site, cidade e regional vêm do cadastro; só
 sql/013_colaboradores_cpf.sql      coluna cpf em colaboradores (11 números) e índice para a busca
 sql/014_gemba_conforme.sql         coluna resultado (Desvio/Conforme) em registros_gemba; motivo e ação obrigatórios só no Desvio
 sql/015_gemba_editar.sql           permissão de alterar registros_gemba, coluna editado_em e função gemba_editar_registro (edição tudo ou nada)
-js/pel.js             aba Calculadora PEL (calculadora, Visão geral, Usuários, Sites e trimestre)
+js/pel.js             aba Calculadora PEL (calculadora, Visão geral, Sites e trimestre)
+js/permissoes.js      aba Permissões (papel e abas de cada conta; só Administrador)
 faltantes.html        aba Faltante Aduana: a tela do painel (abre numa moldura dentro da aba)
 js/faltantes.js       abre a moldura da aba Faltante Aduana
 js/faltantes-regras.js regras de classificação R01–R06 (rodam na tela e no servidor)
-api/faltantes.js      função do Vercel da aba Faltante Aduana (confere login e papel)
+api/faltantes.js      função do Vercel da aba Faltante Aduana (confere login e a aba: Ver consulta, Editar salva)
 api/_lib/             núcleo (linha do tempo, regras, resumo, responsáveis), Google Sheets API e Supabase
 sql/016_faltantes_cache.sql   tabela faltantes_cache (cache do painel; só o servidor acessa)
+sql/017_permissoes_por_aba.sql  papel Usuário, campo abas em pel_perfis, mapa gq_tabela_abas, função gq_pode e regras por aba (troca a tranca "só Administrador")
+sql/desfazer-017.sql          volta a tranca "só Administrador" do 011
 vercel.json           tempo máximo da função e arquivo de regras junto dela
 docs/faltante-aduana/ regras, rotina diária, decisões, contexto geral e importador da aba Faltante Aduana
 css/pel.css           estilo da aba PEL (tudo dentro de #aba-pel) e das telas de cadastro
@@ -399,11 +419,11 @@ CHANGELOG.md          histórico de mudanças
 ## Segurança
 
 - Só a **chave pública** do Supabase fica no código (`js/supabase.js`). A chave secreta nunca entra no código.
-- Desde a aba PEL, qualquer pessoa com e-mail @dhl.com cria a própria conta, mas ela nasce **Pendente** e não vê nada até o Administrador liberar. Analista e Gestão só acessam a aba PEL; as outras abas e as fotos são trancadas no banco para quem não é Administrador.
+- Desde a aba PEL, qualquer pessoa com e-mail @dhl.com cria a própria conta, mas ela nasce **Pendente** e não vê nada até o Administrador liberar. Cada conta só acessa as abas que o Administrador liberou na aba Permissões (Analista e Gestão também a PEL); o banco confere as mesmas regras, inclusive nas fotos e anexos.
 - A foto da turma e a lista de presença ficam numa pasta **privada**: só abrem com login, por um link que vale 1 hora.
 - Nada do app aparece sem login. Ao clicar em Sair, as listas, o Painel, o Cronograma, o Plano de ação, o Poka-Yoke e a Eficácia somem da tela.
-- Dados de colaboradores: matrícula, nome, CPF, setor e status (o CPF entrou em 10/11/2026, a pedido). Só o **Administrador** lê a tabela de colaboradores.
-- **Aba PEL:** regras no próprio banco: analista lê e grava só o próprio site, Gestão lê todos sem alterar lançamentos nem indicadores, conta pendente ou bloqueada não lê nada e só o Administrador muda papéis e edita indicadores.
+- Dados de colaboradores: matrícula, nome, CPF, setor e status (o CPF entrou em 10/11/2026, a pedido). Lê a tabela de colaboradores o Administrador e quem tem Ver ou Editar numa aba que a usa (Painel, Gemba, Eficácia, Cronograma ou Colaboradores).
+- **Aba PEL:** regras no próprio banco: analista lê e grava só o próprio site, Gestão lê todos sem alterar lançamentos nem indicadores, conta pendente, bloqueada ou Usuário não lê nada da PEL e só o Administrador muda papéis, abas e indicadores.
 
 ## Como mudar algo
 
