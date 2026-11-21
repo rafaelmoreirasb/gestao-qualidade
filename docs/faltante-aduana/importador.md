@@ -83,3 +83,21 @@ O Apps Script pode estar em inglês: os botões estão em inglês com a traduç�
   Base SSP53 (os dados continuam na Base Mirassol Oficial).
 - Se você rodar `criarTodosGatilhos` (arquivo da automação), ele apaga e recria **todos** os gatilhos, já incluindo os dois
   novos.
+
+## Aba Colaboradores (desde 21/11/2026)
+Arquivo `apps-script/base-ssp53/colaboradores.gs` (terceiro arquivo do Labor_Sorting). A cada 1 hora (`atualizarColaboradores`)
+copia da planilha **Base de usuários - SSP53 OFICIAL** só **Nome, CPF e User ext** de três abas e grava na aba
+**Colaboradores** da Base SSP53 com as colunas **Nome | CPF | User ext | Tipo**:
+
+| Aba de origem | Tipo |
+|---|---|
+| Base de Usuários Fixos (LMS) | DHL |
+| Base de usuários Full | FULL |
+| Base usuários Diaristas | Diaristas |
+
+- As colunas são achadas pelo cabeçalho (NOME, CPF, USER EXT), não pela letra.
+- Se uma aba não existir (ou o cabeçalho mudar), nada é gravado e chega um e-mail.
+- A planilha de origem precisa estar compartilhada (Leitor) com a conta que roda o script (r.moreira.sb@gmail.com).
+- O painel Faltante Aduana usa só a coluna Nome (lista de nomes em "Responsáveis por ilha").
+- Ligar: rodar `atualizarColaboradores` uma vez (pede permissão) e depois `criarGatilhoColaboradores`. O `criarTodosGatilhos` também cria esse gatilho.
+
