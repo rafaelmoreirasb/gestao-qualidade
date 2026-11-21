@@ -96,6 +96,7 @@ copia da planilha **Base de usuários - SSP53 OFICIAL** só **Nome, CPF e User e
 | Base usuários Diaristas | Diaristas |
 
 - As colunas são achadas pelo cabeçalho (NOME, CPF, USER EXT), não pela letra.
+- Nomes padronizados: primeira letra de cada palavra maiúscula e o resto minúscula ("Adriana Marques De Oliveira").
 - Se uma aba não existir (ou o cabeçalho mudar), nada é gravado e chega um e-mail.
 - A planilha de origem precisa estar compartilhada (Leitor) com a conta que roda o script (r.moreira.sb@gmail.com).
 - O painel Faltante Aduana usa só a coluna Nome (lista de nomes em "Responsáveis por ilha").

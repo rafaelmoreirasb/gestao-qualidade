@@ -8,6 +8,7 @@
 //    - aba "Base de usuários Full"         → Tipo Full
 //    - aba "Base usuários Diaristas"       → Tipo Diaristas
 //  Copia SÓ Nome, CPF e User ext (nenhuma outra coluna, nem senha).
+//  Nomes padronizados: primeira letra de cada palavra maiúscula e o resto minúscula (colTitulo).
 //  As colunas são achadas pelo NOME do cabeçalho (NOME, CPF, USER EXT), então inserir uma coluna na origem
 //  não quebra nada. Se uma aba não for encontrada, NADA é gravado (a aba Colaboradores fica como estava)
 //  e você recebe um e-mail.
@@ -73,7 +74,7 @@ function colLerAba(aba, tipo) {
   for (const r of valores.slice(lin + 1)) {
     const nome = String(r[cNome] || '').trim();
     if (!nome || colNorm(nome) === 'nome') continue; // linha vazia ou cabeçalho repetido
-    saida.push([nome, String(r[cCpf] || '').trim(), String(r[cExt] || '').trim(), tipo]);
+    saida.push([colTitulo(nome), String(r[cCpf] || '').trim(), String(r[cExt] || '').trim(), tipo]);
   }
   return saida;
 }
@@ -94,6 +95,13 @@ function colGravar(linhas) {
   if (ultLin > dados.length) aba.getRange(dados.length + 1, 1, ultLin - dados.length, Math.max(ultCol, nCol)).clearContent();
   if (ultCol > nCol) aba.getRange(1, nCol + 1, Math.max(ultLin, dados.length), ultCol - nCol).clearContent();
   aba.setFrozenRows(1);
+}
+
+/** Padrão dos nomes: primeira letra de cada palavra maiúscula e o resto minúscula, sem espaços sobrando.
+    "ADRIANA MARQUES DE OLIVEIRA" → "Adriana Marques De Oliveira". Também depois de hífen e apóstrofo ("D'Avila", "Ana-Clara"). */
+function colTitulo(nome) {
+  return String(nome).replace(/\s+/g, ' ').trim().toLocaleLowerCase('pt-BR')
+    .replace(/(^|[\s\-'’])(\p{L})/gu, (_, antes, letra) => antes + letra.toLocaleUpperCase('pt-BR'));
 }
 
 /** Acha a aba pelo nome sem ligar para maiúsculas, acentos e espaços sobrando. */
