@@ -5,6 +5,7 @@ Tudo o que é preciso saber sobre a aba **Faltante Aduana** do app. A instalaç�
 
 Documentos desta pasta:
 - [`REGRAS.md`](REGRAS.md): as regras de classificação;
+- [`automatizar.md`](automatizar.md): como parar de exportar os relatórios à mão;
 - [`rotina.md`](rotina.md): a rotina diária;
 - [`decisoes.md`](decisoes.md): o histórico de decisões;
 - [`importador.md`](importador.md): o importador dos CSV, que continua no Google.
