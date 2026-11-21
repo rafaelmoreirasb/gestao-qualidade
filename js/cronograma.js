@@ -116,7 +116,7 @@
     let pessoas = colaboradores.filter((c) => s.has(c.id));
     const q = semAcento(est.busca);
     if (q) {
-      const bate = (c) => semAcento(c.nome + ' ' + c.matricula).includes(q);
+      const bate = (c) => semAcento(c.nome + ' ' + (c.user_ext || '') + ' ' + (c.matricula || '')).includes(q);
       pessoas = pessoas.filter(bate).concat(pessoas.filter((c) => !bate(c)));
     }
     d.className = 'crono-col-pessoas';
@@ -212,7 +212,7 @@
     try {
       const [cols, tres, parts] = await Promise.all([
         lerTudo(() => sb.from('colaboradores')
-          .select('id, matricula, nome, status, cpf')
+          .select('id, matricula, user_ext, nome, status, cpf')
           .order('nome', { ascending: true })
           .order('id', { ascending: true })),
         lerTudo(() => sb.from('treinamentos')
@@ -435,10 +435,10 @@
     return c;
   }
 
-  // Texto onde a busca procura: data, tema, participantes (nome e matrícula) e situação
+  // Texto onde a busca procura: data, tema, participantes (nome, User ext e matrícula) e situação
   function textoDeBusca(t) {
     const s = participantes[t.id] || new Set();
-    const pessoas = colaboradores.filter((c) => s.has(c.id)).map((c) => c.nome + ' ' + c.matricula).join(' ');
+    const pessoas = colaboradores.filter((c) => s.has(c.id)).map((c) => c.nome + ' ' + (c.user_ext || '') + ' ' + (c.matricula || '')).join(' ');
     return semAcento([dataCompleta(t.data), t.tema, pessoas, situacao(t)].join(' | '));
   }
 
@@ -707,7 +707,7 @@
     // Só Ativos; um desligado que já participou continua aparecendo, marcado
     const pessoas = colaboradores
       .filter((c) => ehAtivo(c) || s.has(c.id))
-      .filter((c) => !q || semAcento(c.nome).includes(q) || String(c.matricula).toLowerCase().includes(q) ||
+      .filter((c) => !q || semAcento(c.nome).includes(q) || semAcento((c.user_ext || '') + ' ' + (c.matricula || '')).includes(q) ||
         (qNum.length >= 3 && String(c.cpf || '').includes(qNum)));
 
     const caixa = $('crono-pessoas');
@@ -736,7 +736,7 @@
       const nome = document.createElement('span');
       nome.textContent = c.nome + ' ';
       const info = document.createElement('small');
-      info.textContent = '· ' + c.matricula + (ehAtivo(c) ? '' : ' · desligado');
+      info.textContent = [c.user_ext || c.matricula, ehAtivo(c) ? '' : 'desligado'].filter(Boolean).map((x) => '· ' + x).join(' ');
       nome.appendChild(info);
       rot.appendChild(cx);
       rot.appendChild(nome);
