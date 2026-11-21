@@ -5,7 +5,7 @@
 //
 //  Origem: planilha "Base de usuários - SSP53 OFICIAL"
 //    - aba "Base de Usuários Fixos (LMS)"  → Tipo DHL
-//    - aba "Base de usuários Full"         → Tipo FULL
+//    - aba "Base de usuários Full"         → Tipo Full
 //    - aba "Base usuários Diaristas"       → Tipo Diaristas
 //  Copia SÓ Nome, CPF e User ext (nenhuma outra coluna, nem senha).
 //  As colunas são achadas pelo NOME do cabeçalho (NOME, CPF, USER EXT), então inserir uma coluna na origem
@@ -23,7 +23,7 @@ const COL_CONFIG = {
   CABECALHO: ['Nome', 'CPF', 'User ext', 'Tipo'],
   ABAS: [
     { aba: 'Base de Usuários Fixos (LMS)', tipo: 'DHL' },
-    { aba: 'Base de usuários Full', tipo: 'FULL' },
+    { aba: 'Base de usuários Full', tipo: 'Full' },
     { aba: 'Base usuários Diaristas', tipo: 'Diaristas' },
   ],
 };

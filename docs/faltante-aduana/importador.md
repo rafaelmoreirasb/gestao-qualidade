@@ -92,7 +92,7 @@ copia da planilha **Base de usuários - SSP53 OFICIAL** só **Nome, CPF e User e
 | Aba de origem | Tipo |
 |---|---|
 | Base de Usuários Fixos (LMS) | DHL |
-| Base de usuários Full | FULL |
+| Base de usuários Full | Full |
 | Base usuários Diaristas | Diaristas |
 
 - As colunas são achadas pelo cabeçalho (NOME, CPF, USER EXT), não pela letra.
