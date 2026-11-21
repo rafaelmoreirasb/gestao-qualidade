@@ -130,7 +130,7 @@
           .order('data', { ascending: true })
           .order('id', { ascending: true })),
         lerTudo(() => sb.from('colaboradores')
-          .select('id, matricula, nome, setor, status')
+          .select('id, matricula, user_ext, nome, setor, status')
           .order('nome', { ascending: true })
           .order('id', { ascending: true })),
         carregarListas(),
@@ -626,7 +626,7 @@
       ordenados.forEach((c) => {
         const o = document.createElement('option');
         o.value = String(c.id);
-        o.textContent = c.nome + ' · ' + c.matricula + (c.status === 'Ativo' ? '' : ' (desligado)');
+        o.textContent = c.nome + ((c.user_ext || c.matricula) ? ' · ' + (c.user_ext || c.matricula) : '') + (c.status === 'Ativo' ? '' : ' (desligado)');
         s.appendChild(o);
       });
     }
@@ -646,7 +646,7 @@
     $('painel-ficha-ini').textContent = p ? iniciais(p.nome) : '—';
     $('painel-ficha-nome').textContent = p ? p.nome : '—';
     $('painel-ficha-info').textContent = p
-      ? 'Matrícula ' + p.matricula + ' · ' + (p.setor || 'Sem setor') + (p.status === 'Ativo' ? '' : ' · Desligado')
+      ? (p.user_ext ? 'User ext ' + p.user_ext + ' · ' : p.matricula ? 'Matrícula ' + p.matricula + ' · ' : '') + (p.setor || 'Sem setor') + (p.status === 'Ativo' ? '' : ' · Desligado')
       : '';
     $('painel-ficha-dev').textContent = String(meus.length);
     $('painel-ficha-con').textContent = String(meusConf.length);

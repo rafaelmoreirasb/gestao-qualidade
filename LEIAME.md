@@ -30,7 +30,7 @@ O Painel só **lê** o banco (registros do Gemba, colaboradores, listas e treina
 - **Resumo do dia:** passar o mouse num dia (ou tocar, no celular) mostra a data, a contagem ("N desvios · M conformes · K treinamentos") e a lista de desvios (hora, colaborador, processo, motivo), de conformes (com ✅) e de treinamentos (hora, tema, nº de participantes; avisa se ainda não foi marcado como realizado).
   - Pessoas registradas juntas no Gemba aparecem **numa linha só**, com todos os nomes. Se o registro tem fotos, aparece o botão **📷 Ver fotos (N)**: mostra as miniaturas e, ao clicar numa, abre a foto grande. O resumo do mapa por colaborador também tem o botão.
 - No computador, o mapa abre rolado até a semana de hoje. Quando houver mais de um ano, aparece um seletor de ano.
-- **Mapa por colaborador:** escolher a pessoa (Ativos primeiro; desligados aparecem com "(desligado)"). Ficha com iniciais, nome, matrícula, setor, total de desvios, **conformes**, **conformidade %** da pessoa, **treinamentos realizados de que participou** e o desvio que mais se repete. Abaixo, o mapa só dela, com as mesmas cores e o resumo do dia.
+- **Mapa por colaborador:** escolher a pessoa (Ativos primeiro; desligados aparecem com "(desligado)"). Ficha com iniciais, nome, User ext (ou matrícula antiga), setor, total de desvios, **conformes**, **conformidade %** da pessoa, **treinamentos realizados de que participou** e o desvio que mais se repete. Abaixo, o mapa só dela, com as mesmas cores e o resumo do dia.
 
 ### Aba Gemba (funcionando)
 
@@ -60,7 +60,7 @@ Registro rápido em passos, feito para usar também no celular.
   - **Busca por palavras:** "conforme" ou "desvio" junto com um nome (ex.: "conforme ana") mostra só os conformes daquela pessoa.
   - **Lápis ✎ (editar):** abre uma janela com o registro inteiro já preenchido: Desvio/Conforme, Dia (a hora original é mantida), **Pessoas** (caixas de seleção; quem já estava aparece marcado, mesmo se não for mais Ativo), Processo, Motivo, Ação, Observação e **Fotos** (tirar as que existem, acrescentar até 6). **Salvar alterações** grava tudo de uma vez (função `gemba_editar_registro`, tudo ou nada): quem foi desmarcado sai do registro, quem foi marcado entra. Sem ninguém marcado, vira "Sem colaborador". Cancelar, X ou Esc fecham sem mudar nada. Registro editado mostra **✎ ao lado da data** (passando o mouse: "Editado em …").
   - **Pessoas:** no máximo **2 nomes** e um selo "+N" com os demais; passando o mouse aparecem todos.
-  - **Busca** (sem diferenciar acentos) por data, hora, nome, matrícula, processo, motivo, ação ou observação. Acha também os nomes escondidos no "+N", e o nome encontrado passa a aparecer primeiro.
+  - **Busca** (sem diferenciar acentos) por data, hora, nome, User ext ou matrícula, processo, motivo, ação ou observação. Acha também os nomes escondidos no "+N", e o nome encontrado passa a aparecer primeiro.
   - **Fotos:** "📷 N" abre as miniaturas embaixo da linha; clicar numa abre a foto grande.
   - **Busca** "sem colab" acha os registros sem colaborador.
   - **Lixeira:** apaga o registro inteiro (todas as pessoas e as fotos), com confirmação; só para corrigir lançamento feito errado.
@@ -131,12 +131,12 @@ Mostra se as pessoas param de repetir o erro depois de um treino. A aba só **l�
 - O calendário ocupa a **largura toda** (o quadro "Aguardando participantes" foi retirado em 23/10/2026). Treinos sem participantes aparecem na tabela com "Nenhum participante ainda" em vermelho; os atrasados têm faixa vermelha no calendário e chip "Atrasado"; a busca por "agendado" ou "atrasado" mostra só esses.
 - **Todos os treinamentos:** tabela com Data, Hora, Carga, Tema, Participantes (no máximo **2 nomes** + selo **"+N"**, como no Gemba; passando o mouse aparecem todos; vermelho = nenhum participante ainda), Situação (Realizado com ✓ verde), **Anexos** (ícones verdes de foto e lista; clicar abre o arquivo), botão **Participantes** e lixeira (só para lançamento errado; apaga junto a lista de participantes e os anexos).
   - Mostra **6 linhas**; o resto rola dentro da tabela (cabeçalho fixo). Datas mais recentes primeiro.
-  - **Busca** no topo: data (ex.: "15/10" ou "/10"), tema, participante (nome ou matrícula) e situação (agendado, hoje, atrasado, realizado), sem diferenciar acento ou maiúscula. Quem bate com a busca aparece entre os 2 nomes visíveis. O título mostra "· N de M" quando filtra.
+  - **Busca** no topo: data (ex.: "15/10" ou "/10"), tema, participante (nome, User ext ou matrícula) e situação (agendado, hoje, atrasado, realizado), sem diferenciar acento ou maiúscula. Quem bate com a busca aparece entre os 2 nomes visíveis. O título mostra "· N de M" quando filtra.
 - **Janela do treinamento** (botão Participantes, clique no calendário ou no quadro da direita):
   - **Carga horária** editável, com botão **Salvar**;
   - **Status:** "Marcar como realizado" (exige pelo menos 1 participante e data de hoje ou anterior) e "Voltar para agendado" (para corrigir engano). Um treino Realizado não pode ficar sem participantes;
   - **Anexos:** **Foto da turma** (JPEG ou PNG) e **Lista de presença** (PDF, até 10 MB), 1 de cada por treino, com **Anexar / Ver / Trocar / 🗑**. A foto é diminuída no navegador antes de enviar (lado maior até 1600 px). **Ver** abre o arquivo numa aba nova (link temporário de 1 hora). Trocar ou remover apaga o arquivo anterior;
-  - **Participantes:** caixas de seleção com busca por nome ou matrícula; só **Ativos** (um desligado que já participou continua aparecendo, marcado "desligado"). Cada caixa é gravada na hora; **Concluir** só fecha.
+  - **Participantes:** caixas de seleção com busca por nome, User ext, matrícula ou CPF; só **Ativos** (um desligado que já participou continua aparecendo, marcado "desligado"). Cada caixa é gravada na hora; **Concluir** só fecha.
 - Situação mostrada: **Realizado** (marcado por você), **Atrasado**, **Hoje** ou **Agendado**.
 
 ### Aba Plano de ação (funcionando)
@@ -161,16 +161,23 @@ Ações no formato **5W2H**, com Origem e Status.
 - **Lixeira** só para corrigir lançamento feito errado. Para encerrar uma ação, mude o Status para Concluída.
 - Ao abrir a aba, os dados são lidos de novo (assim um processo criado agora no Gemba já aparece em Onde).
 
-### Aba Colaboradores (funcionando)
+### Aba Colaboradores (funcionando; base nova desde 21/11/2026)
 
 - **Título com contagem:** total, ativos e desligados.
-- **Adicionar manualmente:** matrícula, nome e CPF (opcional, 11 números). Matrícula repetida é recusada. Quem for adicionado à mão e não estiver na próxima planilha importada vira Desligado.
-- **Lista estilo planilha:** #, Matrícula, Nome, CPF (completo, 000.000.000-00), Status, Treinamentos e lixeira; busca por nome, matrícula, status ou **CPF** (com ou sem ponto e traço, a partir de 3 números).
+- **Lista estilo planilha:** #, Nome, **User ext**, CPF (completo, 000.000.000-00), **Tipo** (DHL, Full ou Diaristas), Status, Treinamentos e lixeira. Busca por nome, User ext, matrícula antiga, tipo, status ou **CPF** (com ou sem ponto e traço, a partir de 3 números).
+- **Adicionar manualmente:** Nome (obrigatório), User ext, CPF (opcional, 11 números) e Tipo. CPF ou User ext repetido é recusado. Quem for adicionado à mão e não estiver na Base SSP53 vira Desligado na próxima atualização automática.
 - **Status na própria linha:** Ativo (verde) ou Desligado (vermelho, nome riscado, vai para o fim da lista).
 - **Treinamentos:** quantos treinamentos com status **Realizado** a pessoa participou (atualiza ao abrir a aba).
 - **Regra:** quem sai da empresa vira **Desligado** e o histórico continua. A **lixeira** é só para corrigir cadastro errado. Quem tem registro no Gemba ou participou de treinamento **não pode ser excluído**.
-- **Importar planilha** = **sincronizar com a lista de ativos do RH** (.xlsx ou .csv, primeira aba, colunas **Matrícula**, **Nome** e **CPF**; as outras colunas são ignoradas). A planilha deve ter **todos os ativos**. Antes de gravar aparece um **resumo**: novos (entram como Ativo), quem não está na planilha (vira **Desligado**), Desligados que voltaram (reativados), nome ou CPF diferente (atualizados com o da planilha) e sem mudança, com a lista de nomes de cada grupo. Se mais de 20% dos ativos forem virar Desligado, aparece um aviso vermelho. Só grava ao clicar em **Confirmar atualização**; **Cancelar** não muda nada. Ninguém é excluído. CPF vazio ou inválido na planilha não apaga o CPF guardado; CPF sem o zero da frente (Excel) é completado. A planilha não é guardada, só os dados.
-- **Busca por CPF** também no Gemba (passo 1) e na janela de participantes do Cronograma.
+- **Base SSP53 (atualização automática):** a importação de planilha **saiu**. A lista fica igual à aba **Colaboradores** da planilha **Base SSP53** (colunas Nome, CPF, User ext e Tipo, preenchida pelo Apps Script `colaboradores.gs` a cada 1 hora). Ao abrir a aba, quem tem **Editar** em Colaboradores confere a base (no máximo a cada 10 minutos; botão **Atualizar agora** para conferir na hora):
+  - quem é **novo** entra como Ativo (sem matrícula); quem **não está na base** vira **Desligado**; quem estava Desligado e **voltou** é reativado; Nome, User ext, CPF e Tipo são atualizados com os da base;
+  - a pessoa é reconhecida pelo **CPF**; sem CPF igual, pelo **User ext**; sem os dois, pelo **nome** (só se o CPF não for diferente). Quem é reconhecido continua no **mesmo cadastro**, então todo o histórico (Gemba, Cronograma, Painel, Eficácia) continua ligado;
+  - campo vazio na base não apaga o que já estava guardado;
+  - **trava de segurança:** se a base vier vazia ou se mais de **20% dos ativos** fossem virar Desligado, nada é gravado sozinho: aparece o resumo com a lista de nomes de cada grupo e os botões **Aplicar mesmo assim** e **Agora não**;
+  - depois de cada atualização aparece o resumo do que mudou. Ninguém é excluído;
+  - quem tem só **Ver** vê a lista, mas não dispara a atualização.
+- A leitura da Base SSP53 é feita pela função `api/colaboradores.js` (mesma ligação com o Google do Faltante Aduana; só responde para Administrador ou conta com Colaboradores em Editar). Quem grava é a própria tela, com as regras do banco.
+- **Gemba, Painel e Cronograma** mostram o **User ext** ao lado do nome (no lugar da matrícula) e buscam por nome, User ext, matrícula ou CPF. Quem só tem a matrícula antiga (ex.: desligados antigos) continua mostrando a matrícula.
 
 ## Fase 10 · Aba Faltante Aduana (desde 17/11/2026)
 
@@ -343,7 +350,7 @@ A aba **PEL** (`#pel`) calcula a nota trimestral do PEL de cada site. Com ela, o
 
 | Tabela | Criada em | Campos |
 | --- | --- | --- |
-| colaboradores | `sql/001_colaboradores.sql` (Fase 1) e `sql/013_colaboradores_cpf.sql` | id, matricula (única), nome, setor (vazio por enquanto), status (Ativo/Desligado), criado_em, **cpf** (só os 11 números; não é único, a pessoa pode voltar com outra matrícula) |
+| colaboradores | `sql/001_colaboradores.sql` (Fase 1), `sql/013_colaboradores_cpf.sql` e `sql/018_colaboradores_base_ssp53.sql` | id, matricula (única; **opcional** desde o 018, quem entrou pela Base SSP53 não tem), **user_ext**, **tipo** (DHL, Full, Diaristas), nome, setor (vazio por enquanto), status (Ativo/Desligado), criado_em, **cpf** (só os 11 números; não é único, a pessoa pode voltar com outra matrícula) |
 | listas | `sql/002_gemba.sql` (Fase 2) | id, lista, item, ordem, ativo, criado_em. Não pode apagar (item removido fica com ativo = falso) |
 | registros_gemba | `sql/002_gemba.sql` (Fase 2), `sql/009`, `sql/010`, `sql/014_gemba_conforme.sql` e `sql/015_gemba_editar.sql` | id, data, colaborador_id (**opcional** desde o 010: vazio = "Sem colaborador"), **resultado** (Desvio ou Conforme; antigos = Desvio), processo, motivo e acao (obrigatórios só no Desvio; vazios no Conforme), **editado_em** (última edição pelo lápis), observacao, criado_em, **grupo** (pessoas salvas juntas têm o mesmo; registros antigos têm um próprio) e **fotos** (lista de caminhos na pasta "gemba"). Uma linha por pessoa |
 | treinamentos | `sql/003_cronograma.sql` e `sql/004_cronograma_status_carga.sql` (Fase 4) | id, data, hora, tema, **carga_minutos** (carga horária em minutos), **status** (Agendado/Realizado), **foto_caminho** e **lista_caminho** (onde estão os anexos; colunas do `sql/007_cronograma_anexos.sql`), criado_em. Pode ler, criar, alterar **só** carga, status e anexos, e excluir (só lançamento errado) |
@@ -383,7 +390,7 @@ js/cronograma.js      aba Cronograma (calendário, PDF, tela cheia, vários dias
 js/planoacao.js       aba Plano de ação (5W2H, alterar, status na linha, prazo, filtros e indicadores)
 js/pokayoke.js        aba Poka-Yoke (importação acumulada, ranking, treinado hoje)
 js/eficacia.js        aba Eficácia (acompanhamento de 30 dias dos treinos do Gemba e do Poka-Yoke; só lê o banco)
-js/colaboradores.js   aba Colaboradores
+js/colaboradores.js   aba Colaboradores (lista, cadastro manual e atualização automática com a Base SSP53)
 sql/001_colaboradores.sql          tabela colaboradores e regras de acesso
 sql/002_gemba.sql                  tabelas listas e registros_gemba, itens iniciais e regras de acesso
 sql/003_cronograma.sql             tabelas treinamentos e treinamento_participantes e regras de acesso
@@ -408,6 +415,8 @@ api/_lib/             núcleo (linha do tempo, regras, resumo, responsáveis), G
 sql/016_faltantes_cache.sql   tabela faltantes_cache (cache do painel; só o servidor acessa)
 sql/017_permissoes_por_aba.sql  papel Usuário, campo abas em pel_perfis, mapa gq_tabela_abas, função gq_pode e regras por aba (troca a tranca "só Administrador")
 sql/desfazer-017.sql          volta a tranca "só Administrador" do 011
+sql/018_colaboradores_base_ssp53.sql  colunas user_ext e tipo em colaboradores, matrícula opcional e função colaboradores_atualizar_lote (atualização com a Base SSP53)
+api/colaboradores.js  função do Vercel da aba Colaboradores: lê a aba Colaboradores da Base SSP53 (só Administrador ou Colaboradores em Editar)
 vercel.json           tempo máximo da função e arquivo de regras junto dela
 docs/faltante-aduana/ regras, rotina diária, decisões, contexto geral e importador da aba Faltante Aduana
 css/pel.css           estilo da aba PEL (tudo dentro de #aba-pel) e das telas de cadastro
@@ -422,7 +431,7 @@ CHANGELOG.md          histórico de mudanças
 - Desde a aba PEL, qualquer pessoa com e-mail @dhl.com cria a própria conta, mas ela nasce **Pendente** e não vê nada até o Administrador liberar. Cada conta só acessa as abas que o Administrador liberou na aba Permissões (Analista e Gestão também a PEL); o banco confere as mesmas regras, inclusive nas fotos e anexos.
 - A foto da turma e a lista de presença ficam numa pasta **privada**: só abrem com login, por um link que vale 1 hora.
 - Nada do app aparece sem login. Ao clicar em Sair, as listas, o Painel, o Cronograma, o Plano de ação, o Poka-Yoke e a Eficácia somem da tela.
-- Dados de colaboradores: matrícula, nome, CPF, setor e status (o CPF entrou em 10/11/2026, a pedido). Lê a tabela de colaboradores o Administrador e quem tem Ver ou Editar numa aba que a usa (Painel, Gemba, Eficácia, Cronograma ou Colaboradores).
+- Dados de colaboradores: nome, User ext, CPF, tipo, setor, status e a matrícula antiga (o CPF entrou em 10/11/2026 e User ext e Tipo em 21/11/2026, a pedido). Lê a tabela de colaboradores o Administrador e quem tem Ver ou Editar numa aba que a usa (Painel, Gemba, Eficácia, Cronograma ou Colaboradores).
 - **Aba PEL:** regras no próprio banco: analista lê e grava só o próprio site, Gestão lê todos sem alterar lançamentos nem indicadores, conta pendente, bloqueada ou Usuário não lê nada da PEL e só o Administrador muda papéis, abas e indicadores.
 
 ## Como mudar algo

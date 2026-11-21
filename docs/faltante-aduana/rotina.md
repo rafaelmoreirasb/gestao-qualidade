@@ -7,6 +7,7 @@ Quase tudo roda sozinho. A parte do Rafael: **exportar, olhar o painel e decidir
    De tarde (~15h, quando ficam disponíveis) e, se der, **de novo de manhã antes da reunião** (pega o que aconteceu à noite).
    Pode repetir dias — nada duplica.
 2. **Jogar na pasta do Drive "Faltantes – Entrada"** (computador ou app do Drive no celular). O nome do arquivo não importa.
+   **Atalho:** com o Google Drive para computador, o navegador salva o relatório direto nessa pasta e este passo some (ver [`automatizar.md`](automatizar.md)).
 3. **Esperar até 15 min**: os arquivos somem da pasta (vão para "Processados") = entraram na planilha. Na aba,
    **Atualizar agora** relê a planilha na hora (~10 s); sem clicar, o painel atualiza sozinho em até 10 min.
 4. **Abrir o app** Gestão de Processo e Qualidade (login de Administrador) › aba **Faltante Aduana**.

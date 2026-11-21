@@ -45,7 +45,8 @@ function criarTodosGatilhos() {
   ['atualizarTorreAduana', 'atualizarOneBipe']
     .forEach(f => ScriptApp.newTrigger(f).timeBased().everyHours(1).create());
   ScriptApp.newTrigger('arquivarRelatoriosAntigos').timeBased().everyDays(1).atHour(3).create(); // importar-relatorios.gs
-  console.log('Gatilhos criados: Histórico, Direcionamento, Base Inventário a cada 15 min, Relatórios a cada 5 min, 2 espelhos (Torre e One Bipe) a cada hora, arquivamento às 3h');
+  ScriptApp.newTrigger('atualizarColaboradores').timeBased().everyHours(1).create();   // colaboradores.gs
+  console.log('Gatilhos criados: Histórico, Direcionamento, Base Inventário a cada 15 min, Relatórios a cada 5 min, 2 espelhos (Torre e One Bipe) e Colaboradores a cada hora, arquivamento às 3h');
 }
 
 // ---------- Espelho (a aba de destino fica igual à de origem) ----------

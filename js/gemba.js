@@ -27,14 +27,14 @@
   const $ = (id) => document.getElementById(id);
   const TABELA = 'registros_gemba';
   const PASTA = 'gemba';                 // pasta privada do Storage
-  const CAMPOS_REG = 'id, data, editado_em, grupo, fotos, resultado, processo, motivo, acao, observacao, colaborador_id, colaboradores(nome, matricula)';
+  const CAMPOS_REG = 'id, data, editado_em, grupo, fotos, resultado, processo, motivo, acao, observacao, colaborador_id, colaboradores(nome, matricula, user_ext)';
   const MAX_PESSOAS = 30;
   const MAX_FOTOS = 6;
   const FOTO_LADO_MAX = 1600;            // a foto é reduzida para no máximo 1600 px no lado maior
   const FOTO_QUALIDADE = 0.82;
   const LIMITE_ARQUIVO = 10 * 1024 * 1024;
 
-  let ativos = [];            // colaboradores Ativos (id, matricula, nome, setor)
+  let ativos = [];            // colaboradores Ativos (id, matricula, user_ext, nome, setor)
   let listas = {};            // { LISTA_...: ['item', ...] }
   let carregadoPara = null;   // id do usuário cujos dados estão na tela
   let carregando = false;
@@ -60,6 +60,9 @@
   const acoes = () => listas[LISTA_ACOES] || [];
   const motivosDe = (proc) => listas[nomeListaMotivos(proc)] || [];
   const setorTxt = (c) => (c && c.setor) ? c.setor : 'Sem setor';
+  // Identificação ao lado do nome: User ext (Base SSP53); quem só tem a matrícula antiga mostra a matrícula
+  const idColab = (c) => (c && (c.user_ext || c.matricula)) || '';
+  const idBusca = (c) => chave(((c && c.user_ext) || '') + ' ' + ((c && c.matricula) || ''));
   const plural = (n, um, varios) => n + ' ' + (n === 1 ? um : varios);
   const dataBr = (iso) => { const d = new Date(iso); return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear(); };
   const MAX_NOMES_TABELA = 2;   // nomes visíveis na coluna Pessoas
@@ -130,7 +133,7 @@
     const PAGINA = 1000;
     for (let de = 0; ; de += PAGINA) {
       const { data, error } = await sb.from('colaboradores')
-        .select('id, matricula, nome, setor, cpf')
+        .select('id, matricula, user_ext, nome, setor, cpf')
         .eq('status', 'Ativo')
         .order('nome', { ascending: true })
         .range(de, de + PAGINA - 1);
@@ -282,7 +285,7 @@
     }
     const q = chave($('gemba-busca').value);
     const qNum = String($('gemba-busca').value || '').replace(/\D/g, '');   // busca por CPF, com ou sem ponto e traço
-    const achados = ativos.filter((c) => !q || chave(c.nome).includes(q) || String(c.matricula).toLowerCase().includes(q) ||
+    const achados = ativos.filter((c) => !q || chave(c.nome).includes(q) || idBusca(c).includes(q) ||
       (qNum.length >= 3 && String(c.cpf || '').includes(qNum)));
     if (!achados.length) {
       caixa.appendChild(el('div', 'gemba-resultado-vazio', 'Nenhum colaborador encontrado na base.'));
@@ -300,7 +303,7 @@
       caixaSel.addEventListener('change', () => marcarColab(c, caixaSel.checked, caixaSel));
       rotulo.appendChild(caixaSel);
       rotulo.appendChild(el('span', 'gemba-resultado-nome', c.nome));
-      rotulo.appendChild(el('span', 'gemba-resultado-info', c.matricula + ' · ' + setorTxt(c)));
+      rotulo.appendChild(el('span', 'gemba-resultado-info', [idColab(c), setorTxt(c)].filter(Boolean).join(' · ')));
       frag.appendChild(rotulo);
     });
     caixa.appendChild(frag);
@@ -508,10 +511,10 @@
     desenharTodos();
   }
 
-  // Texto em que a busca procura (sem acento): data, hora, nomes, matrículas, processo, motivo, ação e observação
+  // Texto em que a busca procura (sem acento): data, hora, nomes, User ext/matrículas, processo, motivo, ação e observação
   function textoBusca(g) {
     const r = g.linhas[0];
-    const pessoas = g.linhas.map((x) => nomeDaLinha(x) + ' ' + ((x.colaboradores && x.colaboradores.matricula) || '')).join(' ');
+    const pessoas = g.linhas.map((x) => nomeDaLinha(x) + ' ' + idBusca(x.colaboradores)).join(' ');
     return chave([dataBr(r.data), horaDe(r.data), pessoas, conformeDaLinha(r) ? 'conforme' : 'desvio',
       r.processo, r.motivo || '', r.acao || '', r.observacao || ''].join(' '));
   }
@@ -560,7 +563,7 @@
     // Pessoas: até 2 nomes; na busca, quem bate com o texto aparece primeiro
     let nomes = g.linhas.map(nomeDaLinha);
     if (q) {
-      const bate = (n, idx) => chave(n + ' ' + ((g.linhas[idx].colaboradores && g.linhas[idx].colaboradores.matricula) || '')).includes(q);
+      const bate = (n, idx) => (chave(n) + ' ' + idBusca(g.linhas[idx].colaboradores)).includes(q);
       const marcados = nomes.map((n, idx) => ({ n, b: bate(n, idx) }));
       nomes = marcados.filter((x) => x.b).map((x) => x.n).concat(marcados.filter((x) => !x.b).map((x) => x.n));
     }
@@ -672,7 +675,7 @@
     ed.ids = g.linhas.map((x) => x.colaborador_id).filter((id) => id != null);
     // Quem está no registro mas não é Ativo (ex.: desligado) também aparece na lista
     ed.extras = g.linhas.filter((x) => x.colaborador_id != null && !ativos.some((a) => a.id === x.colaborador_id))
-      .map((x) => ({ id: x.colaborador_id, nome: ((x.colaboradores && x.colaboradores.nome) || 'Colaborador') + ' (não ativo)', matricula: (x.colaboradores && x.colaboradores.matricula) || '' }));
+      .map((x) => ({ id: x.colaborador_id, nome: ((x.colaboradores && x.colaboradores.nome) || 'Colaborador') + ' (não ativo)', matricula: (x.colaboradores && x.colaboradores.matricula) || '', user_ext: (x.colaboradores && x.colaboradores.user_ext) || '' }));
     ed.fotosFicam = (r.fotos || []).slice();
     ed.fotosSaem = [];
     ed.fotosNovas.forEach((f) => URL.revokeObjectURL(f.previa));
@@ -735,7 +738,7 @@
     const q = chave($('ge-busca').value);
     const qNum = String($('ge-busca').value || '').replace(/\D/g, '');
     const base = ed.extras.concat(ativos);
-    const achados = base.filter((c) => !q || chave(c.nome).includes(q) || String(c.matricula).toLowerCase().includes(q) ||
+    const achados = base.filter((c) => !q || chave(c.nome).includes(q) || idBusca(c).includes(q) ||
       (qNum.length >= 3 && String(c.cpf || '').includes(qNum)));
     // Marcados primeiro
     achados.sort((a, b) => (ed.ids.includes(b.id) ? 1 : 0) - (ed.ids.includes(a.id) ? 1 : 0));
@@ -765,7 +768,7 @@
       });
       rotulo.appendChild(cx);
       rotulo.appendChild(el('span', 'gemba-resultado-nome', c.nome));
-      rotulo.appendChild(el('span', 'gemba-resultado-info', c.matricula + (c.setor !== undefined ? ' · ' + setorTxt(c) : '')));
+      rotulo.appendChild(el('span', 'gemba-resultado-info', [idColab(c), c.setor !== undefined ? setorTxt(c) : ''].filter(Boolean).join(' · ')));
       frag.appendChild(rotulo);
     });
     caixa.appendChild(frag);

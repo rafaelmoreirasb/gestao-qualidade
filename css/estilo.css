@@ -402,6 +402,27 @@ a:hover { color: var(--vermelho-escuro); }
 
 .form-adicionar .mensagem { align-self: stretch; }
 
+/* Colaboradores: Nome, User ext, CPF e Tipo (alteração 21/11/2026) */
+.grade-adicionar.grade-adicionar-colab {
+  grid-template-columns: minmax(0, 2fr) 130px 150px 130px;
+}
+
+.grade-adicionar-colab .campo select {
+  height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--cinza-campo);
+  border-radius: var(--raio);
+  font-size: 15px;
+  font-weight: 400;
+  background: var(--branco);
+  color: var(--preto);
+}
+
+.cartao-base {
+  flex: 1 1 360px;
+  min-width: 0;
+}
+
 .cartao-lista {
   padding: 18px 20px;
   display: flex;
@@ -427,12 +448,15 @@ a:hover { color: var(--vermelho-escuro); }
   font-size: 14px;
 }
 
-.planilha-colab { min-width: 780px; }
+.planilha-colab { min-width: 900px; }
 
 .planilha-colab .planilha-cabecalho,
 .planilha-colab .planilha-linha {
-  grid-template-columns: 44px 110px minmax(200px, 2fr) 130px 150px 120px 60px;
+  grid-template-columns: 44px minmax(200px, 2fr) 110px 130px 100px 150px 120px 60px;
 }
+
+.planilha-colab .col-ext { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; line-height: 36px; }
+.planilha-colab .col-tipo { font-size: 13px; }
 
 .planilha-colab .col-cpf { font-size: 12px; white-space: nowrap; }
 
@@ -609,6 +633,8 @@ a:hover { color: var(--vermelho-escuro); }
   .titulo-contagem { display: block; font-size: 18px; }
   .cartao-adicionar { flex-basis: 100%; }
   .grade-adicionar { grid-template-columns: 1fr; }
+  .grade-adicionar.grade-adicionar-colab { grid-template-columns: 1fr; }
+  .cartao-base { flex-basis: 100%; }
   .busca { width: 100%; }
 }
 

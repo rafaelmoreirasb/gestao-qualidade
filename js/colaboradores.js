@@ -1,12 +1,24 @@
 /* ==========================================================
    js/colaboradores.js
    Aba Colaboradores: adicionar, listar, mudar status,
-   excluir (só para corrigir cadastro errado) e importar planilha.
-   Dados guardados: matrícula, nome, CPF, setor e status.
-   Importar planilha = sincronizar com a lista de ATIVOS do RH:
-   quem é novo entra como Ativo, quem não está na planilha vira
-   Desligado, quem voltou é reativado e nome/CPF são atualizados.
-   Antes de gravar, mostra um resumo e espera a confirmação.
+   excluir (só para corrigir cadastro errado) e atualizar
+   sozinha com a Base SSP53.
+   Dados guardados: nome, User ext, CPF, tipo, setor, status
+   (e a matrícula antiga, de quem já estava cadastrado).
+
+   Base SSP53 (alteração 21/11/2026): ao abrir a aba, quem tem
+   Editar na aba lê a aba "Colaboradores" da planilha Base SSP53
+   (pela função api/colaboradores.js) e a lista fica igual a ela:
+     - quem é novo entra como Ativo;
+     - quem não está na base vira Desligado (ninguém é excluído);
+     - quem estava Desligado e voltou é reativado;
+     - Nome, User ext, CPF e Tipo são atualizados.
+   A pessoa é reconhecida pelo CPF; sem CPF, pelo User ext;
+   sem os dois, pelo nome. Assim o cadastro (e todo o histórico
+   do Gemba, Cronograma, Painel e Eficácia) continua o mesmo.
+   Segurança: se a base vier vazia ou se mais de 20% dos ativos
+   fossem virar Desligado, NADA é gravado sozinho: aparece o
+   resumo e o botão "Aplicar mesmo assim".
    A coluna Treinamentos conta de quantos treinamentos do
    Cronograma a pessoa participou (só os marcados como Realizado).
    ========================================================== */
@@ -14,25 +26,40 @@
 (function () {
   const $ = (id) => document.getElementById(id);
   const TABELA = 'colaboradores';
-  const CAMPOS = 'id, matricula, nome, cpf, setor, status';
+  const CAMPOS = 'id, matricula, user_ext, nome, cpf, tipo, setor, status';
+  const TIPOS = ['DHL', 'Full', 'Diaristas'];
+  const INTERVALO_SINC = 10 * 60 * 1000;   // confere a Base SSP53 no máximo a cada 10 minutos
+  const LIMITE_DESLIGAR = 0.2;             // mais de 20% dos ativos virando Desligado: pede confirmação
 
   let lista = [];             // colaboradores carregados do banco
   let treinosPorColab = {};   // id do colaborador -> nº de treinamentos realizados
   let carregadoPara = null;   // id do usuário cujos dados estão na tela
   let carregando = false;
-  let plano = null;           // resumo da planilha esperando confirmação
+  let sincronizando = false;
+  let ultimaSinc = 0;         // quando a Base SSP53 foi conferida pela última vez
+  let plano = null;           // mudanças esperando "Aplicar mesmo assim"
 
   /* ---------------- Ajudantes ---------------- */
 
   const semAcento = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
   const limparNome = (s) => String(s || '').replace(/\s+/g, ' ').trim();
-  const limparMatricula = (s) => String(s || '').replace(/\.0+$/, '').replace(/\s+/g, '').trim();
+  const limparExt = (s) => String(s || '').replace(/\s+/g, ' ').trim();
   const ehAtivo = (c) => (c.status || 'Ativo') === 'Ativo';
   const soNumeros = (s) => String(s || '').replace(/\D/g, '');
+  const pad = (n) => String(n).padStart(2, '0');
+  const horaAgora = () => { const d = new Date(); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+
+  // Tipo com a grafia oficial (DHL, Full, Diaristas); outro valor da base fica como veio
+  function limparTipo(t) {
+    const s = limparNome(t);
+    if (!s) return '';
+    const achado = TIPOS.find((x) => semAcento(x) === semAcento(s));
+    return achado || s;
+  }
 
   // CPF guardado só com os 11 números. Devolve '' se veio vazio
   // e null se veio preenchido mas não dá para ser um CPF.
-  // O Excel tira o zero da frente de número: 1234567890 vira 01234567890.
+  // Planilha às vezes tira o zero da frente: 1234567890 vira 01234567890.
   function limparCpf(v) {
     let s = String(v == null ? '' : v).trim();
     if (!s) return '';
@@ -46,6 +73,16 @@
 
   const formatarCpf = (c) => (c && /^\d{11}$/.test(c)) ? c.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4') : '—';
 
+  // Como a pessoa é identificada nas mensagens
+  function identificar(c) {
+    const partes = [c.nome];
+    if (c.user_ext) partes.push('User ext ' + c.user_ext);
+    else if (c.matricula) partes.push('matrícula ' + c.matricula);
+    if (c.cpf) partes.push('CPF ' + formatarCpf(c.cpf));
+    if (c.tipo) partes.push(c.tipo);
+    return partes.join(' · ');
+  }
+
   function mostrarMsg(idCaixa, texto, ok) {
     const caixa = $(idCaixa);
     if (!caixa) return;
@@ -55,22 +92,28 @@
   }
 
   function limparMsgs() {
-    ['colab-msg-adicionar', 'colab-msg-lista', 'colab-msg-importar'].forEach((id) => mostrarMsg(id, ''));
+    ['colab-msg-adicionar', 'colab-msg-lista', 'colab-msg-base'].forEach((id) => mostrarMsg(id, ''));
   }
 
   function traduzirErro(e) {
     const m = String((e && e.message) || '').toLowerCase();
     const code = e && e.code;
-    if (code === '23505') return 'Essa matrícula já está na lista.';
+    if (code === '23505') return 'Esse cadastro já está na lista.';
     if (code === '23514' && m.includes('cpf')) return 'CPF inválido: precisa ter 11 números.';
-    if (code === '42703' || (m.includes('cpf') && (m.includes('column') || m.includes('schema cache')))) {
-      return 'A coluna CPF ainda não existe no banco. Rode o arquivo sql/013_colaboradores_cpf.sql no Supabase (SQL Editor).';
+    if (code === '23502' && m.includes('matricula')) {
+      return 'O banco ainda exige matrícula. Rode o arquivo sql/018_colaboradores_base_ssp53.sql no Supabase (SQL Editor).';
+    }
+    if (code === 'PGRST202' || m.includes('colaboradores_atualizar_lote')) {
+      return 'Falta a função de atualização no banco. Rode o arquivo sql/018_colaboradores_base_ssp53.sql no Supabase (SQL Editor).';
+    }
+    if (code === '42703' || code === 'PGRST204' || ((m.includes('user_ext') || m.includes('tipo')) && (m.includes('column') || m.includes('schema cache')))) {
+      return 'As colunas User ext e Tipo ainda não existem no banco. Rode o arquivo sql/018_colaboradores_base_ssp53.sql no Supabase (SQL Editor).';
     }
     if (code === '42P01' || code === 'PGRST205' || m.includes('could not find the table') || m.includes('does not exist')) {
       return 'A tabela de colaboradores ainda não existe no banco. Rode o arquivo sql/001_colaboradores.sql no Supabase (SQL Editor).';
     }
     if (code === '42501' || m.includes('permission denied') || m.includes('row-level security')) {
-      return 'O banco recusou a gravação por falta de permissão. Confira se o arquivo sql/001_colaboradores.sql foi rodado inteiro.';
+      return 'O banco recusou a gravação por falta de permissão. Sua conta precisa de Editar na aba Colaboradores.';
     }
     if (m.includes('jwt')) return 'Sua sessão expirou. Clique em Sair e entre de novo.';
     if (m.includes('failed to fetch') || m.includes('network')) return 'Não foi possível conectar. Confira a internet e tente de novo.';
@@ -160,7 +203,8 @@
     const q = semAcento($('colab-busca').value);
     const qNum = soNumeros($('colab-busca').value);
     const visiveis = ativos.concat(deslig).filter((c) =>
-      !q || semAcento(c.nome).includes(q) || String(c.matricula).toLowerCase().includes(q) || semAcento(c.status).includes(q) ||
+      !q || semAcento(c.nome).includes(q) || semAcento(c.user_ext).includes(q) || semAcento(c.matricula).includes(q) ||
+      semAcento(c.tipo).includes(q) || semAcento(c.status).includes(q) ||
       (qNum.length >= 3 && String(c.cpf || '').includes(qNum)));
 
     const caixa = $('colab-linhas');
@@ -170,7 +214,7 @@
     caixa.appendChild(frag);
 
     const vazio = $('colab-vazio');
-    if (!lista.length) { vazio.textContent = 'Nenhum colaborador cadastrado ainda. Adicione acima ou importe uma planilha.'; vazio.hidden = false; }
+    if (!lista.length) { vazio.textContent = 'Nenhum colaborador cadastrado ainda. Adicione acima ou aguarde a atualização com a Base SSP53.'; vazio.hidden = false; }
     else if (!visiveis.length) { vazio.textContent = 'Nenhum colaborador encontrado.'; vazio.hidden = false; }
     else vazio.hidden = true;
   }
@@ -181,11 +225,14 @@
     linha.className = 'planilha-linha' + (ativo ? '' : ' desligado');
 
     linha.appendChild(celula('direita numero col-num', String(n)));
-    linha.appendChild(celula('numero col-mat', c.matricula));
     const nome = celula('col-nome', c.nome);
-    nome.title = c.nome;
+    nome.title = c.nome + (c.matricula ? ' · matrícula antiga ' + c.matricula : '');
     linha.appendChild(nome);
+    const ext = celula('numero col-ext', c.user_ext || '—');
+    if (c.user_ext) ext.title = c.user_ext;
+    linha.appendChild(ext);
     linha.appendChild(celula('numero col-cpf', formatarCpf(c.cpf)));
+    linha.appendChild(celula('col-tipo', c.tipo || '—'));
 
     // Status editável na linha
     const cs = celula('col-status');
@@ -237,12 +284,12 @@
     render();
     mostrarMsg('colab-msg-lista', novo === 'Desligado'
       ? c.nome + ' marcado como Desligado e movido para o fim da lista. O histórico continua registrado.'
-      : c.nome + ' reativado.', true);
+      : c.nome + ' reativado. Se não estiver na Base SSP53, volta a Desligado na próxima atualização automática.', true);
   }
 
   async function excluir(c, botao) {
     const ok = window.confirm(
-      'Excluir ' + c.nome + ' (matrícula ' + c.matricula + ')?\n\n' +
+      'Excluir ' + identificar(c) + '?\n\n' +
       'Use a exclusão SÓ para corrigir cadastro feito errado.\n' +
       'Se a pessoa saiu da empresa, cancele e marque como Desligado para manter o histórico.');
     if (!ok) return;
@@ -266,25 +313,32 @@
   async function adicionar(ev) {
     ev.preventDefault();
     if (!carregadoPara) { mostrarMsg('colab-msg-adicionar', 'A lista ainda não carregou. Espere um instante e tente de novo.', false); return; }
-    const matricula = limparMatricula($('colab-matricula').value);
     const nome = limparNome($('colab-nome').value);
-    const cpf = limparCpf($('colab-cpf').value);
-    if (!matricula || !nome) { mostrarMsg('colab-msg-adicionar', 'Preencha matrícula e nome.', false); return; }
-    if (cpf === null || (cpf && soNumeros($('colab-cpf').value).length !== 11)) { mostrarMsg('colab-msg-adicionar', 'CPF inválido: precisa ter 11 números (ou deixe em branco).', false); return; }
-    if (lista.some((c) => String(c.matricula) === matricula)) { mostrarMsg('colab-msg-adicionar', 'Essa matrícula já está na lista.', false); return; }
+    const ext = limparExt($('colab-ext').value);
+    const cpfDigitado = $('colab-cpf').value;
+    const cpf = limparCpf(cpfDigitado);
+    const tipo = limparTipo($('colab-tipo').value);
+    if (!nome) { mostrarMsg('colab-msg-adicionar', 'Preencha o nome.', false); return; }
+    if (cpf === null || (cpf && soNumeros(cpfDigitado).length !== 11)) { mostrarMsg('colab-msg-adicionar', 'CPF inválido: precisa ter 11 números (ou deixe em branco).', false); return; }
+    const mesmoCpf = cpf && lista.find((c) => c.cpf === cpf);
+    if (mesmoCpf) { mostrarMsg('colab-msg-adicionar', 'Esse CPF já está na lista: ' + identificar(mesmoCpf) + (ehAtivo(mesmoCpf) ? '.' : ' (Desligado; para trazer de volta, mude o Status para Ativo).'), false); return; }
+    const mesmoExt = ext && lista.find((c) => semAcento(c.user_ext) === semAcento(ext));
+    if (mesmoExt) { mostrarMsg('colab-msg-adicionar', 'Esse User ext já está na lista: ' + identificar(mesmoExt) + '.', false); return; }
 
     const botao = $('colab-adicionar');
     botao.disabled = true;
     try {
-      const { data, error } = await sb.from(TABELA).insert({ matricula, nome, cpf: cpf || null, setor: '', status: 'Ativo' }).select(CAMPOS).single();
+      const { data, error } = await sb.from(TABELA)
+        .insert({ nome, user_ext: ext || null, cpf: cpf || null, tipo: tipo || null, setor: '', status: 'Ativo' })
+        .select(CAMPOS).single();
       if (error) throw error;
       lista.push(data);
-      $('colab-matricula').value = '';
       $('colab-nome').value = '';
+      $('colab-ext').value = '';
       $('colab-cpf').value = '';
       render();
       mostrarMsg('colab-msg-adicionar', nome + ' adicionado.', true);
-      $('colab-matricula').focus();
+      $('colab-nome').focus();
     } catch (e) {
       mostrarMsg('colab-msg-adicionar', traduzirErro(e), false);
     } finally {
@@ -292,74 +346,105 @@
     }
   }
 
-  /* ---------------- Importar planilha (sincronizar com o RH) ---------------- */
+  /* ---------------- Base SSP53 (atualização automática) ---------------- */
 
-  // Acha as colunas Matrícula, Nome e CPF e devolve as linhas preenchidas
-  function linhasParaColaboradores(linhas) {
-    const ehMat = (c) => /matr|chapa/.test(c);
-    const ehNome = (c) => /nome|colaborador|funcionario/.test(c);
-    const h = linhas.findIndex((r) => r && r.some((c) => ehMat(semAcento(c))) && r.some((c) => ehNome(semAcento(c)) && !ehMat(semAcento(c))));
-    if (h < 0) throw new Error('não encontrei as colunas Matrícula e Nome na primeira aba');
-    const cab = linhas[h].map(semAcento);
-    const iM = cab.findIndex(ehMat);
-    const iN = cab.findIndex((c, i) => i !== iM && ehNome(c));
-    const iC = cab.findIndex((c, i) => i !== iM && i !== iN && /cpf/.test(c));
-    if (iM < 0 || iN < 0) throw new Error('não encontrei as colunas Matrícula e Nome na primeira aba');
-
-    const saida = [];
-    let incompletas = 0;
-    linhas.slice(h + 1).forEach((r) => {
-      if (!r) return;
-      const matricula = limparMatricula(r[iM]);
-      const nome = limparNome(r[iN]);
-      const cpfBruto = iC >= 0 ? r[iC] : '';
-      if (!matricula && !nome && !String(cpfBruto || '').trim()) return;   // linha em branco
-      if (!matricula || !nome) { incompletas++; return; }
-      saida.push({ matricula, nome, cpfBruto });
+  // Pede ao servidor as linhas da aba Colaboradores da Base SSP53
+  async function lerBase() {
+    const { data } = await sb.auth.getSession();
+    const sessao = data && data.session;
+    if (!sessao) throw new Error('jwt: sessão expirada');
+    const r = await fetch('/api/colaboradores', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + sessao.access_token },
+      body: '{}',
     });
-    return { saida, incompletas, temCpf: iC >= 0 };
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.erro || ('o servidor respondeu ' + r.status));
+    if (!j.r || !j.r.ok) throw new Error((j.r && j.r.motivo) || 'resposta vazia');
+    return j.r.linhas || [];
   }
 
-  // Compara a planilha com a lista atual. Não grava nada.
-  function montarPlano(nomeArquivo, lidas) {
-    const { saida, incompletas, temCpf } = lidas;
-
-    // Matrícula repetida dentro da própria planilha conta uma vez só
+  // Compara a Base SSP53 com a lista atual. Não grava nada.
+  function montarPlano(linhasBase) {
+    // 1) Limpa a base e conta cada pessoa uma vez só
+    const base = [];
     const vistos = new Set();
-    let repetidas = 0;
-    const unicos = saida.filter((c) => { if (vistos.has(c.matricula)) { repetidas++; return false; } vistos.add(c.matricula); return true; });
+    let repetidas = 0, cpfInvalidos = 0;
+    linhasBase.forEach((l) => {
+      const nome = limparNome(l.nome);
+      if (!nome) return;
+      let cpf = limparCpf(l.cpf);
+      if (cpf === null) { cpfInvalidos++; cpf = ''; }
+      const ext = limparExt(l.ext);
+      const tipo = limparTipo(l.tipo);
+      const chave = cpf ? 'cpf:' + cpf : ext ? 'ext:' + semAcento(ext) : 'nome:' + semAcento(nome);
+      if (vistos.has(chave)) { repetidas++; return; }
+      vistos.add(chave);
+      base.push({ nome, cpf, ext, tipo });
+    });
 
-    const porMatricula = new Map(lista.map((c) => [String(c.matricula), c]));
+    // 2) Índices da lista atual
+    const indice = () => new Map();
+    const porCpf = indice(), porExt = indice(), porNome = indice();
+    const guardar = (m, k, c) => { if (!k) return; if (!m.has(k)) m.set(k, []); m.get(k).push(c); };
+    lista.forEach((c) => {
+      guardar(porCpf, c.cpf || '', c);
+      guardar(porExt, semAcento(c.user_ext), c);
+      guardar(porNome, semAcento(limparNome(c.nome)), c);
+    });
+    const usados = new Set();
+    // Entre vários candidatos, prefere quem está Ativo e o cadastro mais antigo
+    const escolher = (arr, aceita) => {
+      if (!arr) return null;
+      const livres = arr.filter((c) => !usados.has(c.id) && (!aceita || aceita(c)));
+      livres.sort((a, b) => (ehAtivo(b) ? 1 : 0) - (ehAtivo(a) ? 1 : 0) || a.id - b.id);
+      return livres[0] || null;
+    };
+
+    // 3) Reconhece cada pessoa da base: CPF, depois User ext, depois nome
     const novos = [], readmitidos = [], atualizados = [];
-    let semMudanca = 0, cpfInvalidos = 0;
+    let semMudanca = 0, porNomeQtd = 0;
+    base.forEach((b) => {
+      // CPF diferente dos dois lados = pessoas diferentes
+      const cpfNaoBriga = (c) => !b.cpf || !c.cpf || c.cpf === b.cpf;
+      let ex = b.cpf ? escolher(porCpf.get(b.cpf)) : null;
+      if (!ex && b.ext) ex = escolher(porExt.get(semAcento(b.ext)), cpfNaoBriga);
+      if (!ex) {
+        ex = escolher(porNome.get(semAcento(b.nome)), cpfNaoBriga);
+        if (ex) porNomeQtd++;
+      }
+      if (!ex) { novos.push(b); return; }
+      usados.add(ex.id);
 
-    unicos.forEach((u) => {
-      const ex = porMatricula.get(u.matricula);
-      let cpf = limparCpf(u.cpfBruto);
-      if (cpf === null) cpfInvalidos++;
-      // CPF vazio ou inválido na planilha não apaga o CPF que já estava guardado
-      if (!cpf) cpf = (ex && ex.cpf) || null;
-      const item = { matricula: u.matricula, nome: u.nome, cpf };
-      if (!ex) novos.push(item);
-      else if (!ehAtivo(ex)) readmitidos.push({ ...item, antes: ex });
-      else if (ex.nome !== u.nome || (ex.cpf || null) !== cpf) atualizados.push({ ...item, antes: ex });
+      // Vazio na base não apaga o que já estava guardado
+      const depois = {
+        nome: b.nome,
+        cpf: b.cpf || ex.cpf || null,
+        user_ext: b.ext || ex.user_ext || null,
+        tipo: b.tipo || ex.tipo || null,
+      };
+      const mudou = [];
+      if (ex.nome !== depois.nome) mudou.push('nome: ' + ex.nome + ' → ' + depois.nome);
+      if ((ex.cpf || null) !== depois.cpf) mudou.push('CPF: ' + formatarCpf(ex.cpf) + ' → ' + formatarCpf(depois.cpf));
+      if ((ex.user_ext || null) !== depois.user_ext) mudou.push('User ext: ' + (ex.user_ext || '—') + ' → ' + depois.user_ext);
+      if ((ex.tipo || null) !== depois.tipo) mudou.push('Tipo: ' + (ex.tipo || '—') + ' → ' + depois.tipo);
+      const item = { antes: ex, depois, mudou };
+      if (!ehAtivo(ex)) readmitidos.push(item);
+      else if (mudou.length) atualizados.push(item);
       else semMudanca++;
     });
 
-    const desligar = lista.filter((c) => ehAtivo(c) && !vistos.has(String(c.matricula)));
+    // 4) Ativos que não estão na base viram Desligado
+    const desligar = lista.filter((c) => ehAtivo(c) && !usados.has(c.id));
     const ativosAgora = lista.filter(ehAtivo).length;
-    const alerta = ativosAgora > 0 && desligar.length > ativosAgora * 0.2;
+    const baseVazia = !base.length;
+    const muitos = ativosAgora > 0 && desligar.length > ativosAgora * LIMITE_DESLIGAR;
 
-    return { nomeArquivo, novos, readmitidos, atualizados, desligar, semMudanca, cpfInvalidos, repetidas, incompletas, temCpf, ativosAgora, alerta, total: unicos.length };
-  }
-
-  function fecharResumo() {
-    plano = null;
-    const caixa = $('colab-sinc');
-    if (!caixa) return;
-    caixa.hidden = true;
-    $('colab-sinc-itens').textContent = '';
-    $('colab-sinc-alerta').hidden = true;
+    return {
+      total: base.length, novos, readmitidos, atualizados, desligar, semMudanca, porNomeQtd,
+      repetidas, cpfInvalidos, ativosAgora, baseVazia, alerta: baseVazia || muitos,
+      nadaMuda: !novos.length && !desligar.length && !readmitidos.length && !atualizados.length,
+    };
   }
 
   // Um grupo do resumo: número + explicação, com a lista de nomes para abrir
@@ -379,7 +464,7 @@
     s.appendChild(document.createTextNode(' ' + texto));
     d.appendChild(s);
     const ul = document.createElement('ul');
-    const LIMITE = 200;
+    const LIMITE = 300;
     pessoas.slice(0, LIMITE).forEach((p) => {
       const li = document.createElement('li');
       li.textContent = mostrar(p);
@@ -394,139 +479,173 @@
     return d;
   }
 
-  function mostrarResumo(p) {
-    const caixa = $('colab-sinc');
+  function fecharResumo() {
+    plano = null;
+    $('colab-sinc').hidden = true;
+    $('colab-sinc-itens').textContent = '';
+    $('colab-sinc-alerta').hidden = true;
+    $('colab-sinc-botoes').hidden = true;
+  }
+
+  // pendente = true: ainda não gravou (esperando "Aplicar mesmo assim")
+  function mostrarResumo(p, pendente) {
     const itens = $('colab-sinc-itens');
     itens.textContent = '';
-    $('colab-sinc-titulo').textContent = 'Resumo de "' + p.nomeArquivo + '" · ' + p.total + ' pessoa(s) na planilha';
+    $('colab-sinc-titulo').textContent = (pendente ? 'O que vai mudar' : 'O que mudou na atualização das ' + horaAgora()) +
+      ' · ' + p.total + ' pessoa(s) na Base SSP53';
 
-    const ident = (x) => x.nome + ' · matrícula ' + x.matricula + (x.cpf ? ' · CPF ' + formatarCpf(x.cpf) : '');
-    const mudou = (x) => {
-      const partes = [];
-      if (x.antes.nome !== x.nome) partes.push('nome: ' + x.antes.nome + ' → ' + x.nome);
-      if ((x.antes.cpf || null) !== x.cpf) partes.push('CPF: ' + formatarCpf(x.antes.cpf) + ' → ' + formatarCpf(x.cpf));
-      return x.nome + ' · matrícula ' + x.matricula + (partes.length ? ' (' + partes.join('; ') + ')' : '');
-    };
+    const novoTxt = (b) => identificar({ nome: b.nome, user_ext: b.ext, cpf: b.cpf, tipo: b.tipo });
+    const mudouTxt = (x) => x.depois.nome + (x.mudou.length ? ' (' + x.mudou.join('; ') + ')' : '');
+    const vbNovo = pendente ? 'serão cadastrados' : 'cadastrados';
+    const vbDeslig = pendente ? 'serão marcados' : 'marcados';
+    const vbVolta = pendente ? 'serão reativados' : 'reativados';
+    const vbAtual = pendente ? 'serão atualizados' : 'atualizados';
 
-    itens.appendChild(grupoResumo('sinc-novo', p.novos.length, 'novo(s) · serão cadastrados como Ativo', p.novos, ident));
-    itens.appendChild(grupoResumo('sinc-deslig', p.desligar.length, 'não estão na planilha · serão marcados como Desligado', p.desligar,
-      (x) => x.nome + ' · matrícula ' + x.matricula));
-    itens.appendChild(grupoResumo('sinc-volta', p.readmitidos.length, 'estavam Desligados e voltaram · serão reativados', p.readmitidos, ident));
-    itens.appendChild(grupoResumo('sinc-atual', p.atualizados.length, 'com nome ou CPF diferente · serão atualizados com o da planilha', p.atualizados, mudou));
+    itens.appendChild(grupoResumo('sinc-novo', p.novos.length, 'novo(s) · ' + vbNovo + ' como Ativo', p.novos, novoTxt));
+    itens.appendChild(grupoResumo('sinc-deslig', p.desligar.length, 'não estão na Base SSP53 · ' + vbDeslig + ' como Desligado', p.desligar, identificar));
+    itens.appendChild(grupoResumo('sinc-volta', p.readmitidos.length, 'estavam Desligados e voltaram · ' + vbVolta, p.readmitidos, mudouTxt));
+    itens.appendChild(grupoResumo('sinc-atual', p.atualizados.length, 'com Nome, User ext, CPF ou Tipo diferente · ' + vbAtual + ' com os da base', p.atualizados, mudouTxt));
 
     const fim = document.createElement('div');
     fim.className = 'sinc-grupo sinc-zero';
     const extras = [p.semMudanca + ' sem mudança'];
-    if (p.repetidas) extras.push(p.repetidas + ' matrícula(s) repetida(s) na planilha contada(s) uma vez só');
-    if (p.incompletas) extras.push(p.incompletas + ' linha(s) sem matrícula ou sem nome ignorada(s)');
-    if (p.cpfInvalidos) extras.push(p.cpfInvalidos + ' CPF(s) inválido(s) na planilha ignorado(s) (o CPF guardado não muda)');
-    if (!p.temCpf) extras.push('a planilha não tem coluna CPF; os CPFs guardados não mudam');
+    if (p.porNomeQtd) extras.push(p.porNomeQtd + ' reconhecido(s) pelo nome (sem CPF e User ext iguais)');
+    if (p.repetidas) extras.push(p.repetidas + ' linha(s) repetida(s) na base contada(s) uma vez só');
+    if (p.cpfInvalidos) extras.push(p.cpfInvalidos + ' CPF(s) inválido(s) na base ignorado(s) (o CPF guardado não muda)');
     fim.textContent = extras.join(' · ') + '.';
     itens.appendChild(fim);
 
     const alerta = $('colab-sinc-alerta');
-    if (p.alerta) {
-      const pct = Math.round((p.desligar.length / p.ativosAgora) * 100);
-      alerta.textContent = 'Atenção: ' + p.desligar.length + ' de ' + p.ativosAgora + ' ativos (' + pct + '%) seriam marcados como Desligado. ' +
-        'Confira se esta é a planilha completa de ativos antes de confirmar.';
+    if (pendente && p.alerta) {
+      if (p.baseVazia) {
+        alerta.textContent = 'A aba Colaboradores da Base SSP53 veio vazia. Para não desligar todo mundo, nada foi gravado. Confira a planilha.';
+      } else {
+        const pct = Math.round((p.desligar.length / p.ativosAgora) * 100);
+        alerta.textContent = 'Atualização automática pausada: ' + p.desligar.length + ' de ' + p.ativosAgora + ' ativos (' + pct + '%) ' +
+          'seriam marcados como Desligado. Confira o resumo. Se estiver certo, clique em "Aplicar mesmo assim".';
+      }
       alerta.hidden = false;
     } else {
       alerta.hidden = true;
     }
-
-    const nadaMuda = !p.novos.length && !p.desligar.length && !p.readmitidos.length && !p.atualizados.length;
-    $('colab-sinc-confirmar').hidden = nadaMuda;
+    $('colab-sinc-botoes').hidden = !pendente;
+    $('colab-sinc-confirmar').hidden = !!p.baseVazia;
     $('colab-sinc-confirmar').disabled = false;
-    $('colab-sinc-cancelar').textContent = nadaMuda ? 'Fechar' : 'Cancelar';
-    caixa.hidden = false;
-    if (nadaMuda) mostrarMsg('colab-msg-importar', 'A lista já está igual à planilha. Nada para atualizar.', true);
-    else mostrarMsg('colab-msg-importar', 'Confira o resumo e clique em "Confirmar atualização". Nada foi gravado ainda.', true);
+    $('colab-sinc-cancelar').disabled = false;
+    $('colab-sinc').hidden = false;
   }
 
-  async function importar(ev) {
-    const input = ev.target;
-    const arquivo = input.files && input.files[0];
-    if (!arquivo) return;
-    const rotulo = $('colab-arquivo-rotulo');
-    fecharResumo();
-    mostrarMsg('colab-msg-importar', '');
-
-    if (!carregadoPara) {
-      mostrarMsg('colab-msg-importar', 'A lista ainda não carregou. Espere um instante e tente de novo.', false);
-      input.value = '';
-      return;
-    }
-
-    rotulo.classList.add('ocupado');
-    mostrarMsg('colab-msg-importar', 'Lendo "' + arquivo.name + '"…', true);
-    try {
-      const lidas = linhasParaColaboradores(await lerPlanilha(arquivo));
-      if (!lidas.saida.length) throw new Error('nenhuma linha com matrícula e nome');
-      plano = montarPlano(arquivo.name, lidas);
-      mostrarResumo(plano);
-    } catch (e) {
-      fecharResumo();
-      mostrarMsg('colab-msg-importar', 'Não consegui ler a planilha: ' + ((e && e.message) || 'erro desconhecido') + '. Nada foi alterado.', false);
-    } finally {
-      rotulo.classList.remove('ocupado');
-      input.value = '';
-    }
-  }
-
-  async function confirmarSincronizar() {
-    const p = plano;
-    if (!p) return;
-    const botao = $('colab-sinc-confirmar');
-    const rotulo = $('colab-arquivo-rotulo');
-    botao.disabled = true;
-    $('colab-sinc-cancelar').disabled = true;
-    rotulo.classList.add('ocupado');
-    mostrarMsg('colab-msg-importar', 'Gravando…', true);
-
+  // Grava as mudanças. Devolve um texto com o que foi feito.
+  async function aplicar(p) {
     let gravados = 0, desligados = 0;
     try {
-      // 1) Novos, reativados e atualizados: grava pela matrícula (status Ativo)
-      const gravar = p.novos.concat(p.readmitidos, p.atualizados)
-        .map((x) => ({ matricula: x.matricula, nome: x.nome, cpf: x.cpf || null, status: 'Ativo' }));
+      // 1) Novos: entram como Ativo (sem matrícula)
+      const novos = p.novos.map((b) => ({ nome: b.nome, cpf: b.cpf || null, user_ext: b.ext || null, tipo: b.tipo || null, setor: '', status: 'Ativo' }));
       const LOTE = 500;
-      for (let i = 0; i < gravar.length; i += LOTE) {
-        const { data, error } = await sb.from(TABELA)
-          .upsert(gravar.slice(i, i + LOTE), { onConflict: 'matricula' })
-          .select('id');
+      for (let i = 0; i < novos.length; i += LOTE) {
+        const { data, error } = await sb.from(TABELA).insert(novos.slice(i, i + LOTE)).select('id');
         if (error) throw error;
         gravados += (data || []).length;
       }
 
-      // 2) Quem não está na planilha vira Desligado (ninguém é excluído)
+      // 2) Reativados e atualizados: o MESMO cadastro (mesmo id), para o histórico continuar
+      //    (função colaboradores_atualizar_lote do sql/018: um pedido por lote)
+      const mudar = p.readmitidos.concat(p.atualizados).map((x) => ({
+        id: x.antes.id, nome: x.depois.nome, cpf: x.depois.cpf || '', user_ext: x.depois.user_ext || '', tipo: x.depois.tipo || '',
+      }));
+      for (let i = 0; i < mudar.length; i += LOTE) {
+        const { data, error } = await sb.rpc('colaboradores_atualizar_lote', { itens: mudar.slice(i, i + LOTE) });
+        if (error) throw error;
+        gravados += Number(data) || 0;
+      }
+
+      // 3) Quem não está na base vira Desligado (ninguém é excluído)
       const ids = p.desligar.map((c) => c.id);
       const LOTE_ID = 200;
       for (let i = 0; i < ids.length; i += LOTE_ID) {
-        const { data, error } = await sb.from(TABELA)
-          .update({ status: 'Desligado' })
-          .in('id', ids.slice(i, i + LOTE_ID))
-          .select('id');
+        const { data, error } = await sb.from(TABELA).update({ status: 'Desligado' }).in('id', ids.slice(i, i + LOTE_ID)).select('id');
         if (error) throw error;
         desligados += (data || []).length;
       }
+    } catch (e) {
+      const parte = (gravados || desligados) ? ' Parte já foi gravada (' + gravados + ' gravado(s), ' + desligados + ' desligado(s)); clique em "Atualizar agora" para terminar.' : ' Nada foi alterado.';
+      throw new Error(traduzirErro(e) + parte);
+    }
+    const partes = [];
+    if (p.novos.length) partes.push(p.novos.length + ' novo(s)');
+    if (desligados) partes.push(desligados + ' marcado(s) como Desligado');
+    if (p.readmitidos.length) partes.push(p.readmitidos.length + ' reativado(s)');
+    if (p.atualizados.length) partes.push(p.atualizados.length + ' atualizado(s)');
+    return partes.join(', ');
+  }
 
-      fecharResumo();
+  // forcado = botão "Atualizar agora" (não espera os 10 minutos)
+  async function sincronizar(forcado) {
+    if (sincronizando || carregando || !carregadoPara) return;
+    if (typeof gqPodeEditar !== 'function' || !gqPodeEditar('colaboradores')) return;   // modo Ver não atualiza
+    if (!forcado && (plano || Date.now() - ultimaSinc < INTERVALO_SINC)) return;
+    sincronizando = true;
+    const botao = $('colab-atualizar');
+    botao.disabled = true;
+    fecharResumo();
+    mostrarMsg('colab-msg-base', 'Conferindo a Base SSP53…', true);
+    try {
+      const linhas = await lerBase();
+      ultimaSinc = Date.now();
+      const p = montarPlano(linhas);
+      if (p.nadaMuda) {
+        mostrarMsg('colab-msg-base', 'A lista já está igual à Base SSP53 (' + p.total + ' pessoa(s), conferido às ' + horaAgora() + ').', true);
+      } else if (p.alerta) {
+        plano = p;
+        mostrarResumo(p, true);
+        mostrarMsg('colab-msg-base', 'Nada foi gravado ainda.', false);
+      } else {
+        const feito = await aplicar(p);
+        await carregar(carregadoPara);
+        mostrarResumo(p, false);
+        mostrarMsg('colab-msg-base', 'Atualizado com a Base SSP53 às ' + horaAgora() + ': ' + feito + '. Ninguém foi excluído e o histórico continua.', true);
+      }
+    } catch (e) {
+      const m = String((e && e.message) || '');
+      mostrarMsg('colab-msg-base', /parte já foi gravada|nada foi alterado/i.test(m)
+        ? m
+        : 'Não consegui ler a Base SSP53: ' + (m.includes('jwt') || m.includes('fetch') ? traduzirErro(e) : m) + ' A lista não mudou.', false);
+      if (/parte já foi gravada/i.test(m)) await carregar(carregadoPara);
+    } finally {
+      sincronizando = false;
+      botao.disabled = false;
+    }
+  }
+
+  async function aplicarMesmoAssim() {
+    const p = plano;
+    if (!p || sincronizando) return;
+    sincronizando = true;
+    $('colab-sinc-confirmar').disabled = true;
+    $('colab-sinc-cancelar').disabled = true;
+    $('colab-atualizar').disabled = true;
+    mostrarMsg('colab-msg-base', 'Gravando…', true);
+    try {
+      const feito = await aplicar(p);
+      plano = null;
       await carregar(carregadoPara);
-
-      const partes = [];
-      if (p.novos.length) partes.push(p.novos.length + ' novo(s) cadastrado(s)');
-      if (desligados) partes.push(desligados + ' marcado(s) como Desligado');
-      if (p.readmitidos.length) partes.push(p.readmitidos.length + ' reativado(s)');
-      if (p.atualizados.length) partes.push(p.atualizados.length + ' atualizado(s)');
-      mostrarMsg('colab-msg-importar', 'Lista atualizada com "' + p.nomeArquivo + '": ' + partes.join(', ') + '. Ninguém foi excluído e o histórico continua registrado. A planilha não foi guardada, só os dados.', true);
+      mostrarResumo(p, false);
+      mostrarMsg('colab-msg-base', 'Atualizado com a Base SSP53 às ' + horaAgora() + ': ' + feito + '. Ninguém foi excluído e o histórico continua.', true);
     } catch (e) {
       fecharResumo();
       await carregar(carregadoPara);
-      const feito = (gravados || desligados) ? ' Parte já foi gravada (' + gravados + ' gravado(s), ' + desligados + ' desligado(s)); escolha a planilha de novo para terminar.' : ' Nada foi alterado.';
-      mostrarMsg('colab-msg-importar', traduzirErro(e) + feito, false);
+      mostrarMsg('colab-msg-base', String((e && e.message) || e), false);
     } finally {
-      $('colab-sinc-cancelar').disabled = false;
-      rotulo.classList.remove('ocupado');
+      sincronizando = false;
+      $('colab-atualizar').disabled = false;
     }
+  }
+
+  // Confere sozinho quando a aba Colaboradores está aberta
+  function talvezSincronizar() {
+    const aba = $('aba-colaboradores');
+    if (!aba || aba.hidden) return;
+    sincronizar(false);
   }
 
   /* ---------------- Login / saída ---------------- */
@@ -535,21 +654,25 @@
     lista = [];
     treinosPorColab = {};
     carregadoPara = null;
+    ultimaSinc = 0;
     $('colab-linhas').textContent = '';
     $('colab-contagem').textContent = '';
     $('colab-vazio').hidden = true;
     $('colab-busca').value = '';
-    $('colab-matricula').value = '';
     $('colab-nome').value = '';
+    $('colab-ext').value = '';
     $('colab-cpf').value = '';
     fecharResumo();
     limparMsgs();
   }
 
-  function quandoSessaoMudar(sessao) {
+  async function quandoSessaoMudar(sessao) {
     const uid = sessao && sessao.user ? sessao.user.id : null;
     if (!uid) { limparTela(); return; }
-    if (carregadoPara !== uid) carregar(uid);
+    if (carregadoPara !== uid) {
+      await carregar(uid);
+      talvezSincronizar();
+    }
   }
 
   /* ---------------- Início ---------------- */
@@ -558,18 +681,21 @@
 
   $('colab-form').addEventListener('submit', adicionar);
   $('colab-busca').addEventListener('input', render);
-  $('colab-arquivo').addEventListener('change', importar);
-  $('colab-sinc-confirmar').addEventListener('click', confirmarSincronizar);
+  $('colab-atualizar').addEventListener('click', () => sincronizar(true));
+  $('colab-sinc-confirmar').addEventListener('click', aplicarMesmoAssim);
   $('colab-sinc-cancelar').addEventListener('click', () => {
-    const tinhaMudanca = !$('colab-sinc-confirmar').hidden;
     fecharResumo();
-    mostrarMsg('colab-msg-importar', tinhaMudanca ? 'Importação cancelada. Nada foi alterado.' : '', true);
+    mostrarMsg('colab-msg-base', 'Atualização não aplicada. A lista não mudou. Clique em "Atualizar agora" quando quiser conferir de novo.', true);
   });
 
-  // Ao abrir a aba, atualiza a contagem de treinamentos (ex.: participante marcado agora no Cronograma)
+  // Ao abrir a aba: atualiza a contagem de treinamentos e confere a Base SSP53
   document.addEventListener('gq:aba', (ev) => {
-    if (ev.detail && ev.detail.aba === 'colaboradores' && carregadoPara && !carregando) carregarTreinos();
+    if (!(ev.detail && ev.detail.aba === 'colaboradores') || !carregadoPara || carregando) return;
+    carregarTreinos();
+    sincronizar(false);
   });
+  // Quando o perfil (permissões) termina de carregar, confere se a aba já está aberta
+  document.addEventListener('gq:perfil', () => setTimeout(talvezSincronizar, 0));
 
   // O Supabase pede para não chamar o banco dentro deste aviso; por isso o setTimeout.
   sb.auth.onAuthStateChange((_evento, sessao) => {
