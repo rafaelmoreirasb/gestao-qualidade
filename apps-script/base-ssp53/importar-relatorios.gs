@@ -328,6 +328,106 @@ function relSepararPorIdade(dados, colData, limite) {
   return { ficam, porMes };
 }
 
+// ===== HISTÓRICO: só os últimos 15 dias na Base SSP53 (desde 23/11/2026) =====
+// Todo dia às 4h, as linhas do Histórico com mais de 15 dias vão para a planilha "Arquivo Histórico AAAA-MM (1ª quinzena)"
+// ou "(2ª quinzena)", na pasta "Faltantes – Arquivo" (um mês inteiro de Histórico não cabe numa planilha só).
+// Nada é apagado de vez: primeiro copia TUDO para o arquivo (sem duplicar, pela coluna Chave), e só no fim tira da Base SSP53.
+// Se o tempo acabar (limite de 6 min do Google), agenda a continuação sozinho em 1 minuto e segue de onde parou.
+// As linhas que não são antigas mas estão no meio do trecho antigo (poucas) voltam para o fim do Histórico.
+// O painel não perde nada: a aba Aduana também guarda 15 dias, e o período usa o Resumo diário.
+const HIST_ARQ = { ABA: 'Histórico', DIAS: 15, BLOCO: 30000, TEMP: '_historico_manter', PROP: 'histArqProxima' };
+
+function arquivarHistoricoAntigo() {
+  const inicio = Date.now();
+  ScriptApp.getProjectTriggers().filter((t) => t.getHandlerFunction() === 'histArqContinuar').forEach((t) => ScriptApp.deleteTrigger(t));
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(30 * 1000)) { histArqAgendar(5); console.log('Histórico: planilha ocupada, tento de novo em 5 min'); return; }
+  const props = PropertiesService.getScriptProperties();
+  const erros = [];
+  try {
+    const ss = SpreadsheetApp.openById(REL_CONFIG.PLANILHA_ID);
+    const aba = ss.getSheetByName(HIST_ARQ.ABA);
+    if (!aba || aba.getLastRow() < 2) return;
+    const limite = new Date(); limite.setHours(0, 0, 0, 0); limite.setDate(limite.getDate() - HIST_ARQ.DIAS);
+    const nCol = aba.getLastColumn();
+    const cab = aba.getRange(1, 1, 1, nCol).getDisplayValues()[0];
+    const colChave = cab.findIndex((c) => relNorm(c) === 'chave');
+    if (colChave < 0) throw new Error('A aba Histórico não tem a coluna "Chave".');
+    // 1) até onde vão as linhas antigas (o Histórico entra em ordem de data, então elas ficam no começo)
+    const datas = aba.getRange(2, 1, aba.getLastRow() - 1, 1).getDisplayValues();
+    let L = -1; // índice da última linha antiga
+    datas.forEach(([d], i) => { const x = relLerData(d); if (x && x < limite) L = i; });
+    if (L < 0) { props.deleteProperty(HIST_ARQ.PROP); console.log('Histórico: nada com mais de ' + HIST_ARQ.DIAS + ' dias'); return; }
+    // 2) copia o trecho 0..L para os arquivos (em blocos; retoma de onde parou)
+    let prox = Number(props.getProperty(HIST_ARQ.PROP) || 0);
+    let temp = ss.getSheetByName(HIST_ARQ.TEMP);
+    if (prox === 0 && temp) { ss.deleteSheet(temp); temp = null; } // sobra de uma rodada que não terminou o passo 3
+    const chavesArq = new Map(); // planilha de arquivo -> Set das chaves que já estão lá
+    while (prox <= L) {
+      if (Date.now() - inicio > REL_CONFIG.TEMPO_MAX_MS) {
+        props.setProperty(HIST_ARQ.PROP, String(prox)); histArqAgendar(1);
+        console.log('Histórico: copiado até a linha ' + (prox + 1) + ' de ' + (L + 1) + '. Continua sozinho em 1 minuto.');
+        return;
+      }
+      const n = Math.min(HIST_ARQ.BLOCO, L - prox + 1);
+      const valores = aba.getRange(2 + prox, 1, n, nCol).getDisplayValues();
+      const porArquivo = new Map(), manter = [];
+      for (const r of valores) {
+        const d = relLerData(r[0]);
+        if (!d || d >= limite) { manter.push(r); continue; }
+        const nome = 'Arquivo Histórico ' + d.getFullYear() + '-' + relPad(d.getMonth() + 1) + (d.getDate() <= 15 ? ' (1ª quinzena)' : ' (2ª quinzena)');
+        if (!porArquivo.has(nome)) porArquivo.set(nome, []);
+        porArquivo.get(nome).push(r);
+      }
+      for (const [nome, linhas] of porArquivo) {
+        const arq = relPlanilhaNaPasta(nome, relPasta(REL_CONFIG.PASTA_ARQUIVO));
+        let abaArq = arq.getSheetByName(HIST_ARQ.ABA);
+        if (!abaArq) {
+          abaArq = arq.insertSheet(HIST_ARQ.ABA);
+          relAjustarColunas(abaArq, nCol);
+          if (abaArq.getMaxRows() > 100) abaArq.deleteRows(101, abaArq.getMaxRows() - 100);
+          relEscreverTexto(abaArq, 1, [cab]);
+          abaArq.setFrozenRows(1);
+          relLimparAbaPadrao(arq);
+        }
+        if (!chavesArq.has(nome)) {
+          const u = abaArq.getLastRow();
+          chavesArq.set(nome, new Set(u > 1 ? abaArq.getRange(2, colChave + 1, u - 1, 1).getDisplayValues().flat() : []));
+        }
+        const vistas = chavesArq.get(nome);
+        const novas = linhas.filter((r) => { const k = r[colChave]; if (k && vistas.has(k)) return false; vistas.add(k); return true; });
+        if (novas.length) relEscreverTexto(abaArq, abaArq.getLastRow() + 1, novas);
+      }
+      if (manter.length) {
+        if (!temp) { temp = ss.insertSheet(HIST_ARQ.TEMP); relAjustarColunas(temp, nCol); }
+        relEscreverTexto(temp, temp.getLastRow() + 1, manter);
+      }
+      prox += n;
+      props.setProperty(HIST_ARQ.PROP, String(prox));
+    }
+    // 3) tudo copiado: tira o trecho antigo da Base SSP53 e devolve as linhas que não eram antigas
+    aba.deleteRows(2, L + 1);
+    let devolvidas = 0;
+    if (temp) {
+      const vals = temp.getLastRow() ? temp.getRange(1, 1, temp.getLastRow(), nCol).getDisplayValues() : [];
+      if (vals.length) relEscreverTexto(aba, aba.getLastRow() + 1, vals);
+      devolvidas = vals.length;
+      ss.deleteSheet(temp);
+    }
+    props.deleteProperty(HIST_ARQ.PROP);
+    const foram = L + 1 - devolvidas;
+    relRegistrar(ss, '(arquivamento)', 'Histórico', foram, 0, 0, 0, foram + ' linhas com mais de ' + HIST_ARQ.DIAS + ' dias foram para "Arquivo Histórico" (por quinzena)');
+    console.log('Histórico: ' + foram + ' linhas foram para o arquivo por quinzena.');
+  } catch (e) {
+    erros.push(e.message);
+  } finally {
+    lock.releaseLock();
+    if (erros.length) relAvisarErro('Arquivamento do Histórico', erros);
+  }
+}
+function histArqContinuar() { arquivarHistoricoAntigo(); }
+function histArqAgendar(min) { ScriptApp.newTrigger('histArqContinuar').timeBased().after(min * 60 * 1000).create(); }
+
 // ===== MIGRAÇÃO (rode UMA vez) =====
 // Traz da planilha antiga (Conteneirização) as abas que a Base SSP53 ainda não tem.
 // Pula a aba que já tem dados na Base SSP53. Se o tempo acabar, rode de novo: continua de onde parou.
@@ -589,5 +689,7 @@ function criarGatilhosRelatorios() {
     .forEach((t) => ScriptApp.deleteTrigger(t));
   ScriptApp.newTrigger('importarRelatorios').timeBased().everyMinutes(5).create();
   ScriptApp.newTrigger('arquivarRelatoriosAntigos').timeBased().everyDays(1).atHour(REL_CONFIG.HORA_ARQUIVAMENTO).create();
-  console.log('Gatilhos criados: relatórios a cada 5 min e arquivamento diário às ' + REL_CONFIG.HORA_ARQUIVAMENTO + 'h.');
+  ScriptApp.getProjectTriggers().filter((t) => t.getHandlerFunction() === 'arquivarHistoricoAntigo').forEach((t) => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger('arquivarHistoricoAntigo').timeBased().everyDays(1).atHour(4).create();
+  console.log('Gatilhos criados: relatórios a cada 5 min, arquivamento diário às ' + REL_CONFIG.HORA_ARQUIVAMENTO + 'h e Histórico às 4h.');
 }

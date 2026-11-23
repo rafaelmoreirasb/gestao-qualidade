@@ -211,7 +211,9 @@ classificação manual e os responsáveis por ilha também são gravados lá.
 
 **Abas que a planilha Base SSP53 precisa ter** (nomes iguais, porque o painel acha as colunas pelo cabeçalho): Aduana,
 Histórico, Auditoria de Carrinho, Problem Solving, **Base Inventário**, Torre Aduana, Direcionamento Manual e One Bipe. O inventário
-vem da aba **Base Inventário** (desde 17/11/2026; a aba "Inventário", espelho da Base Mirassol Oficial, não é mais usada).
+vem da aba **Base Inventário**, que desde 23/11/2026 é copiada a cada 1 hora da aba BASE INVENTARIO da Base Mirassol Oficial
+(só de 01/11/2026 em diante; não é apagada). A aba **Histórico** guarda só os últimos 15 dias: as linhas mais velhas vão toda
+madrugada para as planilhas **Arquivo Histórico AAAA-MM (1ª/2ª quinzena)** na pasta Faltantes – Arquivo, onde você pode abrir.
 **Os 4 relatórios do dia** (Inventário, Aduana, Auditoria de Carrinho e Problem Solving) entram juntos pela pasta **Importar
 Inventário** do Drive, pelo Apps Script da Base SSP53 (código em [`apps-script/base-ssp53/`](apps-script/base-ssp53/); instalação em
 [`docs/faltante-aduana/importador.md`](docs/faltante-aduana/importador.md)). Em 17/11/2026

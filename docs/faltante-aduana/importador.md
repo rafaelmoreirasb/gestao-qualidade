@@ -1,6 +1,10 @@
 # Importador dos relatórios diários (Base SSP53) — passo a passo
 
-> Desde 17/11/2026 os **4 relatórios do dia** (Inventário, Aduana, Auditoria de Carrinho e Problem Solving) entram **pela mesma
+> **Desde 23/11/2026 o Inventário não entra mais pela pasta:** a cada 1 hora o script copia a aba **BASE INVENTARIO** da
+> planilha Base Mirassol Oficial (só de **01/11/2026 em diante**) para a aba **Base Inventário** da Base SSP53. Pela pasta entram
+> só os **3 relatórios** (Aduana, Auditoria de Carrinho e Problem Solving).
+>
+> De 17 a 23/11/2026 os **4 relatórios do dia** (Inventário, Aduana, Auditoria de Carrinho e Problem Solving) entravam **pela mesma
 > pasta** do Google Drive e são gravados na planilha **Base SSP53**, que a aba Faltante Aduana lê.
 > Código: pasta [`apps-script/base-ssp53/`](../../apps-script/base-ssp53/) deste repositório. Ele roda no projeto Apps Script
 > da própria planilha (Extensões › Apps Script), com a sua conta pessoal.
@@ -13,7 +17,7 @@ execução a 6 minutos):
 
 | Arquivo (reconhecido pelos cabeçalhos; o nome não importa) | Aba da Base SSP53 | Quem importa |
 |---|---|---|
-| Inventário: `Pacote, Data de Escaneamento, Situação, Área…` | **Base Inventário** | `importarBaseInventario` (arquivo `automacao-base-ssp53.gs`) |
+| Inventário: **não precisa mais jogar** (desde 23/11/2026). Se cair na pasta, vai para Processados sem importar | **Base Inventário** vem da Base Mirassol Oficial | `atualizarBaseInventario`, a cada 1 hora (arquivo `automacao-base-ssp53.gs`) |
 | `audited_shipments…` com coluna **Placa** | **Aduana** | `importarRelatorios` (arquivo `importar-relatorios.gs`) |
 | `audited_shipments…` com coluna **Gaiola** | **Auditoria de Carrinho** | `importarRelatorios` |
 | `report_logistics_problem_solving…` | **Problem Solving** (caso que mudou de estado **atualiza** a linha) | `importarRelatorios` |
@@ -27,6 +31,14 @@ execução a 6 minutos):
   planilha **Arquivo Faltantes AAAA-MM** (pasta **Faltantes – Arquivo**). Nada é apagado de vez: isso evita estourar o limite
   de 10 milhões de células do Google.
 - O app lê a planilha sozinho (a aba Faltante Aduana se atualiza a cada 5 min). Não precisa fazer mais nada.
+- **Histórico (desde 23/11/2026):** a aba Histórico da Base SSP53 guarda só os **últimos 15 dias**. Toda madrugada (4h,
+  `arquivarHistoricoAntigo`) as linhas mais velhas vão para a planilha **Arquivo Histórico AAAA-MM (1ª quinzena)** ou
+  **(2ª quinzena)**, na pasta **Faltantes – Arquivo**. Cada quinzena tem uma planilha própria (um mês inteiro não cabe numa
+  planilha só). Se não der tempo numa rodada, ele continua sozinho 1 minuto depois; só apaga da Base SSP53 depois de copiar tudo.
+  O importador do Histórico não traz de volta linhas com mais de 15 dias.
+- **O painel não perde nada:** a lista de dias do Faltante Aduana vem da aba Aduana, que também guarda 15 dias, então todo dia que
+  aparece no painel ainda tem o Histórico completo. O período (De/Até) usa a aba **Resumo diário**, que guarda todos os dias.
+- **Base Inventário não é apagada:** guarda tudo desde 01/11/2026 (são poucas linhas).
 
 ## Instalação (uma vez só)
 O Apps Script pode estar em inglês: os botões estão em inglês com a tradução entre parênteses.
