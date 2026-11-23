@@ -5,7 +5,7 @@
    ========================================================== */
 
 (function () {
-  const ABAS = ['painel', 'gemba', 'torre', 'faltantes', 'pokayoke', 'eficacia', 'cronograma', 'planoacao', 'colaboradores', 'pel', 'permissoes'];
+  const ABAS = ['painel', 'gemba', 'faltantes', 'pokayoke', 'eficacia', 'cronograma', 'planoacao', 'colaboradores', 'pel', 'permissoes'];
   const PADRAO = 'painel';
   const TITULO_SITE = 'Gestão de Processo e Qualidade · Mirassol SSP53';
 

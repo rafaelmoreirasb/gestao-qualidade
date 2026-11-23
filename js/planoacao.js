@@ -15,6 +15,8 @@
 (function () {
   const $ = (id) => document.getElementById(id);
   const CAMPOS = 'id, o_que, por_que, onde, quem, quando, como, quanto, origem, status';
+  // 'Torre de Aduana' continua valendo para as ações antigas, mas não aparece
+  // mais para escolher (Torre desativada em 23/11/2026).
   const ORIGENS = ['Gemba', 'Torre de Aduana', 'Poka-Yoke'];
   const STATUS = ['Não iniciada', 'Em andamento', 'Concluída'];
   const FILTROS = [['abertas', 'Abertas'], ['atrasadas', 'Atrasadas'], ['concluidas', 'Concluídas'], ['todas', 'Todas']];
@@ -179,7 +181,21 @@
     preencherOnde();
   }
 
+  // Ação antiga com origem que não aparece mais na lista (ex.: Torre de Aduana):
+  // ao alterar, a opção volta só para essa ação, para a origem não mudar sozinha.
+  function origemNaLista(origem) {
+    const sel = $('plano-origem');
+    sel.querySelectorAll('option[data-antiga]').forEach((o) => o.remove());
+    if (!origem || Array.from(sel.options).some((o) => o.value === origem)) return;
+    const o = document.createElement('option');
+    o.value = origem;
+    o.textContent = origem;
+    o.dataset.antiga = '1';
+    sel.appendChild(o);
+  }
+
   function limparForm() {
+    origemNaLista('');
     ['plano-oque', 'plano-porque', 'plano-quem', 'plano-quando', 'plano-como', 'plano-quanto'].forEach((id) => { $(id).value = ''; });
     preencherOnde('');
     // Origem continua a última escolhida (ajuda quando lança várias da mesma origem)
@@ -213,6 +229,7 @@
     $('plano-quando').value = a.quando;
     $('plano-como').value = a.como;
     $('plano-quanto').value = a.quanto;
+    origemNaLista(a.origem);
     $('plano-origem').value = a.origem;
     preencherOnde(a.onde);
     mostrarMsg('plano-msg-form', '');
