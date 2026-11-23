@@ -170,11 +170,34 @@
   .track .fill + .fill { border-left: 1px solid var(--branco); }
   .bars .row .t .sub { white-space: normal; }
   table.tr tr.off td { opacity: .55; } table.tr td.n { text-align: right; font-family: var(--f-mono); font-weight: 700; }
+  /* Indicadores do topo (21/11): total, rosca Sorting × Volumoso e "quem errou" */
+  .indic { display: grid; grid-template-columns: minmax(180px, 0.8fr) minmax(300px, 1.4fr) minmax(260px, 1.2fr); gap: 12px; }
+  .indic .card { gap: 10px; padding: 16px 18px; }
+  .indic h3 { margin: 0; font-size: 13px; font-weight: 500; color: var(--cinza-texto); }
+  .indic .grande { font-family: var(--f-mono); font-size: 44px; font-weight: 700; line-height: 1.1; }
+  .rosca { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  .rosca svg { flex: none; }
+  .rosca .meio-n { font-family: var(--f-mono); font-size: 26px; font-weight: 700; fill: var(--preto); }
+  .rosca .meio-t { font-size: 11px; fill: var(--cinza-texto); }
+  .legenda { display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+  .legenda .it { display: grid; grid-template-columns: 14px auto auto; gap: 8px; align-items: center; }
+  .legenda .q { width: 14px; height: 14px; border-radius: 3px; }
+  .legenda b { font-family: var(--f-mono); }
+  .quem .lin { display: grid; grid-template-columns: 6.5rem 1fr 3rem; gap: 8px; align-items: center; font-size: 14px; }
+  .quem .track { height: 10px; border-radius: 5px; background: var(--cinza-linha); }
+  .quem .n { font-family: var(--f-mono); text-align: right; color: var(--cinza-apagado); }
+  details.card > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; }
+  details.card > summary::-webkit-details-marker { display: none; }
+  details.card > summary::before { content: '▸'; font-size: 16px; transition: transform .15s; }
+  details.card[open] > summary::before { transform: rotate(90deg); }
+  details.card > summary h2 { margin: 0; }
+  details.card > summary .sub { font-size: 13px; color: var(--cinza-texto); font-weight: 400; }
+  @media (max-width: 1000px) { .indic { grid-template-columns: 1fr 1fr; } .indic .quem-card { grid-column: 1 / -1; } }
   @media (max-width: 700px) {
     .row { grid-template-columns: minmax(0, 9rem) 1fr 2.6rem; } .tile .val { font-size: 26px; }
     .marca-logo { height: 32px; width: 113px; } .card { padding: 16px; } select { min-width: 0; width: 100%; }
     .controls label { flex: 1 1 100%; }
-    .duas { grid-template-columns: 1fr; }
+    .duas { grid-template-columns: 1fr; } .indic { grid-template-columns: 1fr; } .indic .grande { font-size: 36px; }
     .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tile { padding: 12px 14px; }
   }
 /* Fase 11: modo Ver (só consulta) */
@@ -207,16 +230,14 @@ body.so-ver .conflito button, body.so-ver #maisIlha, body.so-ver #copiarAnt { di
 
   <div class="controls" id="controlesFaltantes">
     <label>Período<select id="selModo" aria-label="Período" disabled>
-      <option value="dia">Um dia</option><option value="semana">Semana</option><option value="mes">Mês</option><option value="escolher">Escolher dias</option>
-    </select></label>
+      <option value="dia">Um dia</option><option value="periodo">Escolher período (de … até …)</option></select></label>
     <label id="lblDia">Dia analisado<select id="selDia" aria-label="Dia analisado"></select></label>
-    <label id="lblSemana" hidden>Semana<select id="selSemana" aria-label="Semana"></select></label>
-    <label id="lblMes" hidden>Mês<select id="selMes" aria-label="Mês"></select></label>
+    <label id="lblDe" hidden>De<input type="date" id="perDe" aria-label="Primeiro dia do período"></label>
+    <label id="lblAte" hidden>Até<input type="date" id="perAte" aria-label="Último dia do período"></label>
     <button id="btnVisto" type="button" title="Os bipes que você ainda não tinha visto ficam amarelos. Este botão marca todos como vistos.">Marcar bipes como vistos</button>
     <a id="lnkPlanilha" target="_blank" rel="noopener">Abrir a planilha ↗</a>
   </div>
 
-  <div id="escolhaDias" class="card escolha" hidden></div>
   <p id="msg" class="msg" role="status" hidden></p>
   <main id="conteudo" style="display:flex;flex-direction:column;gap:18px"></main>
   <footer id="rodape"></footer>
@@ -258,7 +279,7 @@ body.so-ver .conflito button, body.so-ver #maisIlha, body.so-ver #copiarAnt { di
 
   /* ---------- estado ---------- */
   const S = { dias: [], dia: null, pacotes: [], manual: {}, filtro: null, busca: '', vistosAntes: null, carregando: false, ultima: null, avisos: [], url: '', segundos: 0, regras: [], abaRegras: true, servidor: 1, soConflitos: false, tipo: (() => { try { return localStorage.getItem('pf-tipo') || 'todos'; } catch (e) { return 'todos'; } })(),
-    modo: 'dia', semana: '', mes: '', escolhidos: [], periodo: null, resp: null, buscaPer: '', diasResumo: [],
+    modo: 'dia', perDe: '', perAte: '', regrasAbertas: false, periodo: null, resp: null, buscaPer: '', diasResumo: [],
     aba: 'faltantes', respDia: '', respAba: null, respSeg: null, respLinhas: [], respErro: '' };
   const manualDe = (p) => S.manual[p.dia + '|' + p.id] || S.manual['*|' + p.id] || null;
   const resultado = (p) => { const m = manualDe(p); return m && m.classificacao ? m.classificacao : p.regra.resultado; };
@@ -372,59 +393,73 @@ body.so-ver .conflito button, body.so-ver #maisIlha, body.so-ver #copiarAnt { di
     }
   }
 
-  /* ---------- período (semana / mês / escolher dias) ---------- */
+  /* ---------- período (um dia ou de … até …) ---------- */
   const ehErroCont = (r) => /conteineriza/i.test(String(r || ''));
   const dataDe = (txt) => { const m = String(txt).match(/(\d{2})\/(\d{2})\/(\d{4})/); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null; };
   const dmyD = (d) => pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear();
-  const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
-  function segundaDe(d) { const x = new Date(d); const w = (x.getDay() + 6) % 7; x.setDate(x.getDate() - w); x.setHours(0, 0, 0, 0); return x; }
-  function opcoesPeriodo() {
-    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
-    const semanas = []; let s0 = segundaDe(hoje);
-    for (let i = 0; i < 10; i++) { const fim = new Date(s0); fim.setDate(fim.getDate() + 6); semanas.push({ ini: dmyD(s0), fim: dmyD(fim), rot: (i === 0 ? 'Esta semana · ' : '') + dmyD(s0).slice(0, 5) + ' a ' + dmyD(fim).slice(0, 5) }); s0 = new Date(s0); s0.setDate(s0.getDate() - 7); }
-    const meses = [];
-    for (let i = 0; i < 12; i++) { const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1); const fim = new Date(d.getFullYear(), d.getMonth() + 1, 0); meses.push({ ini: dmyD(d), fim: dmyD(fim), rot: MESES[d.getMonth()] + ' de ' + d.getFullYear() + (i === 0 ? ' (até hoje)' : '') }); }
-    return { semanas, meses };
-  }
+  /** Período (21/11): "Um dia" ou "Escolher período" com De/Até (qualquer dia, ex.: de quarta a quarta). */
   function desenharModo() {
     const nova = S.servidor >= 3;
     $('#selModo').disabled = !nova;
-    $('#selModo').title = nova ? '' : 'Atualize o Painel.gs para ver semana, mês e responsáveis';
+    $('#selModo').title = nova ? '' : 'Atualize o servidor do painel para ver o período';
+    if (S.modo !== 'dia' && S.modo !== 'periodo') S.modo = 'periodo';
+    $('#selModo').value = S.modo;
     $('#lblDia').hidden = S.modo !== 'dia';
-    $('#lblSemana').hidden = S.modo !== 'semana';
-    $('#lblMes').hidden = S.modo !== 'mes';
+    $('#lblDe').hidden = $('#lblAte').hidden = S.modo !== 'periodo';
     $('#btnVisto').hidden = S.modo !== 'dia';
-    const o = opcoesPeriodo();
-    if (!S.semana) S.semana = o.semanas[0].ini; if (!S.mes) S.mes = o.meses[0].ini;
-    $('#selSemana').innerHTML = o.semanas.map((w) => '<option value="' + w.ini + '"' + (w.ini === S.semana ? ' selected' : '') + '>' + esc(w.rot) + '</option>').join('');
-    $('#selMes').innerHTML = o.meses.map((m) => '<option value="' + m.ini + '"' + (m.ini === S.mes ? ' selected' : '') + '>' + esc(m.rot) + '</option>').join('');
-    const box = $('#escolhaDias');
-    box.hidden = S.modo !== 'escolher';
-    if (S.modo === 'escolher') {
-      const todos = [...new Set([...S.dias.map((d) => d.dia), ...S.diasResumo])].sort((a, b) => dataDe(b) - dataDe(a));
-      box.innerHTML = '<p class="note"><b>Marque os dias</b> que entram no indicador. <button type="button" class="chip" id="marcarTodos">Marcar todos</button> <button type="button" class="chip" id="desmarcar">Limpar</button></p><div class="dias">' +
-        todos.map((d) => '<label class="dia-cb"><input type="checkbox" value="' + d + '"' + (S.escolhidos.includes(d) ? ' checked' : '') + '> ' + d.slice(0, 5) + '</label>').join('') + '</div>';
-      box.querySelectorAll('input').forEach((cb) => { cb.onchange = () => { S.escolhidos = [...box.querySelectorAll('input:checked')].map((x) => x.value); atualizar(false); }; });
-      $('#marcarTodos').onclick = () => { S.escolhidos = todos.slice(); desenharModo(); atualizar(false); };
-      $('#desmarcar').onclick = () => { S.escolhidos = []; desenharModo(); render(); };
+    if (!S.perAte) { // começa nos últimos 7 dias até o dia mais recente com faltantes
+      const fim = dataDe((S.dias[0] && S.dias[0].dia) || S.dia) || new Date();
+      const ini = new Date(fim); ini.setDate(ini.getDate() - 6);
+      S.perDe = dmyD(ini); S.perAte = dmyD(fim);
     }
+    $('#perDe').value = isoDe(S.perDe); $('#perAte').value = isoDe(S.perAte);
+    $('#perAte').min = $('#perDe').value; $('#perDe').max = $('#perAte').value;
   }
   function intervalo() {
-    const o = opcoesPeriodo();
-    if (S.modo === 'semana') { const w = o.semanas.find((x) => x.ini === S.semana) || o.semanas[0]; return [w.ini, w.fim, w.rot]; }
-    if (S.modo === 'mes') { const m = o.meses.find((x) => x.ini === S.mes) || o.meses[0]; return [m.ini, m.fim, m.rot]; }
-    const ds = S.escolhidos.map(dataDe).filter(Boolean).sort((a, b) => a - b);
-    return ds.length ? [dmyD(ds[0]), dmyD(ds[ds.length - 1]), S.escolhidos.length + ' dias escolhidos'] : null;
+    let a = dataDe(S.perDe), b = dataDe(S.perAte);
+    if (!a || !b) return null;
+    if (a > b) [a, b] = [b, a];
+    const n = Math.round((b - a) / 86400000) + 1;
+    return [dmyD(a), dmyD(b), 'de ' + dmyD(a).slice(0, 5) + ' até ' + dmyD(b).slice(0, 5) + ' (' + n + ' dia' + (n === 1 ? '' : 's') + ')'];
   }
   async function carregarPeriodo() {
     const iv = intervalo();
-    if (!iv) { S.periodo = { linhas: [], rot: 'nenhum dia marcado', vazio: true }; return; }
+    if (!iv) { S.periodo = { linhas: [], rot: 'escolha o primeiro e o último dia', vazio: true }; return; }
     const r = JSON.parse(await chamar('painelResumoPeriodo', iv[0], iv[1]));
     S.diasResumo = Object.keys(r.diasNoResumo || {});
-    let linhas = r.linhas;
-    if (S.modo === 'escolher') linhas = linhas.filter((l) => S.escolhidos.includes(l.dia));
-    S.periodo = { linhas, rot: iv[2], ini: iv[0], fim: iv[1] };
+    S.periodo = { linhas: r.linhas, rot: iv[2], ini: iv[0], fim: iv[1] };
     S.geradoEm = new Date();
+  }
+
+  /* ---------- indicadores do topo (21/11): sempre aparecem, no dia e no período ---------- */
+  const COR_TIPO = { Sorting: '#4D4D4D', Volumoso: '#FFCC00', '': '#D9D9D9' };
+  /** Rosca: fatias por tipo e o total no meio. */
+  function rosca(partes, total) {
+    const R = 54, C = 2 * Math.PI * R; let acum = 0;
+    const arcos = total ? partes.filter((x) => x.n).map((x) => {
+      const comp = C * x.n / total;
+      const a = '<circle cx="70" cy="70" r="' + R + '" fill="none" stroke="' + x.cor + '" stroke-width="22" stroke-dasharray="' + comp + ' ' + (C - comp) + '" stroke-dashoffset="' + (-acum) + '" transform="rotate(-90 70 70)"><title>' + esc(x.nome + ': ' + fmt(x.n)) + '</title></circle>';
+      acum += comp; return a;
+    }).join('') : '<circle cx="70" cy="70" r="' + R + '" fill="none" stroke="#E0E0E0" stroke-width="22"/>';
+    return '<svg width="140" height="140" viewBox="0 0 140 140" role="img" aria-label="Total ' + total + ' faltantes">' + arcos +
+      '<text x="70" y="70" text-anchor="middle" class="meio-n">' + fmt(total) + '</text><text x="70" y="88" text-anchor="middle" class="meio-t">faltantes</text></svg>';
+  }
+  /** itens = pacotes do dia ou linhas do período (cada um com .tipo = Sorting / Volumoso / vazio). */
+  function indicadores(itens, rotulo) {
+    const total = itens.length;
+    const n = (t) => itens.filter((x) => (x.tipo || '') === t).length;
+    const partes = [{ nome: 'Sorting', n: n('Sorting'), cor: COR_TIPO.Sorting }, { nome: 'Volumoso', n: n('Volumoso'), cor: COR_TIPO.Volumoso }];
+    const semTipo = n(''); if (semTipo) partes.push({ nome: 'Sem tipo', n: semTipo, cor: COR_TIPO[''] });
+    const pct = (k) => total ? Math.round(100 * k / total) + '%' : '—';
+    const quem = ['DHL', 'Diaristas', 'Full'].map((t) => '<div class="lin"><span>' + t + '</span><span class="track"></span><span class="n">—</span></div>').join('');
+    return '<section class="indic" aria-label="Indicadores">' +
+      '<div class="card"><h3>Total de faltantes</h3><div class="grande">' + fmt(total) + '</div><div class="note">' + esc(rotulo) + '</div></div>' +
+      '<div class="card"><h3>Sorting × Volumoso</h3><div class="rosca">' + rosca(partes, total) + '<div class="legenda">' +
+        partes.map((x) => '<div class="it"><span class="q" style="background:' + x.cor + '"></span><span>' + esc(x.nome) + '</span><span><b>' + fmt(x.n) + '</b> · ' + pct(x.n) + '</span></div>').join('') +
+      '</div></div></div>' +
+      '<div class="card quem quem-card"><h3>Quem errou: DHL · Diaristas · Full</h3>' + quem +
+        '<p class="note">Aguardando definir como atribuir o erro a cada colaborador (a aba <b>Colaboradores</b> já tem a coluna <b>Tipo</b>: DHL, Full ou Diaristas).</p></div>' +
+    '</section>';
   }
   function barrasSimples(lista, max, cor, onde) {
     return '<div class="bars">' + lista.map((x) => '<button type="button" class="row"' + (x.dia ? ' data-dia="' + x.dia + '"' : '') + '><span class="t">' + esc(x.nome) + (x.sub ? '<span class="sub">' + esc(x.sub) + '</span>' : '') + '</span><span class="track">' +
@@ -460,11 +495,11 @@ body.so-ver .conflito button, body.so-ver #maisIlha, body.so-ver #copiarAnt { di
       .sort((a, b) => dataDe(b.dia) - dataDe(a.dia) || Number(ehErroCont(b.resultado)) - Number(ehErroCont(a.resultado)) || String(a.rota).localeCompare(String(b.rota)));
     const semDados = !L.length;
     const faltam = P.faltamNoResumo || 0;
-    m.innerHTML = chipsTipo(Ltodas) +
+    m.innerHTML = indicadores(Ltodas, 'no período ' + (P.rot || '')) + chipsTipo(Ltodas) +
       '<p class="lead">Período: <b>' + esc(P.rot || '') + '</b>' + (P.ini ? ' (' + esc(P.ini) + ' a ' + esc(P.fim) + ')' : '') + ' · <b>' + fmt(dias.length) + '</b> dia' + (dias.length === 1 ? '' : 's') + ' com dados. ' +
       'Os dados vêm da aba <b>Resumo diário</b> (o resultado final já considera a sua classificação manual). Clique num dia para abrir o detalhe com a linha do tempo.</p>' +
       (faltam ? '<p class="msg">Ainda faltam <b>' + fmt(faltam) + '</b> dia(s) para entrar no resumo; clique em <b>Atualizar agora</b> para completar.</p>' : '') +
-      (semDados ? '<p class="msg">Nenhum faltante neste período na aba Resumo diário. ' + (P.vazio ? 'Marque pelo menos um dia.' : 'O resumo começa nos dias que estavam na planilha quando o painel foi atualizado.') + '</p>' : '') +
+      (semDados ? '<p class="msg">Nenhum faltante neste período na aba Resumo diário. ' + (P.vazio ? 'Escolha o primeiro e o último dia.' : 'O resumo começa nos dias que estavam na planilha quando o painel foi atualizado.') + '</p>' : '') +
       '<section class="tiles">' +
         tile('Faltantes', L.length, 'no período') +
         tile('Média por dia', dias.length ? Math.round(L.length / dias.length) : 0, 'faltantes por dia com dados') +
@@ -513,7 +548,7 @@ body.so-ver .conflito button, body.so-ver #maisIlha, body.so-ver #copiarAnt { di
 
   /** Aba Faltantes: só o resumo dos erros de conteinerização do dia por responsável (o preenchimento fica na aba Responsáveis). */
   function cartaoResponsaveis() {
-    if (S.servidor < 3) return '<p class="note">Para ver o indicador de semana/mês e os responsáveis por ilha, atualize o servidor do painel (api/faltantes.js).</p>';
+    if (S.servidor < 3) return '<p class="note">Para ver o período e os responsáveis por ilha, atualize o servidor do painel (api/faltantes.js).</p>';
     if (!S.resp) return '';
     const erros = S.pacotes.filter((p) => doTipo(p) && cobravel(p) && ehErroCont(resultado(p)));
     const porResp = new Map(); erros.forEach((p) => { const k = respDe(p) || 'Sem responsável cadastrado'; if (!porResp.has(k)) porResp.set(k, []); porResp.get(k).push(p); });
@@ -630,7 +665,7 @@ body.so-ver .conflito button, body.so-ver #maisIlha, body.so-ver #copiarAnt { di
     S.aba = aba === 'responsaveis' ? 'responsaveis' : 'faltantes';
     document.querySelectorAll('#menu a').forEach((a) => a.setAttribute('aria-current', a.dataset.aba === S.aba ? 'page' : 'false'));
     $('#controlesFaltantes').hidden = S.aba !== 'faltantes';
-    if (S.aba !== 'faltantes') $('#escolhaDias').hidden = true; else desenharModo();
+    if (S.aba === 'faltantes') desenharModo();
     if (S.aba === 'responsaveis' && S.dia && !S.respDia) S.respDia = dmyD(new Date());
     $('#conteudo').innerHTML = '';
     atualizar(false);
@@ -667,6 +702,7 @@ body.so-ver .conflito button, body.so-ver #maisIlha, body.so-ver #copiarAnt { di
     $('#lista-res').innerHTML = [...new Set([...SUGESTOES, ...Object.values(S.manual).map((v) => v.classificacao).filter(Boolean)])].map((s) => '<option value="' + esc(s) + '">').join('');
     m.innerHTML = (S.avisos.length ? '<p class="msg err">Atenção: ' + esc(S.avisos.join(' · ')) + '</p>' : '') +
       (nConf ? '<div class="msg err aviso-conflito"><b>' + fmt(nConf) + (nConf > 1 ? ' pacotes têm' : ' pacote tem') + ' conflito entre a sua classificação e uma regra.</b> Para cada um, escolha qual manter. <button type="button" id="btnConflitos">' + (S.soConflitos ? 'Mostrar todos' : 'Mostrar só os conflitos') + '</button></div>' : '') +
+      indicadores(S.pacotes, 'em ' + S.dia) +
       chipsTipo(S.pacotes) +
       '<p class="lead">Em <b>' + esc(S.dia) + '</b> a aduana teve <b>' + fmt(ps.length) + '</b> pacotes faltantes' + (S.tipo && S.tipo !== 'todos' && temTipo(S.pacotes) ? ' (' + esc(S.tipo) + ')' : '') + '. A linha do tempo de cada um começa no <b>sorting</b> (primeiro bipe do pacote no dia na aba Histórico) e vai até ' + CONFIG.JANELA_HORAS + ' h depois; passado esse prazo, não entra mais nada.' +
       (nSem ? ' <b>' + fmt(nSem) + '</b> não tiveram bipe no Histórico no dia (a linha do tempo começa à 00:00).' : '') +
@@ -684,13 +720,13 @@ body.so-ver .conflito button, body.so-ver #maisIlha, body.so-ver #copiarAnt { di
         lista.map(([r, n]) => '<button type="button" class="row' + (S.filtro && norm(S.filtro) === norm(r) ? ' sel' : S.filtro ? ' dim' : '') + '" data-r="' + esc(r) + '"><span class="t">' + esc(r) + '</span><span class="track"><span class="fill" style="display:block;width:' + (100 * n / max) + '%;background:' + COR(r) + '"></span></span><span class="n">' + fmt(n) + '</span></button>').join('') +
       '</div></section>' +
       cartaoResponsaveis() +
-      cartaoRegras() +
       '<section class="card" id="tabela"><div class="tools"><h2>Pacote a pacote</h2><input id="busca" type="search" placeholder="Buscar shipment, rota, rep…" value="' + esc(S.busca) + '" aria-label="Buscar"></div>' +
         '<p class="note">Mostrando <b>' + esc(S.soConflitos ? 'só os conflitos' : (S.filtro || 'todos os resultados')) + '</b> · ' + fmt(visiveis.length) + ' pacotes' + (S.filtro ? ' · <button type="button" class="chip" id="limpar">Mostrar todos</button>' : '') +
         ' · Bipes em <span style="background:var(--new-bg);color:var(--new-fg);padding:0 4px;border-radius:3px">amarelo</span> são novos desde a sua última visita. Nas duas últimas colunas você classifica: salva sozinho ao sair do campo.</p>' +
         '<div class="scroll"><table><thead><tr><th>Shipment</th><th>Rota · aduana</th><th>Resultado</th><th>Linha do tempo (sorting + ' + CONFIG.JANELA_HORAS + ' h)</th><th class="ed">Sua classificação</th></tr></thead><tbody>' +
         (visiveis.length ? visiveis.map(linhaPacote).join('') : '<tr><td colspan="5" class="empty">Nenhum pacote.</td></tr>') +
-        '</tbody></table></div></section>';
+        '</tbody></table></div></section>' +
+      cartaoRegras();
 
     ligarTipos(m);
     m.querySelectorAll('.row').forEach((b) => b.onclick = () => { S.filtro = S.filtro && norm(S.filtro) === norm(b.dataset.r) ? null : b.dataset.r; render(); if (S.filtro) $('#tabela').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
@@ -704,6 +740,7 @@ body.so-ver .conflito button, body.so-ver #maisIlha, body.so-ver #copiarAnt { di
     m.querySelectorAll('[data-campo]').forEach((el) => {
       el.onchange = () => { const p = porId.get(el.dataset.id); salvar(p, el.dataset.campo, el.value.trim(), document.getElementById('st-' + el.dataset.campo + '-' + p.id)); };
     });
+    const dr = $('#regras'); if (dr) dr.ontoggle = () => { S.regrasAbertas = dr.open; };
     const ir = $('#irResp'); if (ir) ir.onclick = (e) => { e.preventDefault(); S.respDia = S.dia; trocarAba('responsaveis'); };
     if (aid) { const el = document.getElementById(aid); if (el) { if (aval != null && el.value !== aval) el.value = aval; el.focus(); try { if (apos != null) el.setSelectionRange(apos, apos); } catch (e) {} } }
   }
@@ -719,9 +756,11 @@ body.so-ver .conflito button, body.so-ver #maisIlha, body.so-ver #copiarAnt { di
     const linhas = S.regras.map((r) => '<tr' + (r.ligada && r.temLogica ? '' : ' class="off"') + '><td class="mono">' + esc(r.ordem || '') + '</td><td class="mono">' + esc(r.codigo) + '</td><td>' + esc(r.pergunta) +
       (r.observacao ? '<span class="sub">' + esc(r.observacao) + '</span>' : '') + '</td><td>' + esc(r.resultado) + '</td><td>' + (r.ligada ? 'Sim' : 'Não') +
       (r.temLogica ? '' : '<span class="sub st err">sem lógica ainda — pedir ao Claude</span>') + '</td><td class="n">' + fmt(cont[r.codigo] || 0) + '</td></tr>').join('');
-    return '<section class="card" id="regras"><h2>Regras em uso</h2><p class="note">' + nota + '</p>' +
+    const nRegras = S.regras.filter((r) => r.ligada).length;
+    // fica no fim da página e fechada; abre na setinha (21/11)
+    return '<details class="card" id="regras"' + (S.regrasAbertas ? ' open' : '') + '><summary><h2>Regras em uso</h2><span class="sub">' + fmt(nRegras) + ' regra' + (nRegras === 1 ? '' : 's') + ' ligada' + (nRegras === 1 ? '' : 's') + ' · clique para ver</span></summary><p class="note">' + nota + '</p>' +
       (S.regras.length ? '<div class="scroll"><table class="tr"><thead><tr><th>Ordem</th><th>Código</th><th>Pergunta (se SIM, para aqui)</th><th>Resultado</th><th>Ligada</th><th>Pacotes hoje</th></tr></thead><tbody>' + linhas + '</tbody></table></div>'
-        : '<p class="note">Nenhuma regra cadastrada ainda — todos os faltantes ficam como Regra em aberto até você classificar.</p>') + '</section>';
+        : '<p class="note">Nenhuma regra cadastrada ainda — todos os faltantes ficam como Regra em aberto até você classificar.</p>') + '</details>';
   }
 
   function tile(lbl, val, sub, cls) { return '<div class="tile ' + (cls || '') + '"><div class="lbl">' + esc(lbl) + '</div><div class="val">' + fmt(val) + '</div><div class="sub">' + esc(sub) + '</div></div>'; }
@@ -765,9 +804,9 @@ body.so-ver .conflito button, body.so-ver #maisIlha, body.so-ver #copiarAnt { di
   $('#btnAtualizar').onclick = () => atualizar(true);
   $('#selDia').onchange = (e) => { salvarVistos(); S.dia = e.target.value; S.vistosAntes = null; S.filtro = null; S.pacotes = []; try { history.replaceState(null, '', '#' + encodeURIComponent(S.dia)); } catch (x) {} atualizar(false); };
   document.querySelectorAll('#menu a').forEach((a) => { a.onclick = (e) => { e.preventDefault(); if (a.dataset.aba !== S.aba) trocarAba(a.dataset.aba); }; });
-  $('#selModo').onchange = (e) => { S.modo = e.target.value; S.filtro = null; if (S.modo === 'escolher' && !S.escolhidos.length && S.dia) S.escolhidos = [S.dia]; desenharModo(); atualizar(false); };
-  $('#selSemana').onchange = (e) => { S.semana = e.target.value; atualizar(false); };
-  $('#selMes').onchange = (e) => { S.mes = e.target.value; atualizar(false); };
+  $('#selModo').onchange = (e) => { S.modo = e.target.value; S.filtro = null; desenharModo(); atualizar(false); };
+  const mudouPeriodo = () => { const a = dmyDeIso($('#perDe').value), b = dmyDeIso($('#perAte').value); if (!a || !b) return; S.perDe = a; S.perAte = b; desenharModo(); atualizar(false); };
+  $('#perDe').onchange = mudouPeriodo; $('#perAte').onchange = mudouPeriodo;
   $('#btnVisto').onclick = () => { salvarVistos(); S.vistosAntes = lerVistos(); render(); };
   addEventListener('pagehide', salvarVistos);
   document.addEventListener('visibilitychange', () => { if (document.hidden) salvarVistos(); else if (S.aba === 'faltantes') atualizar(false); });

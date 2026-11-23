@@ -197,7 +197,9 @@ classificação manual e os responsáveis por ilha também são gravados lá.
   - ou feita à mão nas duas últimas colunas, e a manual sempre vence a regra;
   - quando a classificação manual e uma regra discordam, o painel pergunta qual manter.
 - **Volumoso × Sorting**: o pacote é Volumoso se o ID está na aba One Bipe. Há botões de filtro e uma etiqueta em cada pacote.
-- **Período**: Um dia · Semana · Mês · Escolher dias, com dados da aba `Resumo diário`.
+- **Período** (desde 21/11/2026): **Um dia** ou **Escolher período** com **De** e **Até** (qualquer dia, ex.: de quarta a quarta), com dados da aba `Resumo diário`. Começa nos últimos 7 dias até o dia mais recente.
+- **Indicadores no topo** (sempre, no dia e no período, mudam com o filtro): **Total de faltantes**; rosca **Sorting × Volumoso** com o total no meio (e "Sem tipo" quando houver); **Quem errou: DHL · Diaristas · Full** (reservado: aguardando definir como atribuir o erro; a aba Colaboradores já tem a coluna Tipo).
+- **Regras em uso** fica no fim da página, fechada; abre na setinha. Os Responsáveis continuam onde estavam.
 - **Responsáveis por ilha**: sub-aba própria. Ilha = letra da rota. Quem tem erro de conteinerização em pacote Volumoso
   aparece como "cobrar: Nome".
 - **Atualiza sozinho quando a planilha recebe dados novos:** depois de importar (relatórios, Inventário, Histórico,
@@ -228,7 +230,7 @@ antiga. A lista completa de abas e colunas está em [`docs/faltante-aduana/conte
   - dia recente: 10 min;
   - dia antigo: 6 h;
   - nomes, responsáveis e One Bipe: 10 min.
-- Ao recalcular um dia, o servidor regrava as linhas desse dia na aba `Resumo diário`, que é a base da semana e do mês.
+- Ao recalcular um dia, o servidor regrava as linhas desse dia na aba `Resumo diário`, que é a base do período.
 
 ### Como ligar (uma vez só, nesta ordem)
 
@@ -271,7 +273,7 @@ antiga. A lista completa de abas e colunas está em [`docs/faltante-aduana/conte
    planilha, com o seu e-mail.
 5. Sub-aba **Responsáveis por ilha**: preencher uma ilha e conferir na aba **Responsáveis** da planilha. Testar "Copiar do dia
    anterior".
-6. Período **Semana** e **Mês**: aparecem os números, a evolução por dia e os rankings (só Volumoso).
+6. **Escolher período** (De/Até, ex.: de quarta a quarta): aparecem os indicadores do topo, a evolução por dia e os rankings (só Volumoso).
 7. No celular: a aba abre e não rola para o lado.
 8. Entrar com uma conta de **Analista**: a aba Faltante Aduana não aparece.
 
