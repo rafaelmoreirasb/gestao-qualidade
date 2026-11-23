@@ -202,7 +202,7 @@ classificação manual e os responsáveis por ilha também são gravados lá.
 - **Regras em uso** fica no fim da página, fechada; abre na setinha. Os Responsáveis continuam onde estavam.
 - **Responsáveis por ilha**: sub-aba própria. Ilha = letra da rota. Quem tem erro de conteinerização em pacote Volumoso
   aparece como "cobrar: Nome".
-  Desde 23/11/2026 tem também as **Funções do dia** (Bipagem, Indução, Tracionando, 5S e Gemba): 1 pessoa em cada, com
+  Desde 23/11/2026 tem também as **Funções do dia** (Bipagem, Indução, Tracionando, 5S, Gemba, PS, Assistente e Coordenador): 1 pessoa em cada, com
   **+ Acrescentar** para pôr mais. Ficam na mesma aba **Responsáveis** da planilha, com a "ilha" `F:FUNÇÃO:número`
   (ex.: `F:BIPAGEM:1`), e não entram na conta de erros por responsável. Ao lado de cada nome aparece **DHL**, **Diarista** ou
   **Full** (coluna Tipo da aba Colaboradores). O botão **📋 Copiar para o WhatsApp** copia o texto

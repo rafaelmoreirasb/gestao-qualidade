@@ -582,7 +582,8 @@ body.so-ver .conflito button, body.so-ver #maisIlha, body.so-ver #copiarAnt, bod
   const isoDe = (dmy) => { const d = dataDe(dmy); return d ? d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) : ''; };
   const dmyDeIso = (iso) => { const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; };
   /* Funções do dia (desde 23/11/2026): gravadas na mesma aba Responsáveis, com a "ilha" F:FUNÇÃO:número. */
-  const FUNCOES = [{ k: 'BIPAGEM', n: 'Bipagem' }, { k: 'INDUCAO', n: 'Indução' }, { k: 'TRACIONANDO', n: 'Tracionando' }, { k: '5S', n: '5S' }, { k: 'GEMBA', n: 'Gemba' }];
+  const FUNCOES = [{ k: 'BIPAGEM', n: 'Bipagem' }, { k: 'INDUCAO', n: 'Indução' }, { k: 'TRACIONANDO', n: 'Tracionando' }, { k: '5S', n: '5S' }, { k: 'GEMBA', n: 'Gemba' },
+    { k: 'PS', n: 'PS' }, { k: 'ASSISTENTE', n: 'Assistente' }, { k: 'COORDENADOR', n: 'Coordenador' }];
   const ehFuncao = (k) => /^F:/.test(k);
   const chaveFunc = (f, n) => 'F:' + f + ':' + n;
   function montarLinhas() {
