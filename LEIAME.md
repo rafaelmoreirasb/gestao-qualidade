@@ -202,6 +202,11 @@ classificação manual e os responsáveis por ilha também são gravados lá.
 - **Regras em uso** fica no fim da página, fechada; abre na setinha. Os Responsáveis continuam onde estavam.
 - **Responsáveis por ilha**: sub-aba própria. Ilha = letra da rota. Quem tem erro de conteinerização em pacote Volumoso
   aparece como "cobrar: Nome".
+  Desde 23/11/2026 tem também as **Funções do dia** (Bipagem, Indução, Tracionando, 5S e Gemba): 1 pessoa em cada, com
+  **+ Acrescentar** para pôr mais. Ficam na mesma aba **Responsáveis** da planilha, com a "ilha" `F:FUNÇÃO:número`
+  (ex.: `F:BIPAGEM:1`), e não entram na conta de erros por responsável. Ao lado de cada nome aparece **DHL**, **Diarista** ou
+  **Full** (coluna Tipo da aba Colaboradores). O botão **📋 Copiar para o WhatsApp** copia o texto
+  "*Layout Volumoso (dia)*" com as ilhas e as funções preenchidas. "Copiar do dia anterior" também copia as funções.
 - **Atualiza sozinho quando a planilha recebe dados novos:** depois de importar (relatórios, Inventário, Histórico,
   Direcionamento ou Torre), o Apps Script da Base SSP53 avisa o app (`relAvisarApp`, com a senha `FALTANTES_SEGREDO`); o app
   recalcula os 3 dias mais recentes e a tela aberta confere a cada 1 min se há versão nova e recarrega sozinha (os dados

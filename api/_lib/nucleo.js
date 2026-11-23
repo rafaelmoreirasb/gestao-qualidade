@@ -383,14 +383,15 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
   }
   async function responsaveis(dia) {
     if (!diaDe(dia)) throw new Error('Dia inválido.');
-    const [mapa, colab] = await Promise.all([mapaResponsaveis(), colaboradores()]);
+    const [mapa, colab, tipos] = await Promise.all([mapaResponsaveis(), colaboradores(), tiposColaboradores()]);
     const anteriores = Object.keys(mapa).filter((d) => lerDataHora(d) < lerDataHora(dia)).sort((a, b) => lerDataHora(b) - lerDataHora(a));
     const anterior = anteriores.length ? { dia: anteriores[0], mapa: mapa[anteriores[0]] } : null;
-    return { dia, ilhas: Object.keys(mapa[dia] || {}).sort(), mapa: mapa[dia] || {}, anterior, colaboradores: colab };
+    return { dia, ilhas: Object.keys(mapa[dia] || {}).sort(), mapa: mapa[dia] || {}, anterior, colaboradores: colab, tipos };
   }
   async function salvarResponsavel(dia, ilha, nome) {
     dia = diaDe(dia); ilha = String(ilha || '').trim().toUpperCase();
-    if (!dia || !/^[A-Z]+$/.test(ilha)) throw new Error('Dia ou ilha inválidos.');
+    // ilha = letra (A, B…); função = F:NOME:número (ex.: F:BIPAGEM:1), desde 23/11/2026
+    if (!dia || !/^([A-Z]+|F:[A-Z0-9]+:\d{1,2})$/.test(ilha)) throw new Error('Dia ou ilha inválidos.');
     if (!(await P.existe(CFG.ABA_RESPONSAVEIS))) await P.criarAba(CFG.ABA_RESPONSAVEIS, CAB_RESP);
     const linha = [dia, ilha, String(nome || '').trim(), quem, agoraTxt()];
     const v = await lerTudo(CFG.ABA_RESPONSAVEIS, 2);
@@ -415,6 +416,21 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
     const lista = Object.keys(nomes).sort((a, b) => a.localeCompare(b, 'pt-BR'));
     await cache.gravar('colab', lista, 600);
     return lista;
+  }
+
+  /** Nome -> Tipo (DHL, Full, Diaristas) da aba Colaboradores. Lê só as colunas Nome e Tipo (não lê CPF). */
+  async function tiposColaboradores() {
+    const c = await cache.ler('colab:tipo');
+    if (c) return c;
+    const t = {};
+    if (await P.existe(CFG.ABA_COLABORADORES)) {
+      const v = await P.ler(CFG.ABA_COLABORADORES, 'A1:Z');
+      const cab = (v[0] || []).map((x) => cel(x).trim().toLowerCase());
+      const cN = cab.findIndex((x) => /nome/.test(x)), cT = cab.indexOf('tipo');
+      if (cN >= 0 && cT >= 0) v.slice(1).forEach((r) => { const n = cel((r || [])[cN]).trim(), x = cel((r || [])[cT]).trim(); if (n && x && !t[n]) t[n] = x; });
+    }
+    await cache.gravar('colab:tipo', t, 600);
+    return t;
   }
 
   /* ---------- Volumoso × Sorting (aba One Bipe) ---------- */
