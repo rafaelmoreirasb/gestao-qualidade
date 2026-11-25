@@ -199,6 +199,8 @@ classificação manual e os responsáveis por ilha também são gravados lá.
 - **Volumoso × Sorting**: o pacote é Volumoso se o ID está na aba One Bipe. Há botões de filtro e uma etiqueta em cada pacote.
 - **Período** (desde 21/11/2026): **Um dia** ou **Escolher período** com **De** e **Até** (qualquer dia, ex.: de quarta a quarta), com dados da aba `Resumo diário`. Começa nos últimos 7 dias até o dia mais recente.
 - **Indicadores no topo** (sempre, no dia e no período, mudam com o filtro): **Total de faltantes**; rosca **Sorting × Volumoso** com o total no meio (e "Sem tipo" quando houver); **Quem errou: DHL · Diaristas · Full** (reservado: aguardando definir como atribuir o erro; a aba Colaboradores já tem a coluna Tipo).
+- **Pacote a pacote › Resultado** (desde 25/11/2026): embaixo do resultado aparece só o número da regra (ex.: "Regra R07"); a
+  pergunta completa fica em Regras em uso.
 - **Pacote a pacote › Auditoria de carrinho** (desde 25/11/2026): Sim/Não (registro na aba Auditoria de Carrinho dentro da
   janela; se tiver mais de um, o mais recente), quem auditou (Rep auditoria), gaiola, estado e a conta daquela gaiola no dia com
   aquele auditor: quantos bipou Sorting e Volumoso (Correto ou A mais; tipo pela aba One Bipe) e quantos ficaram sem bipar

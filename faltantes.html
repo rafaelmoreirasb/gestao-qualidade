@@ -873,10 +873,11 @@ body.so-ver .conflito button, body.so-ver #maisIlha, body.so-ver #copiarAnt, bod
       '<span class="botoes"><button type="button" data-acao="manter" data-id="' + p.id + '">Manter a minha</button><button type="button" class="usar" data-acao="regra" data-id="' + p.id + '">Usar a regra</button></span><span class="st"></span></div>' : '';
     const concorda = temMan && p.regra.codigo && norm(p.regra.resultado) === norm(man.classificacao); // manual e regra dizem o mesmo
     const res = '<td class="res">' + esc(resultado(p)) + (temMan ? '<span class="pill man">manual</span>' : '') + (concorda ? '<span class="pill ok">regra ✓</span>' : '') + (conf ? '<span class="pill sem">conflito</span>' : '') + caixa +
-      (concorda ? '<span class="sub">' + esc(p.regra.codigo) + ' concorda' + (p.regra.detalhe ? ' · ' + esc(p.regra.detalhe) : '') + '</span>' : '') +
+      (concorda ? '<span class="sub">Regra ' + esc(p.regra.codigo) + ' concorda</span>' : '') +
       (temMan && !conf && norm(p.regra.resultado) !== norm(man.classificacao) && !/em aberto/i.test(p.regra.resultado) ? '<span class="sub">Regra: ' + esc(p.regra.resultado) + ' (você decidiu manter a sua' + (S.servidor >= 2 ? '' : ' — salvo só neste navegador') + ')</span>' : '') +
-      (!temMan && p.regra.regra ? '<span class="sub">' + esc(p.regra.regra) + '</span>' : '') +
-      (!temMan && p.regra.detalhe ? '<span class="sub">' + esc(p.regra.detalhe) + '</span>' : '') +
+      // embaixo do resultado: só o número da regra (25/11); a pergunta completa fica em "Regras em uso"
+      (!temMan && p.regra.codigo ? '<span class="sub">Regra ' + esc(p.regra.codigo) + '</span>' : '') +
+      (!temMan && !p.regra.codigo && p.regra.detalhe ? '<span class="sub">' + esc(p.regra.detalhe) + '</span>' : '') +
       (temMan && man.quem ? '<span class="sub">por ' + esc(man.quem) + '</span>' : '') + '</td>';
     const tl = p.eventos.length ? '<ol>' + p.eventos.map((e) => '<li class="' + (ehNovo(p, e) ? 'novo ' : '') + (e === p.ancora ? 'ancora' : '') + '"><span class="q">' + curto(e.quando) + '</span><span class="src ' + e.fonte + '">' + esc(NOMES[e.fonte] || e.fonte) + '</span><span>' + (e === p.ancora ? '<span class="pill ini">início</span> ' : '') + esc(e.texto) + '</span></li>').join('') + '</ol>' : '<span class="sub">Nenhum registro na janela.</span>';
     const ed = '<td class="ed"><input type="text" id="c-' + p.id + '" data-id="' + p.id + '" data-campo="classificacao" list="lista-res" placeholder="Escolha ou escreva" value="' + esc(man.classificacao || '') + '" aria-label="Classificação de ' + p.id + '"><span class="st" id="st-classificacao-' + p.id + '"></span>' +
