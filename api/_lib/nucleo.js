@@ -327,6 +327,22 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
     return { ok: true, quem: linha[4], regraConferida: linha[5] };
   }
 
+  /** Rota inteira (25/11/2026): grava a mesma classificação em vários pacotes do dia, numa gravação só.
+      Pacote que já tem classificação sua no dia é PULADO (não troca). */
+  async function salvarClassificacaoLote(dia, ids, classificacao, raciocinio) {
+    dia = diaDe(dia); classificacao = String(classificacao || '').trim();
+    if (!dia || !classificacao) throw new Error('Dia ou classificação inválidos.');
+    ids = [...new Set((Array.isArray(ids) ? ids : []).map((x) => String(x).trim()))];
+    if (!ids.length || ids.length > 3000 || ids.some((x) => !/^\d+$/.test(x))) throw new Error('Lista de pacotes inválida.');
+    if (!(await P.existe(CFG.ABA_MANUAL))) await P.criarAba(CFG.ABA_MANUAL, CAB_MANUAL);
+    const ja = new Set();
+    for (const r of await lerTudo(CFG.ABA_MANUAL, 6)) if (diaDe(r[0]) === dia && r[2].trim()) ja.add(r[1].trim());
+    const novos = ids.filter((id) => !ja.has(id));
+    const linhas = novos.map((id) => [dia, id, classificacao, String(raciocinio || '').trim(), quem, '']);
+    if (linhas.length) await P.anexar(CFG.ABA_MANUAL, linhas);
+    return { gravados: novos, pulados: ids.length - novos.length, quem };
+  }
+
   /* ---------- regras rodando no servidor (mesmo arquivo da tela) ---------- */
   let _motor = null;
   function motorRegras() {
@@ -525,6 +541,7 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
       return JSON.stringify({ servidor: 5, dados: d, manual, regras, url: P.url });
     },
     painelSalvarClassificacao: salvarClassificacao,
+    painelSalvarClassificacaoLote: salvarClassificacaoLote,
     painelResumoPeriodo: async (ini, fim) => JSON.stringify(await resumoPeriodo(ini, fim)),
     painelResponsaveis: async (dia) => JSON.stringify(await responsaveis(dia)),
     painelSalvarResponsavel: salvarResponsavel,

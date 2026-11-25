@@ -33,14 +33,14 @@ function segredoConfere(recebido) {
 
 // Fase 11: o Administrador marca, para cada conta, a aba em Ver ou Editar (pel_perfis.abas)
 const PAPEIS_COM_ABAS = ['usuario', 'analista', 'gestao'];
-const FUNCOES_QUE_GRAVAM = ['painelSalvarClassificacao', 'painelSalvarResponsavel', 'painelPreencherResumo', 'painelCriarAbaRegras'];
+const FUNCOES_QUE_GRAVAM = ['painelSalvarClassificacao', 'painelSalvarClassificacaoLote', 'painelSalvarResponsavel', 'painelPreencherResumo', 'painelCriarAbaRegras'];
 function nivelFaltantes(usuario) {
   if (usuario.papel === 'admin') return 'editar';
   if (!PAPEIS_COM_ABAS.includes(usuario.papel)) return null;
   const n = usuario.abas && usuario.abas.faltantes;
   return n === 'editar' || n === 'ver' ? n : null;
 }
-const FUNCOES = ['painelListarDias', 'painelVersao', 'painelDadosDoDia', 'painelSalvarClassificacao', 'painelResumoPeriodo',
+const FUNCOES = ['painelListarDias', 'painelVersao', 'painelDadosDoDia', 'painelSalvarClassificacao', 'painelSalvarClassificacaoLote', 'painelResumoPeriodo',
   'painelResponsaveis', 'painelSalvarResponsavel', 'painelPreencherResumo', 'painelCriarAbaRegras'];
 
 let regrasTexto = null;

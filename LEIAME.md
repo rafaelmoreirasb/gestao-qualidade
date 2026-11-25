@@ -199,6 +199,10 @@ classificação manual e os responsáveis por ilha também são gravados lá.
 - **Volumoso × Sorting**: o pacote é Volumoso se o ID está na aba One Bipe. Há botões de filtro e uma etiqueta em cada pacote.
 - **Período** (desde 21/11/2026): **Um dia** ou **Escolher período** com **De** e **Até** (qualquer dia, ex.: de quarta a quarta), com dados da aba `Resumo diário`. Começa nos últimos 7 dias até o dia mais recente.
 - **Indicadores no topo** (sempre, no dia e no período, mudam com o filtro): **Total de faltantes**; rosca **Sorting × Volumoso** com o total no meio (e "Sem tipo" quando houver); **Quem errou: DHL · Diaristas · Full** (reservado: aguardando definir como atribuir o erro; a aba Colaboradores já tem a coluna Tipo).
+- **Classificar rota inteira** (desde 25/11/2026): quadro acima da tabela Pacote a pacote. Escolha a rota (com a quantidade de
+  faltantes do dia), a classificação e o raciocínio e clique em Aplicar: todos os faltantes do dia daquela rota recebem a mesma
+  classificação na aba Classificação manual (uma linha por pacote, gravadas de uma vez). Pacote que você já classificou fica como
+  está. Quem só tem permissão de Ver não vê o quadro.
 - **Pacote a pacote › Resultado** (desde 25/11/2026): embaixo do resultado aparece só o número da regra (ex.: "Regra R07"); a
   pergunta completa fica em Regras em uso.
 - **Pacote a pacote › Auditoria de carrinho** (desde 25/11/2026): Sim/Não (registro na aba Auditoria de Carrinho dentro da

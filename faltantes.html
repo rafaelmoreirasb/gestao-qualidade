@@ -214,7 +214,7 @@
   }
 /* Fase 11: modo Ver (só consulta) */
 body.so-ver td.ed input, body.so-ver td.ed textarea, body.so-ver .linha-resp input, body.so-ver .linha-resp select { pointer-events: none; background: #F2F2F2; }
-body.so-ver .conflito button, body.so-ver #maisIlha, body.so-ver #copiarAnt, body.so-ver .mais-func { display: none; }
+body.so-ver .conflito button, body.so-ver #rotaInteira, body.so-ver #maisIlha, body.so-ver #copiarAnt, body.so-ver .mais-func { display: none; }
 </style>
 
 </head>
@@ -277,7 +277,7 @@ body.so-ver .conflito button, body.so-ver #maisIlha, body.so-ver #copiarAnt, bod
   // Fase 11: conta com a aba em "Ver" consulta tudo, mas não salva (o servidor confere também)
   const SO_VER = (() => { try { return typeof window.parent.gqPodeEditar === 'function' && !window.parent.gqPodeEditar('faltantes'); } catch (e) { return false; } })();
   if (SO_VER) document.body.classList.add('so-ver');
-  const GRAVA = ['painelSalvarClassificacao', 'painelSalvarResponsavel', 'painelPreencherResumo', 'painelCriarAbaRegras'];
+  const GRAVA = ['painelSalvarClassificacao', 'painelSalvarClassificacaoLote', 'painelSalvarResponsavel', 'painelPreencherResumo', 'painelCriarAbaRegras'];
   const chamar = async (fn, ...args) => {
     if (SO_VER && GRAVA.includes(fn)) throw new Error('sua conta só pode ver esta aba.');
     const cliente = window.parent && window.parent.gqSb;
@@ -819,6 +819,7 @@ body.so-ver .conflito button, body.so-ver #maisIlha, body.so-ver #copiarAnt, bod
         lista.map(([r, n]) => '<button type="button" class="row' + (S.filtro && norm(S.filtro) === norm(r) ? ' sel' : S.filtro ? ' dim' : '') + '" data-r="' + esc(r) + '"><span class="t">' + esc(r) + '</span><span class="track"><span class="fill" style="display:block;width:' + (100 * n / max) + '%;background:' + COR(r) + '"></span></span><span class="n">' + fmt(n) + '</span></button>').join('') +
       '</div></section>' +
       cartaoResponsaveis() +
+      cartaoRota(ps) +
       '<section class="card" id="tabela"><div class="tools"><h2>Pacote a pacote</h2><input id="busca" type="search" placeholder="Buscar shipment, rota, rep, auditor, gaiola…" value="' + esc(S.busca) + '" aria-label="Buscar"></div>' +
         '<p class="note">Mostrando <b>' + esc(S.soConflitos ? 'só os conflitos' : (S.filtro || 'todos os resultados')) + '</b> · ' + fmt(visiveis.length) + ' pacotes' + (S.filtro ? ' · <button type="button" class="chip" id="limpar">Mostrar todos</button>' : '') +
         ' · Bipes em <span style="background:var(--new-bg);color:var(--new-fg);padding:0 4px;border-radius:3px">amarelo</span> são novos desde a sua última visita. Nas duas últimas colunas você classifica: salva sozinho ao sair do campo.</p>' +
@@ -839,6 +840,7 @@ body.so-ver .conflito button, body.so-ver #maisIlha, body.so-ver #copiarAnt, bod
     m.querySelectorAll('[data-campo]').forEach((el) => {
       el.onchange = () => { const p = porId.get(el.dataset.id); salvar(p, el.dataset.campo, el.value.trim(), document.getElementById('st-' + el.dataset.campo + '-' + p.id)); };
     });
+    ligarRota(ps);
     const dr = $('#regras'); if (dr) dr.ontoggle = () => { S.regrasAbertas = dr.open; };
     const ir = $('#irResp'); if (ir) ir.onclick = (e) => { e.preventDefault(); S.respDia = S.dia; trocarAba('responsaveis'); };
     if (aid) { const el = document.getElementById(aid); if (el) { if (aval != null && el.value !== aval) el.value = aval; el.focus(); try { if (apos != null) el.setSelectionRange(apos, apos); } catch (e) {} } }
@@ -889,6 +891,57 @@ body.so-ver .conflito button, body.so-ver #maisIlha, body.so-ver #copiarAnt, bod
         (S.resp && cobravel(p) && ehErroCont(resultado(p)) && respDe(p) ? '<span class="pill sem" style="margin-left:0">cobrar: ' + esc(respDe(p)) + '</span>' : '') + (p.vezesFaltante > 1 ? '<span class="sub">faltante ' + p.vezesFaltante + 'x no dia</span>' : '') + '</td>' +
       celulaCarrinho(p) + res + '<td class="tl">' + tl + '</td>' + ed + '</tr>';
   }
+  /* ---------- classificar uma rota inteira (25/11/2026) ---------- */
+  // Grava a mesma classificação em todos os faltantes do dia daquela rota. Pacote que você já classificou fica como está.
+  function pacotesDaRota(rota) { return S.pacotes.filter((p) => p.rota === rota); }
+  function cartaoRota() {
+    const cont = new Map();
+    S.pacotes.forEach((p) => { if (p.rota) cont.set(p.rota, (cont.get(p.rota) || 0) + 1); });
+    if (!cont.size) return '';
+    const rotas = [...cont.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    const sel = S.rotaInteira && cont.has(S.rotaInteira.rota) ? S.rotaInteira : (S.rotaInteira = { rota: '', classificacao: '', raciocinio: '' });
+    const doRota = sel.rota ? pacotesDaRota(sel.rota) : [];
+    const ja = doRota.filter((p) => (manualDe(p) || {}).classificacao).length;
+    const vao = doRota.length - ja;
+    return '<section class="card" id="rotaInteira"><h2>Classificar rota inteira</h2>' +
+      '<p class="note">Quando um mesmo erro sobe muitos pacotes de uma rota, classifique todos de uma vez. Os pacotes que você já classificou ficam como estão. Depois dá para mudar qualquer pacote na tabela.</p>' +
+      '<div class="controls">' +
+        '<label>Rota<select id="rtRota"><option value="">— escolher —</option>' + rotas.map(([r, n]) => '<option value="' + esc(r) + '"' + (r === sel.rota ? ' selected' : '') + '>' + esc(r) + ' · ' + fmt(n) + ' faltante' + (n > 1 ? 's' : '') + '</option>').join('') + '</select></label>' +
+        '<label>Classificação<input type="text" id="rtClass" list="lista-res" placeholder="Escolha ou escreva" value="' + esc(sel.classificacao) + '"></label>' +
+        '<label style="flex:1;min-width:240px">Raciocínio<input type="text" id="rtRac" placeholder="O que aconteceu com a rota" value="' + esc(sel.raciocinio) + '"></label>' +
+        '<button type="button" id="rtAplicar"' + (sel.rota && sel.classificacao.trim() && vao ? '' : ' disabled') + '>' + (sel.rota ? 'Aplicar a ' + fmt(vao) + ' pacote' + (vao === 1 ? '' : 's') + ' da rota' : 'Aplicar a todos os pacotes da rota') + '</button>' +
+      '</div>' +
+      (sel.rota ? '<p class="note">' + fmt(doRota.length) + ' faltante' + (doRota.length === 1 ? '' : 's') + ' na rota ' + esc(sel.rota) + (ja ? ' · <b>' + fmt(ja) + '</b> já classificado' + (ja === 1 ? '' : 's') + ' por você (fica' + (ja === 1 ? '' : 'm') + ' como está' + (ja === 1 ? '' : 'ão') + ')' : '') + '.</p>' : '') +
+      '<p class="st" id="rtSt"></p></section>';
+  }
+  function ligarRota() {
+    const r = $('#rtRota'); if (!r) return;
+    const sel = S.rotaInteira;
+    r.onchange = () => { sel.rota = r.value; render(); };
+    $('#rtClass').oninput = (e) => { sel.classificacao = e.target.value; atualizarBotaoRota(); };
+    $('#rtRac').oninput = (e) => { sel.raciocinio = e.target.value; };
+    $('#rtAplicar').onclick = aplicarRota;
+  }
+  function atualizarBotaoRota() {
+    const sel = S.rotaInteira, b = $('#rtAplicar'); if (!b) return;
+    const vao = sel.rota ? pacotesDaRota(sel.rota).filter((p) => !(manualDe(p) || {}).classificacao).length : 0;
+    b.disabled = !(sel.rota && sel.classificacao.trim() && vao);
+  }
+  async function aplicarRota() {
+    const sel = S.rotaInteira, b = $('#rtAplicar'), st = $('#rtSt');
+    const alvo = pacotesDaRota(sel.rota).filter((p) => !(manualDe(p) || {}).classificacao);
+    if (!alvo.length || !sel.classificacao.trim()) return;
+    b.disabled = true; st.textContent = 'Salvando ' + fmt(alvo.length) + ' pacotes…'; st.classList.remove('err');
+    try {
+      const r = await chamar('painelSalvarClassificacaoLote', S.dia, alvo.map((p) => p.id), sel.classificacao.trim(), sel.raciocinio.trim());
+      (r.gravados || []).forEach((id) => { S.manual[S.dia + '|' + id] = { classificacao: sel.classificacao.trim(), raciocinio: sel.raciocinio.trim(), quem: r.quem, regraConferida: '' }; });
+      const msg = fmt((r.gravados || []).length) + ' pacote' + ((r.gravados || []).length === 1 ? '' : 's') + ' da rota ' + sel.rota + ' classificado' + ((r.gravados || []).length === 1 ? '' : 's') + ' como "' + sel.classificacao.trim() + '"' + (r.pulados ? ' · ' + fmt(r.pulados) + ' já tinha' + (r.pulados === 1 ? '' : 'm') + ' classificação e ficou como estava' : '') + '.';
+      S.rotaInteira = { rota: '', classificacao: '', raciocinio: '' };
+      render();
+      const s2 = $('#rtSt'); if (s2) s2.textContent = msg;
+    } catch (e) { b.disabled = false; st.textContent = 'Não salvou: ' + (e && e.message ? e.message : e); st.classList.add('err'); }
+  }
+
   /** Coluna "Auditoria de carrinho": Sim/Não, quem auditou e a conta da gaiola (aba Auditoria de Carrinho). */
   function celulaCarrinho(p) {
     if (!('carrinho' in p)) return '<td class="car"><span class="sub">—</span></td>'; // dado antigo, antes de recalcular
