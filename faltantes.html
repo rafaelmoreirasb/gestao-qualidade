@@ -836,7 +836,7 @@ body.so-ver .conflito button, body.so-ver #rotaInteira, body.so-ver #maisIlha, b
       cartaoRegras();
 
     ligarTipos(m);
-    m.querySelectorAll('.row').forEach((b) => b.onclick = () => { S.filtro = S.filtro && norm(S.filtro) === norm(b.dataset.r) ? null : b.dataset.r; render(); if (S.filtro) $('#tabela').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+    m.querySelectorAll('.row').forEach((b) => b.onclick = () => { S.filtro = S.filtro && norm(S.filtro) === norm(b.dataset.r) ? null : b.dataset.r; render(); if (S.filtro) { const alvo = $('#rotaInteira'); (alvo && alvo.offsetParent ? alvo : $('#tabela')).scrollIntoView({ behavior: 'smooth', block: 'start' }); } });
     const l = $('#limpar'); if (l) l.onclick = () => { S.filtro = null; S.soConflitos = false; render(); };
     const bc = $('#btnConflitos'); if (bc) bc.onclick = () => { S.soConflitos = !S.soConflitos; S.filtro = null; render(); $('#tabela').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
     m.querySelectorAll('[data-acao]').forEach((b) => { b.onclick = () => decidir(porIdC.get(b.dataset.id), b.dataset.acao, b); });
@@ -900,28 +900,43 @@ body.so-ver .conflito button, body.so-ver #rotaInteira, body.so-ver #maisIlha, b
   }
   /* ---------- classificar uma rota inteira (25/11/2026) ---------- */
   // Grava a mesma classificação em todos os faltantes do dia daquela rota. Pacote que você já classificou fica como está.
-  function pacotesDaRota(rota) { return S.pacotes.filter((p) => p.rota === rota); }
+  // Segue os mesmos filtros da tabela (25/11/2026): barra de "Resultado de cada faltante", Tipo e "só conflitos".
+  const noFiltroRota = (p) => doTipo(p) && (!S.soConflitos || conflito(p)) && (!S.filtro || norm(resultado(p)) === norm(S.filtro));
+  function pacotesDaRota(rota) { return S.pacotes.filter((p) => p.rota === rota && noFiltroRota(p)); }
+  function rotuloFiltroRota() {
+    const f = [];
+    if (S.soConflitos) f.push('só conflitos'); else if (S.filtro) f.push(S.filtro);
+    if (S.tipo && S.tipo !== 'todos' && temTipo(S.pacotes)) f.push(S.tipo);
+    return f.join(' · ');
+  }
   function cartaoRota() {
     const cont = new Map();
-    S.pacotes.forEach((p) => { if (p.rota) cont.set(p.rota, (cont.get(p.rota) || 0) + 1); });
-    if (!cont.size) return '';
+    S.pacotes.filter(noFiltroRota).forEach((p) => { if (p.rota) cont.set(p.rota, (cont.get(p.rota) || 0) + 1); });
+    const filtro = rotuloFiltroRota();
+    if (!cont.size && !filtro) return '';
     const rotas = [...cont.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-    const sel = S.rotaInteira && cont.has(S.rotaInteira.rota) ? S.rotaInteira : (S.rotaInteira = { rota: '', classificacao: '', raciocinio: '' });
+    const sel = S.rotaInteira || (S.rotaInteira = { rota: '', classificacao: '', raciocinio: '' });
+    if (sel.rota && !cont.has(sel.rota)) sel.rota = ''; // a rota escolhida não tem pacotes com o filtro novo
     const doRota = sel.rota ? pacotesDaRota(sel.rota) : [];
     const ja = doRota.filter((p) => (manualDe(p) || {}).classificacao).length;
     const vao = doRota.length - ja;
     return '<section class="card" id="rotaInteira"><h2>Classificar rota inteira</h2>' +
       '<p class="note">Quando um mesmo erro sobe muitos pacotes de uma rota, classifique todos de uma vez. Os pacotes que você já classificou ficam como estão. Depois dá para mudar qualquer pacote na tabela.</p>' +
+      '<p class="note">' + (filtro
+        ? 'Filtro: <b>' + esc(filtro) + '</b> — só os pacotes com esse filtro entram. <button type="button" class="chip" id="rtLimpar">Limpar filtro</button>'
+        : 'Sem filtro: entram todos os faltantes da rota. Clique numa barra de "Resultado de cada faltante" para classificar só aquele resultado.') + '</p>' +
+      (!cont.size ? '<p class="empty">Nenhum pacote com esse filtro.</p>' : '') +
       '<div class="controls">' +
         '<label>Rota<select id="rtRota"><option value="">— escolher —</option>' + rotas.map(([r, n]) => '<option value="' + esc(r) + '"' + (r === sel.rota ? ' selected' : '') + '>' + esc(r) + ' · ' + fmt(n) + ' faltante' + (n > 1 ? 's' : '') + '</option>').join('') + '</select></label>' +
         '<label>Classificação<input type="text" id="rtClass" list="lista-res" placeholder="Escolha ou escreva" value="' + esc(sel.classificacao) + '"></label>' +
         '<label style="flex:1;min-width:240px">Raciocínio<input type="text" id="rtRac" placeholder="O que aconteceu com a rota" value="' + esc(sel.raciocinio) + '"></label>' +
         '<button type="button" id="rtAplicar"' + (sel.rota && sel.classificacao.trim() && vao ? '' : ' disabled') + '>' + (sel.rota ? 'Aplicar a ' + fmt(vao) + ' pacote' + (vao === 1 ? '' : 's') + ' da rota' : 'Aplicar a todos os pacotes da rota') + '</button>' +
       '</div>' +
-      (sel.rota ? '<p class="note">' + fmt(doRota.length) + ' faltante' + (doRota.length === 1 ? '' : 's') + ' na rota ' + esc(sel.rota) + (ja ? ' · <b>' + fmt(ja) + '</b> já classificado' + (ja === 1 ? '' : 's') + ' por você (fica' + (ja === 1 ? '' : 'm') + ' como está' + (ja === 1 ? '' : 'ão') + ')' : '') + '.</p>' : '') +
+      (sel.rota ? '<p class="note">' + fmt(doRota.length) + ' faltante' + (doRota.length === 1 ? '' : 's') + (filtro ? ' (' + esc(filtro) + ')' : '') + ' na rota ' + esc(sel.rota) + (ja ? ' · <b>' + fmt(ja) + '</b> já classificado' + (ja === 1 ? '' : 's') + ' por você (fica' + (ja === 1 ? '' : 'm') + ' como está' + (ja === 1 ? '' : 'ão') + ')' : '') + '.</p>' : '') +
       '<p class="st" id="rtSt"></p></section>';
   }
   function ligarRota() {
+    const lf = $('#rtLimpar'); if (lf) lf.onclick = () => { S.filtro = null; S.soConflitos = false; S.tipo = 'todos'; try { localStorage.setItem('pf-tipo', S.tipo); } catch (e) {} render(); };
     const r = $('#rtRota'); if (!r) return;
     const sel = S.rotaInteira;
     r.onchange = () => { sel.rota = r.value; render(); };

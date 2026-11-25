@@ -202,7 +202,9 @@ classificação manual e os responsáveis por ilha também são gravados lá.
 - **Classificar rota inteira** (desde 25/11/2026): quadro acima da tabela Pacote a pacote. Escolha a rota (com a quantidade de
   faltantes do dia), a classificação e o raciocínio e clique em Aplicar: todos os faltantes do dia daquela rota recebem a mesma
   classificação na aba Classificação manual (uma linha por pacote, gravadas de uma vez). Pacote que você já classificou fica como
-  está. Quem só tem permissão de Ver não vê o quadro.
+  está. Quem só tem permissão de Ver não vê o quadro. Segue os filtros da tabela: ao clicar numa barra de "Resultado de cada
+  faltante" (e/ou no Tipo, ou em "só conflitos"), a lista de rotas e o Aplicar valem só para os pacotes com esse filtro; o quadro
+  mostra o filtro em uso e tem "Limpar filtro".
 - **Pacote a pacote › Resultado** (desde 25/11/2026): embaixo do resultado aparece só o número da regra (ex.: "Regra R07"); a
   pergunta completa fica em Regras em uso.
 - **Pacote a pacote › Auditoria de carrinho** (desde 25/11/2026): Sim/Não (registro na aba Auditoria de Carrinho dentro da
