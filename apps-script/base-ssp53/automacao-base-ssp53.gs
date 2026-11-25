@@ -1,6 +1,10 @@
 // =====================================================================
 //  AUTOMAÇÃO BASE SSP53 (conta pessoal) - tudo grava nesta planilha
-//  Histórico, Direcionamento Manual e Base Inventário: só linhas novas a cada 15 minutos
+//  Histórico e Direcionamento Manual: só linhas novas a cada 15 minutos
+//  Histórico: só os últimos 15 dias ficam aqui; o resto vai todo dia às 4h para "Arquivo Histórico AAAA-MM (quinzena)"
+//    (arquivarHistoricoAntigo, no importar-relatorios.gs). Linhas com mais de 15 dias não são importadas de novo.
+//  Base Inventário: cópia da aba BASE INVENTARIO da Base Mirassol Oficial, de 01/11/2026 em diante, a cada 1 hora
+//    (atualizarBaseInventario, desde 23/11/2026). CSV de inventário na pasta não é mais importado.
 //  Torre Aduana e One Bipe: espelho a cada 1 hora
 //  (o espelho do Inventário foi desligado em 17/11/2026: o painel usa a aba Base Inventário)
 //  Aduana, Auditoria de Carrinho e Problem Solving: arquivo importar-relatorios.gs (mesma pasta do Inventário)
@@ -42,11 +46,12 @@ function criarTodosGatilhos() {
   ['importarNovasLinhas', 'importarDirecionamento', 'importarBaseInventario']
     .forEach(f => ScriptApp.newTrigger(f).timeBased().everyMinutes(15).create());
   ScriptApp.newTrigger('importarRelatorios').timeBased().everyMinutes(5).create(); // importar-relatorios.gs
-  ['atualizarTorreAduana', 'atualizarOneBipe']
+  ['atualizarTorreAduana', 'atualizarOneBipe', 'atualizarBaseInventario']
     .forEach(f => ScriptApp.newTrigger(f).timeBased().everyHours(1).create());
+  ScriptApp.newTrigger('arquivarHistoricoAntigo').timeBased().everyDays(1).atHour(4).create(); // importar-relatorios.gs
   ScriptApp.newTrigger('arquivarRelatoriosAntigos').timeBased().everyDays(1).atHour(3).create(); // importar-relatorios.gs
   ScriptApp.newTrigger('atualizarColaboradores').timeBased().everyHours(1).create();   // colaboradores.gs
-  console.log('Gatilhos criados: Histórico, Direcionamento, Base Inventário a cada 15 min, Relatórios a cada 5 min, 2 espelhos (Torre e One Bipe) e Colaboradores a cada hora, arquivamento às 3h');
+  console.log('Gatilhos criados: Histórico, Direcionamento, Base Inventário a cada 15 min, Relatórios a cada 5 min, Torre, One Bipe, Base Inventário e Colaboradores a cada hora, arquivamento às 3h e Histórico às 4h');
 }
 
 // ---------- Espelho (a aba de destino fica igual à de origem) ----------
@@ -218,8 +223,11 @@ function importarNovasLinhas() {
     const agora = new Date();
     const vistos = {};
     const novas = [];
+    const limiteHist = histLimite();
     for (const linha of dados.slice(inicio)) {
       if (linha.every(c => c === '')) continue; // ignora linhas vazias
+      const dHist = histData(linha[0]);
+      if (dHist && dHist < limiteHist) continue; // mais de 15 dias: já foi (ou vai) para o arquivo, não traz de volta
       const k = chave(linha);
       vistos[k] = (vistos[k] || 0) + 1;
       if (vistos[k] > (existentes[k] || 0)) novas.push([...linha, agora, k]);
@@ -237,6 +245,16 @@ function importarNovasLinhas() {
     lock.releaseLock();
   }
   if (houveNovas) opAvisarApp('historico');
+}
+
+// Histórico: quantos dias ficam na Base SSP53 (o resto vai para o arquivo por quinzena)
+const HIST_DIAS = 15;
+function histLimite() { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - HIST_DIAS); return d; }
+/** "17/11/2026" (ou "17/11/2026 08:00") → Date; outro formato → null */
+function histData(v) {
+  if (v instanceof Date) return v;
+  const m = String(v || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  return m ? new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1])) : null;
 }
 
 function chave(linha) {
@@ -405,6 +423,8 @@ function importarBaseInventario() {
       }
       // A pasta também recebe Aduana, Carrinho e Problem Solving (importar-relatorios.gs): só pega o que é Inventário
       if (!binvEhInventario(conteudo[0] || [])) continue;
+      // Desde 23/11/2026 o inventário vem da Base Mirassol Oficial (atualizarBaseInventario): o CSV só sai da pasta
+      if (!BINV_IMPORTAR_CSV) { arquivo.moveTo(processados); console.log('Base Inventário: ' + arquivo.getName() + ' não importado (o inventário vem da Base Mirassol Oficial)'); continue; }
       const linhas = conteudo.slice(1).filter(l => l.some(c => String(c).trim() !== ''));
       const vistos = {};
       const novas = [];
@@ -438,6 +458,61 @@ function importarBaseInventario() {
 function binvEhInventario(cab) {
   const n = cab.map(c => String(c).normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase());
   return n.includes('pacote') && n.includes('data de escaneamento') && n.includes('situacao');
+}
+
+const BINV_IMPORTAR_CSV = false; // true = volta a importar o CSV de inventário da pasta (como de 17 a 23/11)
+
+// ---------- Base Inventário a partir da Base Mirassol Oficial (desde 23/11/2026) ----------
+const BINVM_ORIGEM_GID = 1547186020;                    // aba "BASE INVENTARIO" da Base Mirassol Oficial
+const BINVM_DESDE      = new Date(2026, 10, 1);          // 01/11/2026 (mês começa em 0: 10 = novembro)
+const BINVM_BLOCO      = 25000;
+
+/** A cada 1 hora: copia da BASE INVENTARIO (Base Mirassol) as linhas de 01/11/2026 em diante para a aba Base Inventário,
+    já nas colunas que o painel lê. Escreve por cima e só no fim apaga o que sobrou: a aba nunca fica vazia. */
+function atualizarBaseInventario() {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(60 * 1000)) { console.log('Base Inventário: outro script está gravando. Tento na próxima hora.'); return; }
+  let gravadas = 0;
+  try {
+    const origem = opAbaPorGid(SpreadsheetApp.openById(OP_MIRASSOL), BINVM_ORIGEM_GID);
+    const ultima = origem.getLastRow();
+    if (ultima < 2) { console.log('Base Inventário: origem vazia, destino mantido'); return; }
+    const cab = origem.getRange(1, 1, 1, origem.getLastColumn()).getDisplayValues()[0];
+    const col = (nome) => dirAcharColuna(cab, nome);
+    const cId = col('Shipment ID'), cDh = col('Data e Horario'), cSit = col('Situação'), cArea = col('Área'), cOp = col('Operador'),
+          cCom = col('Comentario'), cData = col('Data Reporte'), cHora = col('Horario');
+    // Lê só a coluna "Data Reporte" para achar onde começa 01/11 (a origem vem em ordem de data)
+    const datas = origem.getRange(2, cData + 1, ultima - 1, 1).getDisplayValues();
+    let primeira = datas.findIndex(([d]) => { const x = histData(d); return x && x >= BINVM_DESDE; });
+    if (primeira < 0) { console.log('Base Inventário: nenhuma linha desde 01/11 na origem'); return; }
+    const maxCol = Math.max(cId, cDh, cSit, cArea, cOp, cCom, cData, cHora) + 1;
+    const valores = origem.getRange(2 + primeira, 1, ultima - 1 - primeira, maxCol).getDisplayValues();
+    const quando = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm');
+    const linhas = [];
+    for (const r of valores) {
+      const d = histData(r[cData]);
+      if (!d || d < BINVM_DESDE || !String(r[cId]).trim()) continue;
+      linhas.push([r[cId], r[cDh], r[cSit], r[cArea], r[cOp], r[cCom], r[cData], String(r[cHora]).slice(0, 5), 'Base Mirassol Oficial', quando, '']);
+    }
+    if (!linhas.length) { console.log('Base Inventário: nada para gravar'); return; }
+    const destino = opAbaPorGid(SpreadsheetApp.openById(OP_DESTINO_ID), BINV_ABA_GID);
+    const total = linhas.length + 1;
+    if (destino.getMaxRows() < total) destino.insertRowsAfter(destino.getMaxRows(), total - destino.getMaxRows());
+    destino.getRange(1, 1, 1, BINV_CABECALHO.length).setValues([BINV_CABECALHO]);
+    for (let i = 0; i < linhas.length; i += BINVM_BLOCO) {
+      const parte = linhas.slice(i, i + BINVM_BLOCO);
+      const faixa = destino.getRange(2 + i, 1, parte.length, BINV_CABECALHO.length);
+      faixa.setNumberFormat('@'); // texto: a planilha não troca dia e mês
+      faixa.setValues(parte);
+    }
+    if (destino.getMaxRows() > total) destino.deleteRows(total + 1, destino.getMaxRows() - total); // sobras de antes
+    destino.setFrozenRows(1);
+    gravadas = linhas.length;
+    console.log('Base Inventário: ' + gravadas + ' linhas desde 01/11 copiadas da Base Mirassol Oficial');
+  } finally {
+    lock.releaseLock();
+  }
+  if (gravadas) opAvisarApp('inventario');
 }
 
 // Lê o CSV em UTF-8 (ou no formato do Excel em português, se tiver sido salvo pelo Excel)

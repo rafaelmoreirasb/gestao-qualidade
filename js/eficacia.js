@@ -14,7 +14,6 @@
      dias depois do treino. Erro no mesmo dia do treino não conta.
    - Passou dos 30 dias sem repetir = Eficaz. Antes disso = Em
      acompanhamento. Percentual = eficazes ÷ (eficazes + reincidiram).
-   - Torre de Aduana: pausada (ainda sem dados).
    Tabelas lidas: registros_gemba, colaboradores,
    pokayoke_treinos, pokayoke_erros.
    ========================================================== */
@@ -26,7 +25,7 @@
 
   const DIAS_ACOMPANHAMENTO = 30;
   const MAX_LINHAS = 500;
-  const ORIGENS = ['Todas', 'Gemba', 'Torre de Aduana', 'Poka-Yoke'];
+  const ORIGENS = ['Todas', 'Gemba', 'Poka-Yoke'];
   const FILTROS = [['todos', 'Todos'], ['bad', 'Reincidiram'], ['watch', 'Em acompanhamento'], ['ok', 'Eficazes']];
   const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 
@@ -248,11 +247,7 @@
   function desenharTudo() {
     botoes($('ef-origens'), ORIGENS.map((o) => [o, o]), est.origem, (o) => { est.origem = o; desenharTudo(); });
 
-    if (est.origem === 'Torre de Aduana') {
-      mostrarMsg('ef-aviso', 'Torre de Aduana pausada: ainda sem dados. Ela entra aqui quando a aba for liberada.', true);
-    } else {
-      mostrarMsg('ef-aviso', '');
-    }
+    mostrarMsg('ef-aviso', '');
 
     const lista = visiveis();
     desenharResumo(lista);

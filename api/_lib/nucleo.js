@@ -183,7 +183,7 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
   async function dadosDoDia(dia, forcar) {
     const D = lerDataHora(dia);
     if (!D) throw new Error('Dia inválido: ' + dia);
-    const chave = 'dia:' + dia + ':' + CFG.JANELA_HORAS + 'h'; // com a janela na chave: mudar a janela recalcula tudo
+    const chave = 'dia:' + dia + ':' + CFG.JANELA_HORAS + 'h:c1'; // com a janela na chave: mudar a janela recalcula tudo (c1 = com a conta do carrinho, 25/11)
     if (!forcar) { const c = await cache.ler(chave); if (c) return c; }
     const inicioProc = Date.now();
     const dias = Array.from({ length: CFG.DIAS_LEITURA }, (_, i) => somaDias(D, i));
@@ -204,6 +204,18 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
     const eventos = new Map([...falt.keys()].map((id) => [id, []]));
     const nomes = Object.keys(FONTES);
     const lidas = await Promise.all(nomes.map((fonte) => (fonte === 'aduana' ? ad : lerAba(fonte, FONTES[fonte].data ? dias : null))));
+    // Conta de cada gaiola (mesma gaiola, mesmo dia, mesmo auditor) na Auditoria de Carrinho:
+    // bipados (Correto / A mais) guardam os IDs (o tipo Volumoso × Sorting é posto depois, com a aba One Bipe); sem bipar = Faltante / Pendente.
+    const gaiolas = new Map();
+    const chaveGaiola = (o) => [String(o['Gaiola'] || '').trim(), diaDe(o['Data']), String(o['Rep auditoria'] || '').trim()].join('|');
+    lidas[nomes.indexOf('carrinho')].linhas.forEach((o) => {
+      const id = String(o['Shipment ID'] || '').trim();
+      if (!id || !String(o['Gaiola'] || '').trim()) return;
+      const k = chaveGaiola(o);
+      if (!gaiolas.has(k)) gaiolas.set(k, { bipados: new Set(), sem: new Set() });
+      const g = gaiolas.get(k);
+      (/^(faltante|pendente)/.test(norm(o['Estado'])) ? g.sem : g.bipados).add(id);
+    });
     nomes.forEach((fonte, k) => {
       const f = FONTES[fonte], r = lidas[k];
       if (r.aviso) avisos.push(r.aviso);
@@ -226,9 +238,17 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
       const sort = todos.find((e) => e.fonte === 'historico' && dmy(new Date(e.t)) === dia);
       const inicio = sort ? sort.t : D.getTime();
       const fim = inicio + CFG.JANELA_HORAS * 3600 * 1000;
-      pacotes.push({
+      const naJanela = todos.filter((e) => e.t >= inicio && e.t <= fim);
+      const car = naJanela.filter((e) => e.fonte === 'carrinho').pop(); // a mais recente na janela
+      let carrinho = null;
+      if (car) {
+        const o = car.dados, g = gaiolas.get(chaveGaiola(o));
+        carrinho = { auditor: String(o['Rep auditoria'] || '').trim(), gaiola: String(o['Gaiola'] || '').trim(), estado: String(o['Estado'] || '').trim(),
+          dia: diaDe(o['Data']), bipados: g ? [...g.bipados] : [], semBipar: g ? g.sem.size : 0 };
+      }
+      pacotes.push({ carrinho,
         id, dia, aduana: x.aduana, vezesFaltante: x.vezes, temSorting: !!sort, ancora: sort ? sort.chave : null,
-        inicio, fim, janelaFechada: Date.now() > fim, eventos: todos.filter((e) => e.t >= inicio && e.t <= fim),
+        inicio, fim, janelaFechada: Date.now() > fim, eventos: naJanela,
         rota: x.aduana['ID da rota'] || '', horaAduana: x.aduana['Hora'] || '', rep: x.aduana['Rep auditoria'] || '',
       });
     }
@@ -307,6 +327,22 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
     return { ok: true, quem: linha[4], regraConferida: linha[5] };
   }
 
+  /** Rota inteira (25/11/2026): grava a mesma classificação em vários pacotes do dia, numa gravação só.
+      Pacote que já tem classificação sua no dia é PULADO (não troca). */
+  async function salvarClassificacaoLote(dia, ids, classificacao, raciocinio) {
+    dia = diaDe(dia); classificacao = String(classificacao || '').trim();
+    if (!dia || !classificacao) throw new Error('Dia ou classificação inválidos.');
+    ids = [...new Set((Array.isArray(ids) ? ids : []).map((x) => String(x).trim()))];
+    if (!ids.length || ids.length > 3000 || ids.some((x) => !/^\d+$/.test(x))) throw new Error('Lista de pacotes inválida.');
+    if (!(await P.existe(CFG.ABA_MANUAL))) await P.criarAba(CFG.ABA_MANUAL, CAB_MANUAL);
+    const ja = new Set();
+    for (const r of await lerTudo(CFG.ABA_MANUAL, 6)) if (diaDe(r[0]) === dia && r[2].trim()) ja.add(r[1].trim());
+    const novos = ids.filter((id) => !ja.has(id));
+    const linhas = novos.map((id) => [dia, id, classificacao, String(raciocinio || '').trim(), quem, '']);
+    if (linhas.length) await P.anexar(CFG.ABA_MANUAL, linhas);
+    return { gravados: novos, pulados: ids.length - novos.length, quem };
+  }
+
   /* ---------- regras rodando no servidor (mesmo arquivo da tela) ---------- */
   let _motor = null;
   function motorRegras() {
@@ -383,14 +419,15 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
   }
   async function responsaveis(dia) {
     if (!diaDe(dia)) throw new Error('Dia inválido.');
-    const [mapa, colab] = await Promise.all([mapaResponsaveis(), colaboradores()]);
+    const [mapa, colab, tipos] = await Promise.all([mapaResponsaveis(), colaboradores(), tiposColaboradores()]);
     const anteriores = Object.keys(mapa).filter((d) => lerDataHora(d) < lerDataHora(dia)).sort((a, b) => lerDataHora(b) - lerDataHora(a));
     const anterior = anteriores.length ? { dia: anteriores[0], mapa: mapa[anteriores[0]] } : null;
-    return { dia, ilhas: Object.keys(mapa[dia] || {}).sort(), mapa: mapa[dia] || {}, anterior, colaboradores: colab };
+    return { dia, ilhas: Object.keys(mapa[dia] || {}).sort(), mapa: mapa[dia] || {}, anterior, colaboradores: colab, tipos };
   }
   async function salvarResponsavel(dia, ilha, nome) {
     dia = diaDe(dia); ilha = String(ilha || '').trim().toUpperCase();
-    if (!dia || !/^[A-Z]+$/.test(ilha)) throw new Error('Dia ou ilha inválidos.');
+    // ilha = letra (A, B…); função = F:NOME:número (ex.: F:BIPAGEM:1), desde 23/11/2026
+    if (!dia || !/^([A-Z]+|F:[A-Z0-9]+:\d{1,2})$/.test(ilha)) throw new Error('Dia ou ilha inválidos.');
     if (!(await P.existe(CFG.ABA_RESPONSAVEIS))) await P.criarAba(CFG.ABA_RESPONSAVEIS, CAB_RESP);
     const linha = [dia, ilha, String(nome || '').trim(), quem, agoraTxt()];
     const v = await lerTudo(CFG.ABA_RESPONSAVEIS, 2);
@@ -417,6 +454,21 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
     return lista;
   }
 
+  /** Nome -> Tipo (DHL, Full, Diaristas) da aba Colaboradores. Lê só as colunas Nome e Tipo (não lê CPF). */
+  async function tiposColaboradores() {
+    const c = await cache.ler('colab:tipo');
+    if (c) return c;
+    const t = {};
+    if (await P.existe(CFG.ABA_COLABORADORES)) {
+      const v = await P.ler(CFG.ABA_COLABORADORES, 'A1:Z');
+      const cab = (v[0] || []).map((x) => cel(x).trim().toLowerCase());
+      const cN = cab.findIndex((x) => /nome/.test(x)), cT = cab.indexOf('tipo');
+      if (cN >= 0 && cT >= 0) v.slice(1).forEach((r) => { const n = cel((r || [])[cN]).trim(), x = cel((r || [])[cT]).trim(); if (n && x && !t[n]) t[n] = x; });
+    }
+    await cache.gravar('colab:tipo', t, 600);
+    return t;
+  }
+
   /* ---------- Volumoso × Sorting (aba One Bipe) ---------- */
   async function idsOneBipe() {
     const c = await cache.ler('onebipe');
@@ -435,7 +487,15 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
   async function marcarTipos(dados) {
     let ids = null;
     try { ids = await idsOneBipe(); } catch (e) { console.warn('One Bipe: ' + e.message); }
-    (dados && dados.pacotes || []).forEach((p) => { p.tipo = tipoDe(ids, p.id); });
+    (dados && dados.pacotes || []).forEach((p) => {
+      p.tipo = tipoDe(ids, p.id);
+      // conta da gaiola: os IDs bipados viram números Volumoso / Sorting (a lista de IDs não vai para a tela)
+      if (p.carrinho && Array.isArray(p.carrinho.bipados)) {
+        const c = p.carrinho, vol = ids ? c.bipados.filter((x) => ids.has(x)).length : 0;
+        p.carrinho = { auditor: c.auditor, gaiola: c.gaiola, estado: c.estado, dia: c.dia, semBipar: c.semBipar,
+          volumoso: ids ? vol : null, sorting: ids ? c.bipados.length - vol : null, bipados: c.bipados.length };
+      }
+    });
     return dados;
   }
 
@@ -481,6 +541,7 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
       return JSON.stringify({ servidor: 5, dados: d, manual, regras, url: P.url });
     },
     painelSalvarClassificacao: salvarClassificacao,
+    painelSalvarClassificacaoLote: salvarClassificacaoLote,
     painelResumoPeriodo: async (ini, fim) => JSON.stringify(await resumoPeriodo(ini, fim)),
     painelResponsaveis: async (dia) => JSON.stringify(await responsaveis(dia)),
     painelSalvarResponsavel: salvarResponsavel,

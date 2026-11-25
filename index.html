@@ -29,7 +29,6 @@
       <nav class="menu" id="menu" aria-label="Seções" hidden>
         <a href="#painel" data-aba="painel">Painel</a>
         <a href="#gemba" data-aba="gemba">Gemba</a>
-        <a href="#torre" data-aba="torre">Torre de Aduana</a>
         <a href="#faltantes" data-aba="faltantes">Faltante Aduana</a>
         <a href="#pokayoke" data-aba="pokayoke">Poka-Yoke</a>
         <a href="#eficacia" data-aba="eficacia">Eficácia</a>
@@ -465,12 +464,6 @@
         </div>
       </section>
 
-      <!-- ===== Torre de Aduana ===== -->
-      <section class="aba" id="aba-torre" data-titulo="Torre de Aduana" hidden>
-        <h1 class="titulo">Torre de Aduana</h1>
-        <div class="cartao em-construcao"><p>Em construção</p></div>
-      </section>
-
       <!-- ===== Faltante Aduana (js/faltantes.js + faltantes.html + api/faltantes.js) ===== -->
       <section class="aba" id="aba-faltantes" data-titulo="Faltante Aduana" hidden>
         <iframe id="faltantes-quadro" class="faltantes-quadro" title="Faltante Aduana" loading="lazy"></iframe>
@@ -872,7 +865,6 @@
                 <span class="plano-rotulo">Origem do problema</span>
                 <select id="plano-origem">
                   <option value="Gemba">Gemba</option>
-                  <option value="Torre de Aduana">Torre de Aduana</option>
                   <option value="Poka-Yoke">Poka-Yoke</option>
                 </select>
               </label>
@@ -897,7 +889,6 @@
               <select id="plano-origem-filtro" class="plano-select-filtro" aria-label="Origem">
                 <option value="">Todas as origens</option>
                 <option value="Gemba">Gemba</option>
-                <option value="Torre de Aduana">Torre de Aduana</option>
                 <option value="Poka-Yoke">Poka-Yoke</option>
               </select>
             </div>

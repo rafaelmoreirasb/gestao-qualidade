@@ -199,9 +199,26 @@ classificação manual e os responsáveis por ilha também são gravados lá.
 - **Volumoso × Sorting**: o pacote é Volumoso se o ID está na aba One Bipe. Há botões de filtro e uma etiqueta em cada pacote.
 - **Período** (desde 21/11/2026): **Um dia** ou **Escolher período** com **De** e **Até** (qualquer dia, ex.: de quarta a quarta), com dados da aba `Resumo diário`. Começa nos últimos 7 dias até o dia mais recente.
 - **Indicadores no topo** (sempre, no dia e no período, mudam com o filtro): **Total de faltantes**; rosca **Sorting × Volumoso** com o total no meio (e "Sem tipo" quando houver); **Quem errou: DHL · Diaristas · Full** (reservado: aguardando definir como atribuir o erro; a aba Colaboradores já tem a coluna Tipo).
+- **Classificar rota inteira** (desde 25/11/2026): quadro acima da tabela Pacote a pacote. Escolha a rota (com a quantidade de
+  faltantes do dia), a classificação e o raciocínio e clique em Aplicar: todos os faltantes do dia daquela rota recebem a mesma
+  classificação na aba Classificação manual (uma linha por pacote, gravadas de uma vez). Pacote que você já classificou fica como
+  está. Quem só tem permissão de Ver não vê o quadro. Segue os filtros da tabela: ao clicar numa barra de "Resultado de cada
+  faltante" (e/ou no Tipo, ou em "só conflitos"), a lista de rotas e o Aplicar valem só para os pacotes com esse filtro; o quadro
+  mostra o filtro em uso e tem "Limpar filtro".
+- **Pacote a pacote › Resultado** (desde 25/11/2026): embaixo do resultado aparece só o número da regra (ex.: "Regra R07"); a
+  pergunta completa fica em Regras em uso.
+- **Pacote a pacote › Auditoria de carrinho** (desde 25/11/2026): Sim/Não (registro na aba Auditoria de Carrinho dentro da
+  janela; se tiver mais de um, o mais recente), quem auditou (Rep auditoria), gaiola, estado e a conta daquela gaiola no dia com
+  aquele auditor: quantos bipou Sorting e Volumoso (Correto ou A mais; tipo pela aba One Bipe) e quantos ficaram sem bipar
+  (Faltante ou Pendente). A busca acha também pelo auditor e pela gaiola.
 - **Regras em uso** fica no fim da página, fechada; abre na setinha. Os Responsáveis continuam onde estavam.
 - **Responsáveis por ilha**: sub-aba própria. Ilha = letra da rota. Quem tem erro de conteinerização em pacote Volumoso
   aparece como "cobrar: Nome".
+  Desde 23/11/2026 tem também as **Funções do dia** (Bipagem, Indução, Tracionando, 5S, Gemba, PS, Assistente e Coordenador): 1 pessoa em cada, com
+  **+ Acrescentar** para pôr mais. Ficam na mesma aba **Responsáveis** da planilha, com a "ilha" `F:FUNÇÃO:número`
+  (ex.: `F:BIPAGEM:1`), e não entram na conta de erros por responsável. Ao lado de cada nome aparece **DHL**, **Diarista** ou
+  **Full** (coluna Tipo da aba Colaboradores). O botão **📋 Copiar para o WhatsApp** copia o texto
+  "*Layout Volumoso (dia)*" com as ilhas e as funções preenchidas. "Copiar do dia anterior" também copia as funções.
 - **Atualiza sozinho quando a planilha recebe dados novos:** depois de importar (relatórios, Inventário, Histórico,
   Direcionamento ou Torre), o Apps Script da Base SSP53 avisa o app (`relAvisarApp`, com a senha `FALTANTES_SEGREDO`); o app
   recalcula os 3 dias mais recentes e a tela aberta confere a cada 1 min se há versão nova e recarrega sozinha (os dados
@@ -211,7 +228,9 @@ classificação manual e os responsáveis por ilha também são gravados lá.
 
 **Abas que a planilha Base SSP53 precisa ter** (nomes iguais, porque o painel acha as colunas pelo cabeçalho): Aduana,
 Histórico, Auditoria de Carrinho, Problem Solving, **Base Inventário**, Torre Aduana, Direcionamento Manual e One Bipe. O inventário
-vem da aba **Base Inventário** (desde 17/11/2026; a aba "Inventário", espelho da Base Mirassol Oficial, não é mais usada).
+vem da aba **Base Inventário**, que desde 23/11/2026 é copiada a cada 1 hora da aba BASE INVENTARIO da Base Mirassol Oficial
+(só de 01/11/2026 em diante; não é apagada). A aba **Histórico** guarda só os últimos 15 dias: as linhas mais velhas vão toda
+madrugada para as planilhas **Arquivo Histórico AAAA-MM (1ª/2ª quinzena)** na pasta Faltantes – Arquivo, onde você pode abrir.
 **Os 4 relatórios do dia** (Inventário, Aduana, Auditoria de Carrinho e Problem Solving) entram juntos pela pasta **Importar
 Inventário** do Drive, pelo Apps Script da Base SSP53 (código em [`apps-script/base-ssp53/`](apps-script/base-ssp53/); instalação em
 [`docs/faltante-aduana/importador.md`](docs/faltante-aduana/importador.md)). Em 17/11/2026
@@ -289,14 +308,20 @@ não foi compartilhada com a conta de serviço.
 
 A aba **Permissões** (`#permissoes`, depois da PEL) só aparece para o **Administrador**. É uma tabela tipo planilha: **uma linha por conta** e **uma coluna por aba** do app.
 
-- **Colunas:** Nome / e-mail, Site, Criada em, **Papel** e uma coluna para cada aba: Painel, Gemba, Faltante Aduana, Poka-Yoke, Eficácia, Cronograma, Plano de ação e Colaboradores. A última coluna (**PEL**) só informa: a PEL é decidida pelo papel.
+- **Colunas:** Nome / e-mail, Site, Criada em, **Papel** e uma coluna para cada aba: Painel, Gemba, Faltantes, Responsáveis por ilha, Poka-Yoke, Eficácia, Cronograma, Plano de ação e Colaboradores. A última coluna (**PEL**) só informa: a PEL é decidida pelo papel.
 - **Em cada aba:** **—** (sem acesso), **Ver** (amarelo claro) ou **Editar** (preto). **Salva na hora**; vale quando a pessoa recarregar a página ou entrar de novo.
   - **Ver** = a pessoa abre a aba e consulta tudo; os botões de gravar, apagar, importar e "+ Adicionar" não aparecem, os campos de status ficam travados e o título mostra o selo **"Só ver"**.
   - **Editar** = usa a aba inteira, como o Administrador.
 - **Papéis:** Pendente (conta nova, não entra), **Usuário** (vê só as abas marcadas; sem PEL), Analista e Gestão (PEL como antes + as abas marcadas), Administrador (tudo, sem precisar marcar) e Bloqueado (não entra; as abas marcadas ficam guardadas e travadas).
 - **Filtros** por papel (Pendentes com o número de contas esperando) e **busca** por nome ou e-mail. Conta Pendente fica com a linha amarela. O Administrador não muda o próprio papel. Usuário sem nenhuma aba marcada vê o aviso "Nenhuma aba liberada".
 - **No banco** (`sql/017_permissoes_por_aba.sql`): campo `abas` em `pel_perfis` (ex.: `{"gemba":"editar","painel":"ver"}`), mapa `gq_tabela_abas` (qual aba lê e qual grava cada tabela/pasta) e a função `gq_pode`. A tranca antiga "só Administrador" (`gq_so_administrador`) foi trocada por regras por aba: para **ler** uma tabela é preciso Ver numa aba que a usa (ex.: Painel lê Gemba e Cronograma); para **gravar**, Editar na aba dona dela. Tabela fora do mapa (ex.: Torre) continua só do Administrador.
-- **Faltante Aduana:** o servidor (`api/faltantes.js`) confere a aba: com Ver, a pessoa vê o painel mas não salva Classificação, Responsáveis nem Resumo.
+- **Faltante Aduana (desde 25/11/2026, duas colunas):** **Faltantes** (sub-aba Faltantes: classificação, rota inteira, resumo)
+  e **Responsáveis por ilha** (sub-aba Responsáveis), cada uma com —/Ver/Editar. O item Faltante Aduana aparece no menu com
+  qualquer uma das duas; dentro do painel só aparece a sub-aba liberada (só Responsáveis = abre direto nela). O servidor
+  (`api/faltantes.js`) confere cada parte: salvar responsável exige Editar em Responsáveis; o resto, Faltantes. Ler os
+  responsáveis (quadro "Erros por responsável") vale para quem tem qualquer uma das duas. Permissão nova guardada em
+  `pel_perfis.abas` como `"responsaveis"`; o `sql/019_permissao_responsaveis.sql` copiou para ela o nível que cada conta já
+  tinha em Faltante Aduana.
 - **Desfazer:** `sql/desfazer-017.sql` volta a regra "só o Administrador mexe nas abas" (as marcações ficam guardadas, sem efeito).
 - **Atenção (CPF):** quem tem Ver numa aba que lê colaboradores (Painel, Gemba, Eficácia, Cronograma, Colaboradores) não vê o CPF na tela dessas abas, mas tecnicamente conseguiria lê-lo pelo banco (a regra é por linha, não por coluna).
 

@@ -33,14 +33,17 @@ function segredoConfere(recebido) {
 
 // Fase 11: o Administrador marca, para cada conta, a aba em Ver ou Editar (pel_perfis.abas)
 const PAPEIS_COM_ABAS = ['usuario', 'analista', 'gestao'];
-const FUNCOES_QUE_GRAVAM = ['painelSalvarClassificacao', 'painelSalvarResponsavel', 'painelPreencherResumo', 'painelCriarAbaRegras'];
-function nivelFaltantes(usuario) {
+const FUNCOES_QUE_GRAVAM = ['painelSalvarClassificacao', 'painelSalvarClassificacaoLote', 'painelSalvarResponsavel', 'painelPreencherResumo', 'painelCriarAbaRegras'];
+// Desde 25/11/2026: duas permissões — "faltantes" (sub-aba Faltantes) e "responsaveis" (sub-aba Responsáveis por ilha)
+function nivelFaltantes(usuario, parte) {
   if (usuario.papel === 'admin') return 'editar';
   if (!PAPEIS_COM_ABAS.includes(usuario.papel)) return null;
-  const n = usuario.abas && usuario.abas.faltantes;
+  const n = usuario.abas && usuario.abas[parte || 'faltantes'];
   return n === 'editar' || n === 'ver' ? n : null;
 }
-const FUNCOES = ['painelListarDias', 'painelVersao', 'painelDadosDoDia', 'painelSalvarClassificacao', 'painelResumoPeriodo',
+// Qual parte cada função usa. painelVersao e painelResponsaveis (só leitura) valem para qualquer uma das duas.
+const PARTE_DA_FUNCAO = { painelSalvarResponsavel: 'responsaveis', painelVersao: 'qualquer', painelResponsaveis: 'qualquer' };
+const FUNCOES = ['painelListarDias', 'painelVersao', 'painelDadosDoDia', 'painelSalvarClassificacao', 'painelSalvarClassificacaoLote', 'painelResumoPeriodo',
   'painelResponsaveis', 'painelSalvarResponsavel', 'painelPreencherResumo', 'painelCriarAbaRegras'];
 
 let regrasTexto = null;
@@ -73,8 +76,8 @@ module.exports = async function handler(req, res) {
     const tokenUsuario = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
     const usuario = await sb.usuarioDoToken(tokenUsuario);
     if (!usuario) return responder(401, { erro: 'Entre no app de novo (sessão expirada).' });
-    const nivel = nivelFaltantes(usuario);
-    if (!nivel) return responder(403, { erro: 'Sua conta não tem acesso à aba Faltante Aduana.' });
+    const nF = nivelFaltantes(usuario, 'faltantes'), nR = nivelFaltantes(usuario, 'responsaveis');
+    if (!nF && !nR) return responder(403, { erro: 'Sua conta não tem acesso à aba Faltante Aduana.' });
 
     let corpo = req.body;
     if (typeof corpo === 'string') corpo = JSON.parse(corpo || '{}');
@@ -84,7 +87,11 @@ module.exports = async function handler(req, res) {
     }
     const fn = String(corpo.fn || '');
     if (!FUNCOES.includes(fn)) return responder(400, { erro: 'Função desconhecida: ' + fn });
-    if (FUNCOES_QUE_GRAVAM.includes(fn) && nivel !== 'editar') return responder(403, { erro: 'Sua conta só pode ver a aba Faltante Aduana (não pode salvar).' });
+    const parte = PARTE_DA_FUNCAO[fn] || 'faltantes';
+    const nivel = parte === 'qualquer' ? (nF || nR) : parte === 'responsaveis' ? nR : nF;
+    const nomeParte = parte === 'responsaveis' ? 'Responsáveis por ilha' : 'Faltantes';
+    if (!nivel) return responder(403, { erro: 'Sua conta não tem acesso a ' + nomeParte + '.' });
+    if (FUNCOES_QUE_GRAVAM.includes(fn) && nivel !== 'editar') return responder(403, { erro: 'Sua conta só pode ver ' + nomeParte + ' (não pode salvar).' });
 
     const nucleo = criarNucleo({
       planilha: planilhaGoogle({ id: process.env.PLANILHA_ID, sa: process.env.GOOGLE_SA_JSON }),

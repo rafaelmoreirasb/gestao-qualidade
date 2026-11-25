@@ -5,7 +5,7 @@
    ========================================================== */
 
 (function () {
-  const ABAS = ['painel', 'gemba', 'torre', 'faltantes', 'pokayoke', 'eficacia', 'cronograma', 'planoacao', 'colaboradores', 'pel', 'permissoes'];
+  const ABAS = ['painel', 'gemba', 'faltantes', 'pokayoke', 'eficacia', 'cronograma', 'planoacao', 'colaboradores', 'pel', 'permissoes'];
   const PADRAO = 'painel';
   const TITULO_SITE = 'Gestão de Processo e Qualidade · Mirassol SSP53';
 
@@ -30,7 +30,12 @@
       if (!sec) return;
       sec.hidden = a !== nome;
       // Modo Ver (Fase 11): esconde os botões de gravar, apagar e importar
-      sec.classList.toggle('gq-so-ver', typeof window.gqPodeEditar === 'function' && !!window.gqNivelAba(a) && !window.gqPodeEditar(a));
+      // Faltante Aduana tem duas partes (Faltantes e Responsáveis por ilha): só fica "Ver" quando nenhuma das duas é Editar
+      const pode = (x) => typeof window.gqPodeEditar === 'function' && window.gqPodeEditar(x);
+      const tem = (x) => typeof window.gqNivelAba === 'function' && !!window.gqNivelAba(x);
+      sec.classList.toggle('gq-so-ver', a === 'faltantes'
+        ? (tem('faltantes') || tem('responsaveis')) && !pode('faltantes') && !pode('responsaveis')
+        : typeof window.gqPodeEditar === 'function' && tem(a) && !pode(a));
     });
     menu.querySelectorAll('a[data-aba]').forEach((link) => {
       if (link.dataset.aba === nome) link.setAttribute('aria-current', 'page');
