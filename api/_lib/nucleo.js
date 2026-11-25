@@ -183,7 +183,7 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
   async function dadosDoDia(dia, forcar) {
     const D = lerDataHora(dia);
     if (!D) throw new Error('Dia inválido: ' + dia);
-    const chave = 'dia:' + dia + ':' + CFG.JANELA_HORAS + 'h'; // com a janela na chave: mudar a janela recalcula tudo
+    const chave = 'dia:' + dia + ':' + CFG.JANELA_HORAS + 'h:c1'; // com a janela na chave: mudar a janela recalcula tudo (c1 = com a conta do carrinho, 25/11)
     if (!forcar) { const c = await cache.ler(chave); if (c) return c; }
     const inicioProc = Date.now();
     const dias = Array.from({ length: CFG.DIAS_LEITURA }, (_, i) => somaDias(D, i));
@@ -204,6 +204,18 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
     const eventos = new Map([...falt.keys()].map((id) => [id, []]));
     const nomes = Object.keys(FONTES);
     const lidas = await Promise.all(nomes.map((fonte) => (fonte === 'aduana' ? ad : lerAba(fonte, FONTES[fonte].data ? dias : null))));
+    // Conta de cada gaiola (mesma gaiola, mesmo dia, mesmo auditor) na Auditoria de Carrinho:
+    // bipados (Correto / A mais) guardam os IDs (o tipo Volumoso × Sorting é posto depois, com a aba One Bipe); sem bipar = Faltante / Pendente.
+    const gaiolas = new Map();
+    const chaveGaiola = (o) => [String(o['Gaiola'] || '').trim(), diaDe(o['Data']), String(o['Rep auditoria'] || '').trim()].join('|');
+    lidas[nomes.indexOf('carrinho')].linhas.forEach((o) => {
+      const id = String(o['Shipment ID'] || '').trim();
+      if (!id || !String(o['Gaiola'] || '').trim()) return;
+      const k = chaveGaiola(o);
+      if (!gaiolas.has(k)) gaiolas.set(k, { bipados: new Set(), sem: new Set() });
+      const g = gaiolas.get(k);
+      (/^(faltante|pendente)/.test(norm(o['Estado'])) ? g.sem : g.bipados).add(id);
+    });
     nomes.forEach((fonte, k) => {
       const f = FONTES[fonte], r = lidas[k];
       if (r.aviso) avisos.push(r.aviso);
@@ -226,9 +238,17 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
       const sort = todos.find((e) => e.fonte === 'historico' && dmy(new Date(e.t)) === dia);
       const inicio = sort ? sort.t : D.getTime();
       const fim = inicio + CFG.JANELA_HORAS * 3600 * 1000;
-      pacotes.push({
+      const naJanela = todos.filter((e) => e.t >= inicio && e.t <= fim);
+      const car = naJanela.filter((e) => e.fonte === 'carrinho').pop(); // a mais recente na janela
+      let carrinho = null;
+      if (car) {
+        const o = car.dados, g = gaiolas.get(chaveGaiola(o));
+        carrinho = { auditor: String(o['Rep auditoria'] || '').trim(), gaiola: String(o['Gaiola'] || '').trim(), estado: String(o['Estado'] || '').trim(),
+          dia: diaDe(o['Data']), bipados: g ? [...g.bipados] : [], semBipar: g ? g.sem.size : 0 };
+      }
+      pacotes.push({ carrinho,
         id, dia, aduana: x.aduana, vezesFaltante: x.vezes, temSorting: !!sort, ancora: sort ? sort.chave : null,
-        inicio, fim, janelaFechada: Date.now() > fim, eventos: todos.filter((e) => e.t >= inicio && e.t <= fim),
+        inicio, fim, janelaFechada: Date.now() > fim, eventos: naJanela,
         rota: x.aduana['ID da rota'] || '', horaAduana: x.aduana['Hora'] || '', rep: x.aduana['Rep auditoria'] || '',
       });
     }
@@ -451,7 +471,15 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
   async function marcarTipos(dados) {
     let ids = null;
     try { ids = await idsOneBipe(); } catch (e) { console.warn('One Bipe: ' + e.message); }
-    (dados && dados.pacotes || []).forEach((p) => { p.tipo = tipoDe(ids, p.id); });
+    (dados && dados.pacotes || []).forEach((p) => {
+      p.tipo = tipoDe(ids, p.id);
+      // conta da gaiola: os IDs bipados viram números Volumoso / Sorting (a lista de IDs não vai para a tela)
+      if (p.carrinho && Array.isArray(p.carrinho.bipados)) {
+        const c = p.carrinho, vol = ids ? c.bipados.filter((x) => ids.has(x)).length : 0;
+        p.carrinho = { auditor: c.auditor, gaiola: c.gaiola, estado: c.estado, dia: c.dia, semBipar: c.semBipar,
+          volumoso: ids ? vol : null, sorting: ids ? c.bipados.length - vol : null, bipados: c.bipados.length };
+      }
+    });
     return dados;
   }
 

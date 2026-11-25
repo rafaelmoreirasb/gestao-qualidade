@@ -120,6 +120,8 @@
   .tl li.ancora { font-weight: 700; }
   .tl .q { font-family: var(--f-mono); color: var(--cinza-texto); }
   .src { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; }
+  td.car { min-width: 190px; font-size: 13px; }
+  td.car .pill { margin-left: 0; }
   .src.historico { color: var(--preto); } .src.aduana { color: var(--vermelho); } .src.carrinho { color: var(--ambar); }
   .src.ps { color: #5A3E8C; } .src.inventario { color: var(--verde); } .src.torre, .src.direcionamento { color: var(--cinza-apagado); }
   .pill { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 1px 8px; margin-left: 4px; vertical-align: 1px; border: 1px solid currentColor; }
@@ -793,7 +795,7 @@ body.so-ver .conflito button, body.so-ver #maisIlha, body.so-ver #copiarAnt, bod
     const lista = [...grupos.values()].sort((a, b) => b[1] - a[1]);
     const max = Math.max(1, ...lista.map((x) => x[1]));
     const q = norm(S.busca);
-    const visiveis = ps.filter((p) => (!S.soConflitos || conflito(p)) && (!S.filtro || norm(resultado(p)) === norm(S.filtro)) && (!q || norm(p.id + ' ' + p.rota + ' ' + p.rep + ' ' + resultado(p)).includes(q)))
+    const visiveis = ps.filter((p) => (!S.soConflitos || conflito(p)) && (!S.filtro || norm(resultado(p)) === norm(S.filtro)) && (!q || norm(p.id + ' ' + p.rota + ' ' + p.rep + ' ' + resultado(p) + (p.carrinho ? ' ' + p.carrinho.auditor + ' ' + p.carrinho.gaiola : '')).includes(q)))
       .sort((a, b) => (Number(conflito(b)) - Number(conflito(a))) || (Number(b.eventos.some((e) => ehNovo(b, e))) - Number(a.eventos.some((e) => ehNovo(a, e)))) || resultado(a).localeCompare(resultado(b)) || a.rota.localeCompare(b.rota) || a.id.localeCompare(b.id));
 
     $('#lista-res').innerHTML = [...new Set([...SUGESTOES, ...Object.values(S.manual).map((v) => v.classificacao).filter(Boolean)])].map((s) => '<option value="' + esc(s) + '">').join('');
@@ -817,11 +819,11 @@ body.so-ver .conflito button, body.so-ver #maisIlha, body.so-ver #copiarAnt, bod
         lista.map(([r, n]) => '<button type="button" class="row' + (S.filtro && norm(S.filtro) === norm(r) ? ' sel' : S.filtro ? ' dim' : '') + '" data-r="' + esc(r) + '"><span class="t">' + esc(r) + '</span><span class="track"><span class="fill" style="display:block;width:' + (100 * n / max) + '%;background:' + COR(r) + '"></span></span><span class="n">' + fmt(n) + '</span></button>').join('') +
       '</div></section>' +
       cartaoResponsaveis() +
-      '<section class="card" id="tabela"><div class="tools"><h2>Pacote a pacote</h2><input id="busca" type="search" placeholder="Buscar shipment, rota, rep…" value="' + esc(S.busca) + '" aria-label="Buscar"></div>' +
+      '<section class="card" id="tabela"><div class="tools"><h2>Pacote a pacote</h2><input id="busca" type="search" placeholder="Buscar shipment, rota, rep, auditor, gaiola…" value="' + esc(S.busca) + '" aria-label="Buscar"></div>' +
         '<p class="note">Mostrando <b>' + esc(S.soConflitos ? 'só os conflitos' : (S.filtro || 'todos os resultados')) + '</b> · ' + fmt(visiveis.length) + ' pacotes' + (S.filtro ? ' · <button type="button" class="chip" id="limpar">Mostrar todos</button>' : '') +
         ' · Bipes em <span style="background:var(--new-bg);color:var(--new-fg);padding:0 4px;border-radius:3px">amarelo</span> são novos desde a sua última visita. Nas duas últimas colunas você classifica: salva sozinho ao sair do campo.</p>' +
-        '<div class="scroll"><table><thead><tr><th>Shipment</th><th>Rota · aduana</th><th>Resultado</th><th>Linha do tempo (sorting + ' + CONFIG.JANELA_HORAS + ' h)</th><th class="ed">Sua classificação</th></tr></thead><tbody>' +
-        (visiveis.length ? visiveis.map(linhaPacote).join('') : '<tr><td colspan="5" class="empty">Nenhum pacote.</td></tr>') +
+        '<div class="scroll"><table><thead><tr><th>Shipment</th><th>Rota · aduana</th><th>Auditoria de carrinho</th><th>Resultado</th><th>Linha do tempo (sorting + ' + CONFIG.JANELA_HORAS + ' h)</th><th class="ed">Sua classificação</th></tr></thead><tbody>' +
+        (visiveis.length ? visiveis.map(linhaPacote).join('') : '<tr><td colspan="6" class="empty">Nenhum pacote.</td></tr>') +
         '</tbody></table></div></section>' +
       cartaoRegras();
 
@@ -884,7 +886,20 @@ body.so-ver .conflito button, body.so-ver #maisIlha, body.so-ver #copiarAnt, bod
       '<td class="rota"><b>' + esc(p.rota) + '</b><span class="sub">' + esc(String(p.horaAduana).slice(0, 5)) + ' · ' + esc(p.rep) + '</span>' +
         (S.resp && ilhaDe(p.rota) ? '<span class="sub">Ilha ' + esc(ilhaDe(p.rota)) + ' · ' + (respDe(p) ? 'resp.: <b>' + esc(respDe(p)) + '</b>' : 'sem responsável') + '</span>' : '') +
         (S.resp && cobravel(p) && ehErroCont(resultado(p)) && respDe(p) ? '<span class="pill sem" style="margin-left:0">cobrar: ' + esc(respDe(p)) + '</span>' : '') + (p.vezesFaltante > 1 ? '<span class="sub">faltante ' + p.vezesFaltante + 'x no dia</span>' : '') + '</td>' +
-      res + '<td class="tl">' + tl + '</td>' + ed + '</tr>';
+      celulaCarrinho(p) + res + '<td class="tl">' + tl + '</td>' + ed + '</tr>';
+  }
+  /** Coluna "Auditoria de carrinho": Sim/Não, quem auditou e a conta da gaiola (aba Auditoria de Carrinho). */
+  function celulaCarrinho(p) {
+    if (!('carrinho' in p)) return '<td class="car"><span class="sub">—</span></td>'; // dado antigo, antes de recalcular
+    const c = p.carrinho;
+    if (!c) return '<td class="car"><b>Não</b><span class="sub">sem registro na janela</span></td>';
+    const conta = c.volumoso == null
+      ? 'bipou <b>' + fmt(c.bipados) + '</b>'
+      : 'bipou <b>' + fmt(c.sorting) + '</b> Sorting e <b>' + fmt(c.volumoso) + '</b> Volumoso';
+    return '<td class="car"><b>Sim</b>' + (c.estado ? ' <span class="pill' + (/^(faltante|pendente)/.test(norm(c.estado)) ? ' sem' : '') + '">' + esc(c.estado) + '</span>' : '') +
+      '<span class="sub"><b>' + esc(c.auditor || 'sem nome') + '</b></span>' +
+      '<span class="sub">gaiola ' + esc(c.gaiola) + (c.dia ? ' · ' + esc(c.dia.slice(0, 5)) : '') + '</span>' +
+      '<span class="sub">' + conta + ' · <b' + (c.semBipar ? ' style="color:var(--vermelho)"' : '') + '>' + fmt(c.semBipar) + '</b> sem bipar</span></td>';
   }
 
   function aviso(t, erro) { const el = $('#msg'); el.textContent = t || ''; el.hidden = !t; el.classList.toggle('err', !!erro); }
