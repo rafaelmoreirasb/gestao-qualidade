@@ -306,14 +306,20 @@ não foi compartilhada com a conta de serviço.
 
 A aba **Permissões** (`#permissoes`, depois da PEL) só aparece para o **Administrador**. É uma tabela tipo planilha: **uma linha por conta** e **uma coluna por aba** do app.
 
-- **Colunas:** Nome / e-mail, Site, Criada em, **Papel** e uma coluna para cada aba: Painel, Gemba, Faltante Aduana, Poka-Yoke, Eficácia, Cronograma, Plano de ação e Colaboradores. A última coluna (**PEL**) só informa: a PEL é decidida pelo papel.
+- **Colunas:** Nome / e-mail, Site, Criada em, **Papel** e uma coluna para cada aba: Painel, Gemba, Faltantes, Responsáveis por ilha, Poka-Yoke, Eficácia, Cronograma, Plano de ação e Colaboradores. A última coluna (**PEL**) só informa: a PEL é decidida pelo papel.
 - **Em cada aba:** **—** (sem acesso), **Ver** (amarelo claro) ou **Editar** (preto). **Salva na hora**; vale quando a pessoa recarregar a página ou entrar de novo.
   - **Ver** = a pessoa abre a aba e consulta tudo; os botões de gravar, apagar, importar e "+ Adicionar" não aparecem, os campos de status ficam travados e o título mostra o selo **"Só ver"**.
   - **Editar** = usa a aba inteira, como o Administrador.
 - **Papéis:** Pendente (conta nova, não entra), **Usuário** (vê só as abas marcadas; sem PEL), Analista e Gestão (PEL como antes + as abas marcadas), Administrador (tudo, sem precisar marcar) e Bloqueado (não entra; as abas marcadas ficam guardadas e travadas).
 - **Filtros** por papel (Pendentes com o número de contas esperando) e **busca** por nome ou e-mail. Conta Pendente fica com a linha amarela. O Administrador não muda o próprio papel. Usuário sem nenhuma aba marcada vê o aviso "Nenhuma aba liberada".
 - **No banco** (`sql/017_permissoes_por_aba.sql`): campo `abas` em `pel_perfis` (ex.: `{"gemba":"editar","painel":"ver"}`), mapa `gq_tabela_abas` (qual aba lê e qual grava cada tabela/pasta) e a função `gq_pode`. A tranca antiga "só Administrador" (`gq_so_administrador`) foi trocada por regras por aba: para **ler** uma tabela é preciso Ver numa aba que a usa (ex.: Painel lê Gemba e Cronograma); para **gravar**, Editar na aba dona dela. Tabela fora do mapa (ex.: Torre) continua só do Administrador.
-- **Faltante Aduana:** o servidor (`api/faltantes.js`) confere a aba: com Ver, a pessoa vê o painel mas não salva Classificação, Responsáveis nem Resumo.
+- **Faltante Aduana (desde 25/11/2026, duas colunas):** **Faltantes** (sub-aba Faltantes: classificação, rota inteira, resumo)
+  e **Responsáveis por ilha** (sub-aba Responsáveis), cada uma com —/Ver/Editar. O item Faltante Aduana aparece no menu com
+  qualquer uma das duas; dentro do painel só aparece a sub-aba liberada (só Responsáveis = abre direto nela). O servidor
+  (`api/faltantes.js`) confere cada parte: salvar responsável exige Editar em Responsáveis; o resto, Faltantes. Ler os
+  responsáveis (quadro "Erros por responsável") vale para quem tem qualquer uma das duas. Permissão nova guardada em
+  `pel_perfis.abas` como `"responsaveis"`; o `sql/019_permissao_responsaveis.sql` copiou para ela o nível que cada conta já
+  tinha em Faltante Aduana.
 - **Desfazer:** `sql/desfazer-017.sql` volta a regra "só o Administrador mexe nas abas" (as marcações ficam guardadas, sem efeito).
 - **Atenção (CPF):** quem tem Ver numa aba que lê colaboradores (Painel, Gemba, Eficácia, Cronograma, Colaboradores) não vê o CPF na tela dessas abas, mas tecnicamente conseguiria lê-lo pelo banco (a regra é por linha, não por coluna).
 

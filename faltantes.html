@@ -274,12 +274,15 @@ body.so-ver .conflito button, body.so-ver #rotaInteira, body.so-ver #maisIlha, b
   const fmt = (n) => Number(n).toLocaleString('pt-BR');
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   /** Chama o servidor (api/faltantes.js no Vercel) com o login do app. Devolve o mesmo que o antigo Apps Script. */
-  // Fase 11: conta com a aba em "Ver" consulta tudo, mas não salva (o servidor confere também)
-  const SO_VER = (() => { try { return typeof window.parent.gqPodeEditar === 'function' && !window.parent.gqPodeEditar('faltantes'); } catch (e) { return false; } })();
-  if (SO_VER) document.body.classList.add('so-ver');
-  const GRAVA = ['painelSalvarClassificacao', 'painelSalvarClassificacaoLote', 'painelSalvarResponsavel', 'painelPreencherResumo', 'painelCriarAbaRegras'];
+  // Fase 11: conta com a aba em "Ver" consulta tudo, mas não salva (o servidor confere também).
+  // Desde 25/11/2026 são duas permissões: "faltantes" (sub-aba Faltantes) e "responsaveis" (sub-aba Responsáveis por ilha).
+  const NIVEL = (() => {
+    const n = (k) => { try { return typeof window.parent.gqNivelAba === 'function' ? window.parent.gqNivelAba(k) : 'editar'; } catch (e) { return 'editar'; } };
+    return { faltantes: n('faltantes'), responsaveis: n('responsaveis') };
+  })();
+  const GRAVA = { painelSalvarClassificacao: 'faltantes', painelSalvarClassificacaoLote: 'faltantes', painelPreencherResumo: 'faltantes', painelCriarAbaRegras: 'faltantes', painelSalvarResponsavel: 'responsaveis' };
   const chamar = async (fn, ...args) => {
-    if (SO_VER && GRAVA.includes(fn)) throw new Error('sua conta só pode ver esta aba.');
+    if (GRAVA[fn] && NIVEL[GRAVA[fn]] !== 'editar') throw new Error('sua conta só pode ver esta parte.');
     const cliente = window.parent && window.parent.gqSb;
     const sessao = cliente ? (await cliente.auth.getSession()).data.session : null;
     if (!sessao) throw new Error('Entre no app de novo (sessão expirada).');
@@ -565,7 +568,7 @@ body.so-ver .conflito button, body.so-ver #rotaInteira, body.so-ver #maisIlha, b
     const erros = S.pacotes.filter((p) => doTipo(p) && cobravel(p) && ehErroCont(resultado(p)));
     const porResp = new Map(); erros.forEach((p) => { const k = respDe(p) || 'Sem responsável cadastrado'; if (!porResp.has(k)) porResp.set(k, []); porResp.get(k).push(p); });
     const nResp = Object.keys(S.resp.mapa || {}).filter((k) => !ehFuncao(k) && S.resp.mapa[k]).length;
-    return '<section class="card" id="errosResp"><div class="tools"><h2>Erros de conteinerização do dia por responsável' + (temTipo(S.pacotes) ? ' (volumoso)' : '') + '</h2><a href="#" id="irResp">Preencher responsáveis por ilha ›</a></div>' +
+    return '<section class="card" id="errosResp"><div class="tools"><h2>Erros de conteinerização do dia por responsável' + (temTipo(S.pacotes) ? ' (volumoso)' : '') + '</h2>' + (NIVEL.responsaveis ? '<a href="#" id="irResp">' + (NIVEL.responsaveis === 'editar' ? 'Preencher' : 'Ver') + ' responsáveis por ilha ›</a>' : '') + '</div>' +
       '<p class="note">' + (nResp ? '<b>' + nResp + '</b> ilha' + (nResp > 1 ? 's' : '') + ' com responsável em ' + esc(S.dia.slice(0, 5)) + '.' : 'Nenhum responsável preenchido para ' + esc(S.dia.slice(0, 5)) + '.') + ' A ilha é a letra da rota (A1, A2… = ilha A).</p>' +
       (erros.length ? '<div class="bars">' + [...porResp.entries()].sort((a, b) => b[1].length - a[1].length).map(([k, ps]) => '<div class="row"><span class="t">' + esc(k) + '<span class="sub">' + esc(ps.map((p) => p.rota + ' · ' + p.id).join(' | ')) + '</span></span><span class="track"><span class="fill" style="display:block;width:' + (100 * ps.length / erros.length) + '%;background:var(--vermelho)"></span></span><span class="n">' + ps.length + '</span></div>').join('') + '</div>'
         : '<p class="note">Nenhum erro de conteinerização neste dia.</p>') + '</section>';
@@ -762,6 +765,8 @@ body.so-ver .conflito button, body.so-ver #rotaInteira, body.so-ver #maisIlha, b
   /* ---------- abas do painel (menu no cabeçalho) ---------- */
   function trocarAba(aba) {
     S.aba = aba === 'responsaveis' ? 'responsaveis' : 'faltantes';
+    if (!NIVEL[S.aba]) S.aba = S.aba === 'faltantes' ? 'responsaveis' : 'faltantes'; // sem acesso a esta parte
+    document.body.classList.toggle('so-ver', NIVEL[S.aba] !== 'editar');
     document.querySelectorAll('#menu a').forEach((a) => a.setAttribute('aria-current', a.dataset.aba === S.aba ? 'page' : 'false'));
     $('#controlesFaltantes').hidden = S.aba !== 'faltantes';
     if (S.aba === 'faltantes') desenharModo();
@@ -992,7 +997,12 @@ body.so-ver .conflito button, body.so-ver #rotaInteira, body.so-ver #maisIlha, b
   setInterval(conferirVersao, CONFIG.VERSAO_SEG * 1000);
   conferirVersao();
   // link com ?aba=responsaveis (ou #responsaveis) abre direto na aba Responsáveis — base para a permissão do assistente
-  const iniciar = (aba) => { if (aba === 'responsaveis') trocarAba('responsaveis'); else atualizar(false); };
+  // sub-abas sem permissão somem do menu do painel; só "Responsáveis" liberado = abre direto nela
+  document.querySelectorAll('#menu a').forEach((a) => { if (!NIVEL[a.dataset.aba]) a.hidden = true; });
+  const iniciar = (aba) => {
+    if (aba === 'responsaveis' || !NIVEL.faltantes) trocarAba('responsaveis');
+    else { document.body.classList.toggle('so-ver', NIVEL.faltantes !== 'editar'); atualizar(false); }
+  };
   iniciar(new URLSearchParams(location.search).get('aba') || '');
   if (window.frameElement && window.ResizeObserver) {
     const ajustar = () => { window.frameElement.style.height = document.documentElement.scrollHeight + 'px'; };

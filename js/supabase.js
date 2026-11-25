@@ -93,7 +93,8 @@ window.gqPodeEditar = gqPodeEditar;
 function gqListaAbas(perfil) {
   if (!perfil) return ['pel'];
   if (perfil.papel === 'admin') return null;
-  const lista = GQ_ABAS_LIBERAVEIS.filter((a) => gqNivelAba(a));
+  // Faltante Aduana aparece com qualquer uma das duas partes: Faltantes ou Responsáveis por ilha (25/11/2026)
+  const lista = GQ_ABAS_LIBERAVEIS.filter((a) => gqNivelAba(a) || (a === 'faltantes' && gqNivelAba('responsaveis')));
   if (gqNivelAba('pel')) lista.push('pel');
   return lista;
 }

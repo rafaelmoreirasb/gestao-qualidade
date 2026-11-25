@@ -13,7 +13,7 @@
 
   const PAPEIS = { pendente: 'Pendente', usuario: 'Usuário', analista: 'Analista', gestao: 'Gestão', admin: 'Administrador', bloqueado: 'Bloqueado' };
   const ABAS = [
-    ['painel', 'Painel'], ['gemba', 'Gemba'], ['faltantes', 'Faltante Aduana'], ['pokayoke', 'Poka-Yoke'],
+    ['painel', 'Painel'], ['gemba', 'Gemba'], ['faltantes', 'Faltantes'], ['responsaveis', 'Responsáveis por ilha'], ['pokayoke', 'Poka-Yoke'],
     ['eficacia', 'Eficácia'], ['cronograma', 'Cronograma'], ['planoacao', 'Plano de ação'], ['colaboradores', 'Colaboradores'],
   ];
   const NIVEIS = [['', '—'], ['ver', 'Ver'], ['editar', 'Editar']];
