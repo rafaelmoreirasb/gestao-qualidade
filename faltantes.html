@@ -276,10 +276,12 @@ body.so-ver .conflito button, body.so-ver #rotaInteira, body.so-ver #maisIlha, b
   /** Chama o servidor (api/faltantes.js no Vercel) com o login do app. Devolve o mesmo que o antigo Apps Script. */
   // Fase 11: conta com a aba em "Ver" consulta tudo, mas não salva (o servidor confere também).
   // Desde 25/11/2026 são duas permissões: "faltantes" (sub-aba Faltantes) e "responsaveis" (sub-aba Responsáveis por ilha).
-  const NIVEL = (() => {
-    const n = (k) => { try { return typeof window.parent.gqNivelAba === 'function' ? window.parent.gqNivelAba(k) : 'editar'; } catch (e) { return 'editar'; } };
-    return { faltantes: n('faltantes'), responsaveis: n('responsaveis') };
-  })();
+  // Os níveis são lidos DEPOIS que o app termina de carregar o perfil (ver "iniciar", no fim). Antes disso a página
+  // não grava nada. Fora do app (página aberta sozinha) vale 'editar' e o servidor confere de qualquer jeito.
+  const NIVEL = { faltantes: null, responsaveis: null };
+  const appPai = () => { try { const w = window.parent; return w && w !== window && typeof w.gqNivelAba === 'function' ? w : null; } catch (e) { return null; } };
+  const perfilPronto = () => { const w = appPai(); try { return !w || typeof w.gqPerfilPronto !== 'function' || w.gqPerfilPronto(); } catch (e) { return true; } };
+  const lerNiveis = () => { const w = appPai(); ['faltantes', 'responsaveis'].forEach((k) => { try { NIVEL[k] = w ? w.gqNivelAba(k) : 'editar'; } catch (e) { NIVEL[k] = 'editar'; } }); };
   const GRAVA = { painelSalvarClassificacao: 'faltantes', painelSalvarClassificacaoLote: 'faltantes', painelPreencherResumo: 'faltantes', painelCriarAbaRegras: 'faltantes', painelSalvarResponsavel: 'responsaveis' };
   const chamar = async (fn, ...args) => {
     if (GRAVA[fn] && NIVEL[GRAVA[fn]] !== 'editar') throw new Error('sua conta só pode ver esta parte.');
@@ -998,8 +1000,12 @@ body.so-ver .conflito button, body.so-ver #rotaInteira, body.so-ver #maisIlha, b
   conferirVersao();
   // link com ?aba=responsaveis (ou #responsaveis) abre direto na aba Responsáveis — base para a permissão do assistente
   // sub-abas sem permissão somem do menu do painel; só "Responsáveis" liberado = abre direto nela
-  document.querySelectorAll('#menu a').forEach((a) => { if (!NIVEL[a.dataset.aba]) a.hidden = true; });
-  const iniciar = (aba) => {
+  const iniciar = async (aba) => {
+    // espera o app carregar o perfil (até 15 s) — antes a página abria sem saber quem entrou e escondia partes (25/11)
+    for (let i = 0; i < 75 && !perfilPronto(); i++) await new Promise((r) => setTimeout(r, 200));
+    lerNiveis();
+    document.querySelectorAll('#menu a').forEach((a) => { const tem = !!NIVEL[a.dataset.aba]; a.hidden = !tem; a.style.display = tem ? '' : 'none'; });
+    if (!NIVEL.faltantes && !NIVEL.responsaveis) { $('#conteudo').innerHTML = '<section class="card"><p class="empty">Sua conta não tem acesso à aba Faltante Aduana.</p></section>'; return; }
     if (aba === 'responsaveis' || !NIVEL.faltantes) trocarAba('responsaveis');
     else { document.body.classList.toggle('so-ver', NIVEL.faltantes !== 'editar'); atualizar(false); }
   };

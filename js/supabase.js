@@ -87,6 +87,8 @@ function gqNivelAba(aba) {
 }
 function gqPodeEditar(aba) { return gqNivelAba(aba) === 'editar'; }
 window.gqNivelAba = gqNivelAba;
+// O painel Faltante Aduana (moldura) espera o perfil carregar antes de ler as permissões (25/11/2026)
+window.gqPerfilPronto = () => gqPerfilAtual !== null;
 window.gqPodeEditar = gqPodeEditar;
 
 // Abas que aparecem no menu para esta conta (null = todas, Administrador)
