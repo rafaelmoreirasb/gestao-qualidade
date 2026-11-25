@@ -42,7 +42,34 @@ function supabaseServidor({ url, chaveServico }) {
     },
   };
 
-  return { usuarioDoToken, cache };
+  /** Foto de cada dia (sql/020_faltantes_foto.sql): guardada para sempre, para o painel mostrar dias já arquivados da planilha. */
+  const fotos = {
+    async listar() {
+      const r = await fetch(base + '/rest/v1/faltantes_foto?select=dia,n,origem,gerado_em&order=data.desc', { headers: cab });
+      if (!r.ok) throw new Error('Não consegui ler as fotos dos dias (rode o sql/020_faltantes_foto.sql no Supabase). HTTP ' + r.status);
+      return r.json();
+    },
+    async ler(dia) {
+      const r = await fetch(base + '/rest/v1/faltantes_foto?select=valor,origem,gerado_em&dia=eq.' + encodeURIComponent(dia), { headers: cab });
+      if (!r.ok) return null;
+      const [linha] = await r.json();
+      if (!linha) return null;
+      const v = JSON.parse(linha.valor);
+      v.foto = { origem: linha.origem, geradoEm: new Date(linha.gerado_em).getTime() };
+      return v;
+    },
+    async gravar(dia, valor, n, origem) {
+      const m = String(dia).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (!m) throw new Error('Dia inválido para a foto: ' + dia);
+      const r = await fetch(base + '/rest/v1/faltantes_foto?on_conflict=dia', {
+        method: 'POST', headers: { ...cab, Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify({ dia, data: m[3] + '-' + m[2] + '-' + m[1], n: n || 0, valor: JSON.stringify(valor), origem: origem || '', gerado_em: new Date().toISOString() }),
+      });
+      if (!r.ok) throw new Error('Não consegui guardar a foto do dia ' + dia + ' (HTTP ' + r.status + ').');
+    },
+  };
+
+  return { usuarioDoToken, cache, fotos };
 }
 
 module.exports = { supabaseServidor };

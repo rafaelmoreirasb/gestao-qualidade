@@ -199,6 +199,14 @@ classificação manual e os responsáveis por ilha também são gravados lá.
 - **Volumoso × Sorting**: o pacote é Volumoso se o ID está na aba One Bipe. Há botões de filtro e uma etiqueta em cada pacote.
 - **Período** (desde 21/11/2026): **Um dia** ou **Escolher período** com **De** e **Até** (qualquer dia, ex.: de quarta a quarta), com dados da aba `Resumo diário`. Começa nos últimos 7 dias até o dia mais recente.
 - **Indicadores no topo** (sempre, no dia e no período, mudam com o filtro): **Total de faltantes**; rosca **Sorting × Volumoso** com o total no meio (e "Sem tipo" quando houver); **Quem errou: DHL · Diaristas · Full** (reservado: aguardando definir como atribuir o erro; a aba Colaboradores já tem a coluna Tipo).
+- **Foto do dia** (desde 25/11/2026): a planilha guarda só 15 dias, mas o painel guarda uma **foto** de cada dia encerrado
+  (janela de 48 h de todos os pacotes fechada) no Supabase, tabela `faltantes_foto` (`sql/020_faltantes_foto.sql`), para
+  sempre. A foto é tirada sozinha a cada aviso da planilha (até 2 dias por aviso) e regravada sempre que o dia é recalculado
+  enquanto ainda está na planilha. A lista "Dia analisado" junta os dias da aba Aduana com os dias que só têm foto (marcados
+  "· foto"); ao abrir um deles aparece o aviso "📷 Foto do dia". Filtros, tabela, regras, classificação manual e rota inteira
+  funcionam igual (as classificações continuam na aba Classificação manual). Card **Recuperar dias arquivados
+  (Administrador)**, no fim da página: com os links dos arquivos "Arquivo Faltantes AAAA-MM" e "Arquivo Histórico AAAA-MM
+  (quinzena)" (compartilhados como Leitor com a conta de serviço), monta a foto dos dias que já tinham saído da planilha.
 - **Classificar rota inteira** (desde 25/11/2026): quadro acima da tabela Pacote a pacote. Escolha a rota (com a quantidade de
   faltantes do dia), a classificação e o raciocínio e clique em Aplicar: todos os faltantes do dia daquela rota recebem a mesma
   classificação na aba Classificação manual (uma linha por pacote, gravadas de uma vez). Pacote que você já classificou fica como

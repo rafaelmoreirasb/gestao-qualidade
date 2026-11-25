@@ -9,6 +9,12 @@
      cache:    { ler(chave), gravar(chave, valor, segundos) } — tabela faltantes_cache no Supabase
      regras:   texto de js/faltantes-regras.js (o MESMO arquivo que a tela usa)
      usuario:  e-mail de quem está logado (vai em "Quem classificou" / "Quem preencheu")
+     fotos:    { listar, ler(dia), gravar(dia, valor, n, origem) } — tabela faltantes_foto (sql/020), FOTO DO DIA
+     extras:   (só para recuperar dias arquivados) { fonte: [planilha, ...] } — outras planilhas lidas JUNTO com a Base SSP53
+
+   FOTO DO DIA (25/11/2026): a planilha guarda só 15 dias. Quando um dia termina (janela de 48 h de todos os pacotes
+   fechada), o dia calculado é guardado no Supabase para sempre. A lista de dias junta a aba Aduana com as fotos; um dia
+   que já saiu da aba Aduana é aberto pela foto (as classificações manuais continuam vindo da planilha).
    ========================================================== */
 
 const CFG = {
@@ -20,6 +26,7 @@ const CFG = {
   DIAS_CACHE_SEG: 300,      // lista de dias: 5 min
   PREPARAR_DIAS: 3,         // quando a planilha avisa que recebeu dados, recalcula os 3 dias mais recentes
   PREPARAR_TEMPO_MS: 40000, // ... sem passar de 40 s (o Vercel corta em 60)
+  FOTOS_POR_AVISO: 2,       // a cada aviso da planilha, tira a foto de até 2 dias encerrados que ainda não têm foto
   JUNTAR_BLOCOS: 1500,      // blocos de linhas do mesmo dia com menos de 1500 linhas entre eles são lidos juntos (menos pedidos ao Google)
   ABA_MANUAL: 'Classificação manual',
   ABA_REGRAS: 'Regras',
@@ -119,8 +126,10 @@ function comMemoria(planilha) {
   });
 }
 
-function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
+function criarNucleo({ planilha, cache, regras: codigoRegras, usuario, fotos, extras }) {
   const P = comMemoria(planilha);
+  const EXTRAS = {}; // fonte -> [planilha] lidas junto (recuperação dos arquivos)
+  Object.keys(extras || {}).forEach((k) => { EXTRAS[k] = (extras[k] || []).filter(Boolean).map(comMemoria); });
   const quem = usuario || '(painel)';
   const memo = {}; // dentro de uma mesma chamada, não lê a mesma coisa duas vezes
 
@@ -134,11 +143,22 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
     return v.map((r) => Array.from({ length: nCols }, (_, j) => cel(r[j])));
   }
 
-  /** Lê uma aba devolvendo só as colunas pedidas (pelo nome do cabeçalho) e, se der, só as linhas dos dias pedidos. */
+  /** Lê a aba na Base SSP53 e, se houver (recuperação), também nas planilhas de arquivo; junta as linhas. */
   async function lerAba(fonte, dias) {
+    const r = await lerAbaEm(P, fonte, dias);
+    for (const X of EXTRAS[fonte] || []) {
+      const x = await lerAbaEm(X, fonte, dias);
+      if (!x.aviso) r.linhas = r.linhas.concat(x.linhas);
+      else if (!r.linhas.length && r.aviso) r.aviso = x.aviso;
+      if (r.aviso && x.linhas.length) delete r.aviso;
+    }
+    return r;
+  }
+  /** Lê uma aba devolvendo só as colunas pedidas (pelo nome do cabeçalho) e, se der, só as linhas dos dias pedidos. */
+  async function lerAbaEm(P, fonte, dias) {
     const f = FONTES[fonte];
     if (!(await P.existe(f.aba))) return { linhas: [], aviso: 'Aba "' + f.aba + '" não existe.' };
-    const cab = await cabecalho(f.aba);
+    const cab = ((await P.ler(f.aba, '1:1'))[0] || []).map((c) => cel(c).trim());
     const idx = {};
     cab.forEach((c, i) => { const k = norm(c); if (c && !(k in idx)) idx[k] = i; });
     if (!(norm(f.id) in idx)) return { linhas: [], aviso: 'Aba "' + f.aba + '": não achei a coluna "' + f.id + '".' };
@@ -175,15 +195,39 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
     const { linhas } = await lerAba('aduana', null);
     const cont = {};
     for (const o of linhas) if (norm(o['Estado']) === 'faltante') { const d = diaDe(o['Data auditoria']); if (d) cont[d] = (cont[d] || 0) + 1; }
-    const dias = Object.keys(cont).map((d) => ({ dia: d, n: cont[d], t: lerDataHora(d).getTime() })).sort((a, b) => b.t - a.t);
+    const dias = Object.keys(cont).map((d) => ({ dia: d, n: cont[d], t: lerDataHora(d).getTime() }));
+    // dias que já saíram da aba Aduana (arquivados) mas têm FOTO
+    if (fotos) {
+      try {
+        const naAduana = new Set(dias.map((d) => d.dia));
+        for (const f of await fotos.listar()) if (!naAduana.has(f.dia) && lerDataHora(f.dia)) dias.push({ dia: f.dia, n: f.n, t: lerDataHora(f.dia).getTime(), foto: true });
+      } catch (e) { console.warn(e.message); }
+    }
+    dias.sort((a, b) => b.t - a.t);
     await cache.gravar('dias', dias, CFG.DIAS_CACHE_SEG);
-    return dias;
+    return (memo.dias = dias);
+  }
+  /** O dia saiu da aba Aduana e tem foto? Então o painel abre pela foto. */
+  async function soNaFoto(dia) {
+    const dias = memo.dias || (await listarDias(false));
+    const d = dias.find((x) => x.dia === dia);
+    return !!(d && d.foto);
+  }
+  /** Guarda a FOTO do dia (já com Volumoso × Sorting e a conta do carrinho), se todos os pacotes já fecharam a janela. */
+  async function tirarFoto(out, origem) {
+    if (!fotos || !out.pacotes.length || !out.pacotes.every((p) => p.janelaFechada)) return false;
+    const copia = await marcarTipos(JSON.parse(JSON.stringify(out)));
+    copia.tiposNaFoto = true;
+    await fotos.gravar(out.dia, copia, out.pacotes.length, origem || 'automática');
+    return true;
   }
 
-  async function dadosDoDia(dia, forcar) {
+  async function dadosDoDia(dia, forcar, opc) {
     const D = lerDataHora(dia);
     if (!D) throw new Error('Dia inválido: ' + dia);
     const chave = 'dia:' + dia + ':' + CFG.JANELA_HORAS + 'h:c1'; // com a janela na chave: mudar a janela recalcula tudo (c1 = com a conta do carrinho, 25/11)
+    // dia que já saiu da aba Aduana: abre pela FOTO (mesmo com "Atualizar agora": não há mais o que ler na planilha)
+    if (fotos && !(opc && opc.recuperar) && (await soNaFoto(dia))) { const f = await fotos.ler(dia); if (f) return f; }
     if (!forcar) { const c = await cache.ler(chave); if (c) return c; }
     const inicioProc = Date.now();
     const dias = Array.from({ length: CFG.DIAS_LEITURA }, (_, i) => somaDias(D, i));
@@ -257,6 +301,8 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
     await cache.gravar(chave, out, recente ? CFG.CACHE_RECENTE_SEG : CFG.CACHE_SEG);
     // Resumo diário (base de semana/mês): regravado sempre que o dia é recalculado
     try { await gravarResumoDias({ [dia]: await linhasResumo(dia, out) }); } catch (e) { out.avisos.push('Resumo diário não foi atualizado: ' + e.message); }
+    // FOTO do dia (para sempre): regravada a cada recálculo enquanto o dia ainda está na planilha
+    try { out.fotoGuardada = await tirarFoto(out, opc && opc.origem); } catch (e) { out.avisos.push(e.message); }
     return out;
   }
 
@@ -266,12 +312,26 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
     const t0 = Date.now();
     const dias = await listarDias(true);
     const feitos = [];
-    for (const d of dias.slice(0, CFG.PREPARAR_DIAS)) {
+    for (const d of dias.filter((x) => !x.foto).slice(0, CFG.PREPARAR_DIAS)) {
       if (feitos.length && Date.now() - t0 > CFG.PREPARAR_TEMPO_MS) break;
       await dadosDoDia(d.dia, true);
       feitos.push(d.dia);
     }
-    const versao = { geradoEm: Date.now(), dias: feitos, origem: String(origem || ''), segundos: Math.round((Date.now() - t0) / 100) / 10 };
+    // fotos que faltam: dias da aba Aduana já encerrados (janela de 48 h + folga) e ainda sem foto — do mais antigo ao mais novo
+    const fotografados = [];
+    if (fotos) {
+      try {
+        const comFoto = new Set((await fotos.listar()).map((f) => f.dia));
+        const limite = Date.now() - (CFG.JANELA_HORAS + 30) * 3600 * 1000;
+        const pend = dias.filter((d) => !d.foto && !comFoto.has(d.dia) && d.t < limite).sort((a, b) => a.t - b.t);
+        for (const d of pend.slice(0, CFG.FOTOS_POR_AVISO)) {
+          if (Date.now() - t0 > CFG.PREPARAR_TEMPO_MS) break;
+          const out = await dadosDoDia(d.dia, true);
+          if (out.fotoGuardada) fotografados.push(d.dia);
+        }
+      } catch (e) { console.warn('Fotos: ' + e.message); }
+    }
+    const versao = { geradoEm: Date.now(), dias: feitos, fotos: fotografados, origem: String(origem || ''), segundos: Math.round((Date.now() - t0) / 100) / 10 };
     await cache.gravar('versao', versao, 7 * 86400);
     return versao;
   }
@@ -485,6 +545,7 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
   }
   const tipoDe = (ids, id) => (ids ? (ids.has(String(id).trim()) ? 'Volumoso' : 'Sorting') : '');
   async function marcarTipos(dados) {
+    if (dados && dados.tiposNaFoto) return dados; // a foto já guardou Volumoso × Sorting e a conta do carrinho
     let ids = null;
     try { ids = await idsOneBipe(); } catch (e) { console.warn('One Bipe: ' + e.message); }
     (dados && dados.pacotes || []).forEach((p) => {
@@ -529,6 +590,27 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
     return { ini: diaDe(ini), fim: diaDe(fim), linhas, diasNoResumo: contagem, faltamNoResumo: preenchidos.faltam };
   }
 
+  /* ---------- recuperar dias arquivados (Administrador, uma vez) ---------- */
+  /** Dias com faltantes nas planilhas de arquivo (aba Aduana) e se já têm foto. */
+  async function arquivoDias() {
+    const linhas = [];
+    for (const X of EXTRAS.aduana || []) { const r = await lerAbaEm(X, 'aduana', null); if (r.aviso) throw new Error('Arquivo de faltantes: ' + r.aviso); linhas.push(...r.linhas); }
+    const cont = {};
+    for (const o of linhas) if (norm(o['Estado']) === 'faltante') { const d = diaDe(o['Data auditoria']); if (d) cont[d] = (cont[d] || 0) + 1; }
+    let comFoto = new Set();
+    if (fotos) comFoto = new Set((await fotos.listar()).map((f) => f.dia));
+    return Object.keys(cont).map((d) => ({ dia: d, n: cont[d], t: lerDataHora(d).getTime(), temFoto: comFoto.has(d) })).sort((a, b) => a.t - b.t);
+  }
+  /** Calcula o dia lendo a Base SSP53 + os arquivos e guarda a foto. */
+  async function fotoDoArquivo(dia) {
+    if (!fotos) throw new Error('Fotos não configuradas.');
+    const out = await dadosDoDia(diaDe(dia), true, { recuperar: true, origem: 'recuperada dos arquivos' });
+    if (!out.pacotes.length) throw new Error('Nenhum faltante encontrado para ' + dia + ' nos arquivos.');
+    if (!out.fotoGuardada) throw new Error('O dia ' + dia + ' ainda tem pacotes dentro das 48 h — a foto só é tirada depois.');
+    try { await cache.gravar('dias', null, 1); } catch (e) { /* lista refeita na próxima vez */ }
+    return { dia: out.dia, n: out.pacotes.length, segundos: out.segundos, avisos: out.avisos };
+  }
+
   /* ---------- funções chamadas pela tela (mesmos nomes do antigo Apps Script) ---------- */
   return {
     painelListarDias: (forcar) => listarDias(!!forcar),
@@ -547,8 +629,10 @@ function criarNucleo({ planilha, cache, regras: codigoRegras, usuario }) {
     painelSalvarResponsavel: salvarResponsavel,
     painelPreencherResumo: () => preencherResumo(45),
     painelCriarAbaRegras: criarAbaRegras,
+    painelArquivoDias: async () => arquivoDias(),
+    painelFotoArquivo: async (dia) => fotoDoArquivo(dia),
     // para os testes
-    _interno: { lerAba, dadosDoDia, listarDias, classificarDia, diasNoResumo },
+    _interno: { lerAba, dadosDoDia, listarDias, classificarDia, diasNoResumo, tirarFoto },
   };
 }
 

@@ -44,7 +44,17 @@ function nivelFaltantes(usuario, parte) {
 // Qual parte cada função usa. painelVersao e painelResponsaveis (só leitura) valem para qualquer uma das duas.
 const PARTE_DA_FUNCAO = { painelSalvarResponsavel: 'responsaveis', painelVersao: 'qualquer', painelResponsaveis: 'qualquer' };
 const FUNCOES = ['painelListarDias', 'painelVersao', 'painelDadosDoDia', 'painelSalvarClassificacao', 'painelSalvarClassificacaoLote', 'painelResumoPeriodo',
-  'painelResponsaveis', 'painelSalvarResponsavel', 'painelPreencherResumo', 'painelCriarAbaRegras'];
+  'painelResponsaveis', 'painelSalvarResponsavel', 'painelPreencherResumo', 'painelCriarAbaRegras',
+  'painelArquivoInfo', 'painelArquivoDias', 'painelFotoArquivo'];
+// Recuperar dias arquivados (FOTO DO DIA, 25/11/2026): só o Administrador
+const SO_ADMIN = ['painelArquivoInfo', 'painelArquivoDias', 'painelFotoArquivo'];
+/** "https://docs.google.com/spreadsheets/d/<ID>/edit…" ou o próprio ID → ID. */
+function idPlanilha(x) {
+  const t = String(x || '').trim(), m = t.match(/\/d\/([A-Za-z0-9_-]{20,})/);
+  const id = m ? m[1] : t;
+  if (!/^[A-Za-z0-9_-]{20,}$/.test(id)) throw new Error('Link de planilha inválido: ' + t.slice(0, 80));
+  return id;
+}
 
 let regrasTexto = null;
 function regras() {
@@ -67,7 +77,7 @@ module.exports = async function handler(req, res) {
       if (!segredoConfere(segredo)) return responder(401, { erro: 'Senha do aviso não confere (FALTANTES_SEGREDO no Vercel e no Apps Script).' });
       const nucleo = criarNucleo({
         planilha: planilhaGoogle({ id: process.env.PLANILHA_ID, sa: process.env.GOOGLE_SA_JSON }),
-        cache: sb.cache, regras: regras(), usuario: 'planilha (aviso automático)',
+        cache: sb.cache, fotos: sb.fotos, regras: regras(), usuario: 'planilha (aviso automático)',
       });
       const origem = String((req.query && req.query.origem) || '').slice(0, 40);
       return responder(200, { r: await nucleo.prepararRecentes(origem) });
@@ -92,12 +102,26 @@ module.exports = async function handler(req, res) {
     const nomeParte = parte === 'responsaveis' ? 'Responsáveis por ilha' : 'Faltantes';
     if (!nivel) return responder(403, { erro: 'Sua conta não tem acesso a ' + nomeParte + '.' });
     if (FUNCOES_QUE_GRAVAM.includes(fn) && nivel !== 'editar') return responder(403, { erro: 'Sua conta só pode ver ' + nomeParte + ' (não pode salvar).' });
+    if (SO_ADMIN.includes(fn) && usuario.papel !== 'admin') return responder(403, { erro: 'Só o Administrador recupera dias arquivados.' });
+    const args = Array.isArray(corpo.args) ? corpo.args : [];
+    if (fn === 'painelArquivoInfo') {
+      const sa = JSON.parse(process.env.GOOGLE_SA_JSON);
+      return responder(200, { r: { emailServico: sa.client_email } });
+    }
+    // planilhas de arquivo (Drive › Faltantes – Arquivo) lidas JUNTO com a Base SSP53
+    let extras = null;
+    if (fn === 'painelArquivoDias' || fn === 'painelFotoArquivo') {
+      const [linkFalt, linkHist] = fn === 'painelArquivoDias' ? args : args.slice(1);
+      const pf = planilhaGoogle({ id: idPlanilha(linkFalt), sa: process.env.GOOGLE_SA_JSON });
+      extras = { aduana: [pf], carrinho: [pf], ps: [pf] };
+      if (String(linkHist || '').trim()) extras.historico = [planilhaGoogle({ id: idPlanilha(linkHist), sa: process.env.GOOGLE_SA_JSON })];
+    }
 
     const nucleo = criarNucleo({
       planilha: planilhaGoogle({ id: process.env.PLANILHA_ID, sa: process.env.GOOGLE_SA_JSON }),
-      cache: sb.cache, regras: regras(), usuario: usuario.email,
+      cache: sb.cache, fotos: sb.fotos, extras, regras: regras(), usuario: usuario.email,
     });
-    const r = await nucleo[fn](...(Array.isArray(corpo.args) ? corpo.args : []));
+    const r = await nucleo[fn](...args);
     return responder(200, { r });
   } catch (e) {
     console.error(e);

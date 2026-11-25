@@ -122,6 +122,7 @@
   .src { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; }
   td.car { min-width: 190px; font-size: 13px; }
   td.car .pill { margin-left: 0; }
+  .aviso-foto { background: var(--amarelo-claro); border: 1px solid var(--amarelo); color: var(--preto); }
   .src.historico { color: var(--preto); } .src.aduana { color: var(--vermelho); } .src.carrinho { color: var(--ambar); }
   .src.ps { color: #5A3E8C; } .src.inventario { color: var(--verde); } .src.torre, .src.direcionamento { color: var(--cinza-apagado); }
   .pill { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 1px 8px; margin-left: 4px; vertical-align: 1px; border: 1px solid currentColor; }
@@ -329,6 +330,7 @@ body.so-ver .conflito button, body.so-ver #rotaInteira, body.so-ver #maisIlha, b
       S.abaRegras = Array.isArray(r.regras); S.regras = window.REGRAS.montar(r.regras);
       S.pacotes = prepararPacotes(r.dados, S.regras); S.manual = r.manual || {}; S.servidor = r.servidor || 1; S.avisos = r.dados.avisos || []; S.url = r.url; S.segundos = r.dados.segundos;
       S.geradoEm = new Date(r.dados.geradoEm);
+      S.foto = r.dados.foto || null; // dia arquivado da planilha, aberto pela FOTO guardada no app (25/11/2026)
       $('#lnkPlanilha').href = S.url;
       S.resp = null;
       if (S.servidor >= 3) { try { S.resp = JSON.parse(await chamar('painelResponsaveis', S.dia, true)); } catch (e) { console.warn(e); } }
@@ -810,6 +812,8 @@ body.so-ver .conflito button, body.so-ver #rotaInteira, body.so-ver #maisIlha, b
       (nConf ? '<div class="msg err aviso-conflito"><b>' + fmt(nConf) + (nConf > 1 ? ' pacotes têm' : ' pacote tem') + ' conflito entre a sua classificação e uma regra.</b> Para cada um, escolha qual manter. <button type="button" id="btnConflitos">' + (S.soConflitos ? 'Mostrar todos' : 'Mostrar só os conflitos') + '</button></div>' : '') +
       indicadores(S.pacotes, 'em ' + S.dia) +
       chipsTipo(S.pacotes) +
+      (S.foto ? '<div class="msg aviso-foto">📷 <b>Foto do dia</b> — este dia já saiu da planilha (foi arquivado no Drive). O painel mostra a foto guardada em ' +
+        esc(new Date(S.foto.geradoEm).toLocaleString('pt-BR').slice(0, 17)) + (S.foto.origem ? ' (' + esc(S.foto.origem) + ')' : '') + '. Filtros, classificação e regras funcionam normalmente.</div>' : '') +
       '<p class="lead">Em <b>' + esc(S.dia) + '</b> a aduana teve <b>' + fmt(ps.length) + '</b> pacotes faltantes' + (S.tipo && S.tipo !== 'todos' && temTipo(S.pacotes) ? ' (' + esc(S.tipo) + ')' : '') + '. A linha do tempo de cada um começa no <b>sorting</b> (primeiro bipe do pacote no dia na aba Histórico) e vai até ' + CONFIG.JANELA_HORAS + ' h depois; passado esse prazo, não entra mais nada.' +
       (nSem ? ' <b>' + fmt(nSem) + '</b> não tiveram bipe no Histórico no dia (a linha do tempo começa à 00:00).' : '') +
       (nAbertas ? ' <b>' + fmt(nAbertas) + '</b> ainda estão dentro das ' + CONFIG.JANELA_HORAS + ' h e podem receber bipes novos.' : ' A janela de ' + CONFIG.JANELA_HORAS + ' h de todos já encerrou.') + '</p>' +
@@ -833,7 +837,7 @@ body.so-ver .conflito button, body.so-ver #rotaInteira, body.so-ver #maisIlha, b
         '<div class="scroll"><table><thead><tr><th>Shipment</th><th>Rota · aduana</th><th>Auditoria de carrinho</th><th>Resultado</th><th>Linha do tempo (sorting + ' + CONFIG.JANELA_HORAS + ' h)</th><th class="ed">Sua classificação</th></tr></thead><tbody>' +
         (visiveis.length ? visiveis.map(linhaPacote).join('') : '<tr><td colspan="6" class="empty">Nenhum pacote.</td></tr>') +
         '</tbody></table></div></section>' +
-      cartaoRegras();
+      cartaoRegras() + cartaoArquivo();
 
     ligarTipos(m);
     m.querySelectorAll('.row').forEach((b) => b.onclick = () => { S.filtro = S.filtro && norm(S.filtro) === norm(b.dataset.r) ? null : b.dataset.r; render(); if (S.filtro) { const alvo = $('#rotaInteira'); (alvo && alvo.offsetParent ? alvo : $('#tabela')).scrollIntoView({ behavior: 'smooth', block: 'start' }); } });
@@ -848,12 +852,62 @@ body.so-ver .conflito button, body.so-ver #rotaInteira, body.so-ver #maisIlha, b
       el.onchange = () => { const p = porId.get(el.dataset.id); salvar(p, el.dataset.campo, el.value.trim(), document.getElementById('st-' + el.dataset.campo + '-' + p.id)); };
     });
     ligarRota(ps);
+    ligarArquivo();
     const dr = $('#regras'); if (dr) dr.ontoggle = () => { S.regrasAbertas = dr.open; };
     const ir = $('#irResp'); if (ir) ir.onclick = (e) => { e.preventDefault(); S.respDia = S.dia; trocarAba('responsaveis'); };
     if (aid) { const el = document.getElementById(aid); if (el) { if (aval != null && el.value !== aval) el.value = aval; el.focus(); try { if (apos != null) el.setSelectionRange(apos, apos); } catch (e) {} } }
   }
 
   /* Lista das regras em uso (vem da aba Regras) e quantos pacotes do dia caíram em cada uma. */
+  /* ---------- recuperar dias arquivados (só Administrador, 25/11/2026) ---------- */
+  // Lê os arquivos do Drive (Faltantes – Arquivo) junto com a Base SSP53 e guarda a FOTO de cada dia que saiu da planilha.
+  const ehAdmin = () => { try { return typeof window.parent.gqEhAdmin === 'function' ? window.parent.gqEhAdmin() : false; } catch (e) { return false; } };
+  function cartaoArquivo() {
+    if (!ehAdmin()) return '';
+    const A = S.arq || (S.arq = { falt: '', hist: '', dias: null, rodando: false, log: '', email: '' });
+    const lista = A.dias ? (A.dias.length ? '<table class="tr"><thead><tr><th>Dia</th><th>Faltantes</th><th>Foto</th></tr></thead><tbody>' +
+      A.dias.map((d) => '<tr><td>' + esc(d.dia) + '</td><td class="n">' + fmt(d.n) + '</td><td>' + (d.temFoto ? '✓ guardada' : d.erro ? '<span style="color:var(--vermelho)">' + esc(d.erro) + '</span>' : d.fazendo ? 'montando…' : '—') + '</td></tr>').join('') +
+      '</tbody></table>' : '<p class="empty">Nenhum dia com faltantes no arquivo.</p>') : '';
+    const falta = A.dias ? A.dias.filter((d) => !d.temFoto).length : 0;
+    return '<details class="card" id="arquivo"' + (S.arqAberto ? ' open' : '') + '><summary><h2 style="display:inline">Recuperar dias arquivados (Administrador)</h2></summary>' +
+      '<p class="note">Monta a <b>foto</b> dos dias que já saíram da planilha, lendo os arquivos da pasta <b>Faltantes – Arquivo</b> do Drive. ' +
+      'Antes, compartilhe os 2 arquivos como <b>Leitor</b> com ' + (A.email ? '<b>' + esc(A.email) + '</b>' : 'a conta de serviço do app') + '. Faça isso uma vez; daqui para frente as fotos são tiradas sozinhas.</p>' +
+      '<div class="controls">' +
+        '<label style="flex:1;min-width:280px">Link do "Arquivo Faltantes AAAA-MM"<input type="text" id="arqFalt" value="' + esc(A.falt) + '" placeholder="https://docs.google.com/spreadsheets/d/…"></label>' +
+        '<label style="flex:1;min-width:280px">Link do "Arquivo Histórico AAAA-MM (quinzena)"<input type="text" id="arqHist" value="' + esc(A.hist) + '" placeholder="https://docs.google.com/spreadsheets/d/…"></label>' +
+      '</div><div class="controls">' +
+        '<button type="button" id="arqConferir"' + (A.rodando ? ' disabled' : '') + '>1. Conferir dias do arquivo</button>' +
+        '<button type="button" id="arqMontar"' + (A.rodando || !falta ? ' disabled' : '') + '>2. Montar ' + (falta ? fmt(falta) + ' foto' + (falta > 1 ? 's' : '') : 'fotos') + '</button>' +
+      '</div><p class="st" id="arqSt">' + esc(A.log) + '</p>' + lista + '</details>';
+  }
+  function ligarArquivo() {
+    const d = $('#arquivo'); if (!d) return;
+    const A = S.arq;
+    d.ontoggle = () => { S.arqAberto = d.open; if (d.open && !A.email) chamar('painelArquivoInfo').then((r) => { A.email = r.emailServico; render(); }).catch(() => {}); };
+    $('#arqFalt').oninput = (e) => { A.falt = e.target.value; };
+    $('#arqHist').oninput = (e) => { A.hist = e.target.value; };
+    $('#arqConferir').onclick = async () => {
+      A.rodando = true; A.log = 'Lendo o arquivo…'; render();
+      try { A.dias = await chamar('painelArquivoDias', A.falt, A.hist); A.log = fmt(A.dias.length) + ' dia(s) com faltantes no arquivo · ' + fmt(A.dias.filter((x) => !x.temFoto).length) + ' sem foto.'; }
+      catch (e) { A.log = 'Não deu: ' + (e && e.message ? e.message : e); }
+      A.rodando = false; render();
+    };
+    $('#arqMontar').onclick = async () => {
+      A.rodando = true; render();
+      const fila = A.dias.filter((x) => !x.temFoto);
+      let ok = 0;
+      for (const [i, x] of fila.entries()) {
+        x.fazendo = true; x.erro = ''; A.log = 'Montando ' + (i + 1) + ' de ' + fila.length + ': ' + x.dia + ' (cada dia leva até 1 minuto)…'; render();
+        try { await chamar('painelFotoArquivo', x.dia, A.falt, A.hist); x.temFoto = true; ok++; }
+        catch (e) { x.erro = e && e.message ? e.message : String(e); }
+        x.fazendo = false;
+      }
+      A.log = fmt(ok) + ' foto(s) guardada(s)' + (ok < fila.length ? ' · ' + fmt(fila.length - ok) + ' com erro (veja a lista; pode clicar de novo)' : '') + '. Os dias já aparecem na lista "Dia analisado".';
+      A.rodando = false;
+      try { S.dias = await chamar('painelListarDias', true); } catch (e) { /* fica a lista antiga */ }
+      desenharDias(); render();
+    };
+  }
   function cartaoRegras() {
     const cont = {};
     for (const p of S.pacotes.filter(doTipo)) if (p.regra.codigo) cont[p.regra.codigo] = (cont[p.regra.codigo] || 0) + 1;
@@ -984,7 +1038,7 @@ body.so-ver .conflito button, body.so-ver #rotaInteira, body.so-ver #maisIlha, b
     $('#atualizado').textContent = estado === 'load' ? (S.forcando ? 'Relendo a planilha… pode levar uns 10 s' : 'Atualizando…') : S.geradoEm ? 'Dados preparados às ' + hm(S.geradoEm) + ' · conferido às ' + hm(S.ultima) : S.ultima ? 'Atualizado às ' + hm(S.ultima) : 'Sem dados';
   }
   function desenharDias() {
-    $('#selDia').innerHTML = S.dias.map((d) => '<option value="' + esc(d.dia) + '"' + (d.dia === S.dia ? ' selected' : '') + '>' + esc(d.dia) + ' · ' + fmt(d.n) + ' faltantes</option>').join('');
+    $('#selDia').innerHTML = S.dias.map((d) => '<option value="' + esc(d.dia) + '"' + (d.dia === S.dia ? ' selected' : '') + '>' + esc(d.dia) + ' · ' + fmt(d.n) + ' faltantes' + (d.foto ? ' · foto' : '') + '</option>').join('');
   }
 
   /* ---------- eventos ---------- */
